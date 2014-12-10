@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+
+<robot name="apple" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="apple_gazebo" params="name">
+
+    <!-- ros_control plugin -->
+   <!-- <gazebo>
+      <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+	<robotNamespace>/velvet_fingers</robotNamespace>
+      </plugin>
+    </gazebo> -->
+
+    <!-- Palm -->
+    <gazebo reference="${name}_base">
+      <material>Gazebo/White</material>
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>
+

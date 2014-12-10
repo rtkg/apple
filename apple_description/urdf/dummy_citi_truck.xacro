@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<robot name="apple" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Include Utilities -->
+  <xacro:include filename="$(find apple_description)/urdf/utilities.xacro" />
+  <!-- Import all Gazebo-customization elements, including Gazebo colors -->
+  <xacro:include filename="$(find apple_description)/urdf/apple.gazebo.xacro" />
+
+  <xacro:macro name="dummy_citi_truck" params="parent name *origin">
+
+    <!--joint between {parent} and City Truck base -->
+    <joint name="${parent}_joint" type="fixed">
+      <insert_block name="origin"/>
+      <parent link="${parent}"/>
+      <child link="${name}_base"/>
+    </joint>
+
+    <link name="${name}_base">
+      <inertial>
+        <origin xyz="-0.11 0.0 .31" rpy="0 0 0"/>
+        <mass value="30"/>
+        <inertia ixx="5"  ixy="0"  ixz="0" iyy="6" iyz="0" izz="2" />
+      </inertial>
+
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://apple_description/meshes/dummy_citi_truck.stl"/>
+        </geometry>
+        <material name="Aluminium"/>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://apple_description/meshes/dummy_citi_truck.stl"/>
+        </geometry>
+        <material name="Aluminium"/>
+      </collision>
+    </link>
+
+    <!--Extensions -->
+    <xacro:apple_gazebo name="${name}" />
+  
+  </xacro:macro>
+
+</robot>
