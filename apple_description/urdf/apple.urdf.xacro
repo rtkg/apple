@@ -9,13 +9,15 @@
   <xacro:include filename="$(find velvet_fingers_description)/urdf/velvet_fingers.xacro"/> 
   <!--Include a dummy CitiTruck for now-->
   <xacro:include filename="$(find apple_description)/urdf/dummy_citi_truck.xacro"/>
+ <!-- Gazebo plugins -->
+  <xacro:include filename="$(find apple_description)/gazebo/gazebo.urdf.xacro"/>
 
   <!-- Fix to world just for testing -->
   <link name="world"/>
 
   <!-- dummy citi truck-->
   <xacro:dummy_citi_truck name="dummy_citi_truck" parent="world">
-    <origin xyz="0 0 0" rpy="0 0 0" />
+    <origin xyz="0 0 0.15" rpy="0 0 0" />
   </xacro:dummy_citi_truck> 
 
   <!--lbr -->

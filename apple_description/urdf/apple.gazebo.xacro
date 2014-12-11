@@ -4,14 +4,7 @@
 
   <xacro:macro name="apple_gazebo" params="name">
 
-    <!-- ros_control plugin -->
-   <!-- <gazebo>
-      <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
-	<robotNamespace>/velvet_fingers</robotNamespace>
-      </plugin>
-    </gazebo> -->
-
-    <!-- Palm -->
+    <!-- Dummy Citi Truck base -->
     <gazebo reference="${name}_base">
       <material>Gazebo/White</material>
       <mu1>0.2</mu1>

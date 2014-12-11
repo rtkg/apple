@@ -1,0 +1,34 @@
+<launch>
+
+  <!-- these arguments you can pass this launch file-->
+  <arg name="hardware_interface" default="EffortJointInterface"/>
+  <arg name="controllers" default="joint_state_controller 
+                                   lbr_iiwa_joint_1_effort_pos_controller
+				   lbr_iiwa_joint_2_effort_pos_controller
+				   lbr_iiwa_joint_3_effort_pos_controller
+				   lbr_iiwa_joint_4_effort_pos_controller
+				   lbr_iiwa_joint_5_effort_pos_controller
+				   lbr_iiwa_joint_6_effort_pos_controller
+				   lbr_iiwa_joint_7_effort_pos_controller
+			           velvet_fingers_joint_1_effort_pos_controller" /> 
+
+
+  <!-- Load the URDF with the given hardware interface into the ROS Parameter Server -->
+  <param name="robot_description"
+	 command="$(find xacro)/xacro.py '$(find apple_description)/urdf/apple.urdf.xacro' prefix:=$(arg hardware_interface)" />
+
+  <!-- Load joint controller configurations from YAML file to parameter server -->
+  <rosparam file="$(find lbr_iiwa_control)/config/lbr_iiwa_control.yaml" command="load" ns="/apple"  />
+  <rosparam file="$(find velvet_fingers_control)/config/velvet_fingers_control.yaml" command="load" ns="/apple"  />
+
+  <!-- load the controllers -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+	output="screen" ns="/apple" args="$(arg controllers)" />
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+	respawn="false" output="screen">
+    <remap from="/joint_states" to="/apple/joint_states" />
+  </node>
+
+</launch>
