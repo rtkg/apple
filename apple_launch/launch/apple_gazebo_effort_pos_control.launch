@@ -6,7 +6,7 @@
     <arg name="hardware_interface" value="EffortJointInterface" />
   </include>
 
-  <include file="$(find apple_launch)/launch/apple_control.launch">
+  <include file="$(find apple_control)/launch/apple_control.launch">
     <arg name="hardware_interface" value="EffortJointInterface" />
     <arg name="controllers" value="joint_state_controller
                                    lbr_iiwa_joint_1_effort_pos_controller

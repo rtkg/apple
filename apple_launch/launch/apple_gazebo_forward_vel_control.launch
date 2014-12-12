@@ -6,7 +6,7 @@
     <arg name="hardware_interface" value="VelocityJointInterface" />
   </include>
 
-  <include file="$(find apple_launch)/launch/apple_control.launch">
+  <include file="$(find apple_control)/launch/apple_control.launch">
     <arg name="hardware_interface" value="VelocityJointInterface" />
     <arg name="controllers" value="joint_state_controller
                                    lbr_iiwa_joint_1_forward_vel_controller

@@ -13,10 +13,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <run_depend>lbr_iiwa_description</run_depend>
-  <run_depend>lbr_iiwa_control</run_depend>
   <run_depend>velvet_fingers_description</run_depend>
-  <run_depend>velvet_fingers_control</run_depend>
-  <run_depend>controller_manager</run_depend>
 
   <export>
   </export>

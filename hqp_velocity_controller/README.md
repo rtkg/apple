@@ -1,0 +1,1 @@
+Kinematic controller for a VelocityJointInterface outputting velocity commands for a KDL::chain of joints by solving a sequence of hierarchical quadratic programs for each joint (http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=5766760&tag=1) and thus forming a prioritized control law
