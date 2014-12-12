@@ -9,18 +9,20 @@
   <include file="$(find apple_control)/launch/apple_control.launch">
     <arg name="hardware_interface" value="VelocityJointInterface" />
     <arg name="controllers" value="joint_state_controller
-                                   lbr_iiwa_joint_1_forward_vel_controller
-				   lbr_iiwa_joint_2_forward_vel_controller
-				   lbr_iiwa_joint_3_forward_vel_controller
-				   lbr_iiwa_joint_4_forward_vel_controller
-				   lbr_iiwa_joint_5_forward_vel_controller
-				   lbr_iiwa_joint_6_forward_vel_controller
-				   lbr_iiwa_joint_7_forward_vel_controller
-				   velvet_fingers_joint_1_forward_vel_controller" /> 
+                                  apple_group_forward_vel_controller" /> 
 
   </include>
 
   <!-- Launch RQT for control tuning -->
-  <!--<node name="apple_rqt" pkg="rqt_gui" type="rqt_gui" respawn="false" output="screen"/> -->
+  <!-- <node name="apple_rqt" pkg="rqt_gui" type="rqt_gui" respawn="false" output="screen"/> -->
 
 </launch>
+
+#rostopic pub /apple/apple_group_forward_v_controller/command std_msgs/Float64MultiArray """ 
+#layout: 
+#  dim: [{label: 'x', size: 1234, stride: 1},{label: 'y', size: 1234, 
+#stride: 1} ] 
+#  data_offset: 0 
+#data: [-0.1, -0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1] 
+#""" 
+

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>hqp_velocity_controller</name>
+  <name>hqp_controllers</name>
   <version>0.0.0</version>
-  <description>The hqp_velocity_controller package</description>
+  <description>The hqp_controllers package</description>
 
   <maintainer email="robert.krug@oru.se">Robert Krug</maintainer>
 
@@ -11,16 +11,13 @@
   <author email="robert.krug@oru.se">Robert Krug</author>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>controller_interface</build_depend>
+  <build_depend>roscpp</build_depend>
 
   <run_depend>controller_interface</run_depend>
-
+  <run_depend>roscpp</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- You can specify that this package is a metapackage here: -->
-    <!-- <metapackage/> -->
-
-    <!-- Other tools can request additional information be placed here -->
-
-  </export>
+     <controller_interface plugin="${prefix}/hqp_controllers_plugins.xml"/>
+   </export>
 </package>

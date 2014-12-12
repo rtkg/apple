@@ -20,6 +20,7 @@
   <!-- Load joint controller configurations from YAML file to parameter server -->
   <rosparam file="$(find lbr_iiwa_control)/config/lbr_iiwa_control.yaml" command="load" ns="/apple"  />
   <rosparam file="$(find velvet_fingers_control)/config/velvet_fingers_control.yaml" command="load" ns="/apple"  />
+  <rosparam file="$(find apple_control)/config/apple_control.yaml" command="load" ns="/apple"  />
 
   <!-- load the controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"

@@ -1,0 +1,11 @@
+<library path="lib/libhqp_controllers">
+
+  <class name="hqp_controllers/JointGroupVelocityController" 
+         type="hqp_controllers::JointGroupVelocityController" 
+         base_class_type="controller_interface::ControllerBase">
+    <description>
+      The JointGroupVelocityController tracks velocity commands for a set of joints. It expects a VelocityJointInterface type of hardware interface.
+    </description>
+  </class>
+
+</library>
