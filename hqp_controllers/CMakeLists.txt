@@ -47,7 +47,11 @@ include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
                             include/hqp_controllers/hqp_velocity_controller.h
                             src/task.cpp
-                            include/hqp_controllers/task.h)
+                            include/hqp_controllers/task_manager.h
+                            src/task_manager.cpp
+                            include/hqp_controllers/task.h
+                            src/task_object.cpp
+                            include/hqp_controllers/task_object.h)
 
 ## Declare a cpp executable
 # add_executable(hqp_velocity_controller_node src/hqp_velocity_controller_node.cpp)
