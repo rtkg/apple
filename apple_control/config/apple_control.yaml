@@ -16,7 +16,18 @@
       - lbr_iiwa_joint_7
       - velvet_fingers_joint_1
 
-
+  # HQP Velocity Controller ----------------------------------------
+  apple_hqp_vel_controller:
+    type: velocity_controllers/JointGroupVelocityController
+    joints:
+      - lbr_iiwa_joint_1
+      - lbr_iiwa_joint_2
+      - lbr_iiwa_joint_3
+      - lbr_iiwa_joint_4
+      - lbr_iiwa_joint_5
+      - lbr_iiwa_joint_6
+      - lbr_iiwa_joint_7
+      - velvet_fingers_joint_1
 
 
 

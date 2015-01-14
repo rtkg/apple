@@ -11,7 +11,7 @@
   <include file="$(find apple_control)/launch/apple_control.launch">
     <arg name="hardware_interface" value="VelocityJointInterface" />
     <arg name="controllers" value="joint_state_controller
-                                  apple_group_forward_vel_controller" /> 
+                                  apple_hqp_vel_controller" /> 
 
   </include>
 
@@ -21,7 +21,7 @@
 </launch>
 
 <!--
-rostopic pub /apple/apple_group_forward_vel_controller/command std_msgs/Float64MultiArray """ 
+rostopic pub /apple/apple_hqp_vel_controller/command std_msgs/Float64MultiArray """ 
 layout: 
   dim: [{label: 'x', size: 1234, stride: 1},{label: 'y', size: 1234, 
 stride: 1} ] 

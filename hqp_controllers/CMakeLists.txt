@@ -2,34 +2,36 @@ cmake_minimum_required(VERSION 2.8.3)
 project(hqp_controllers)
 
 # Load catkin and all dependencies required for this package
-find_package(catkin 
-  REQUIRED COMPONENTS
-    roscpp
+find_package(catkin REQUIRED COMPONENTS
+     cmake_modules
+     roscpp
 #    urdf
 #    control_toolbox
-    controller_interface
+     controller_interface
 #    controller_manager
 #    hardware_interface
 #    realtime_tools
 #    control_msgs
 )
 
+find_package(Eigen REQUIRED)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
 # Declare catkin package
 catkin_package(
-  CATKIN_DEPENDS
-    roscpp
+     CATKIN_DEPENDS
+     roscpp
 #    urdf
 #    control_toolbox
-    controller_interface
+     controller_interface
 #    controller_manager
 #    hardware_interface
 #    realtime_tools
 #    control_msgs
-  INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME}
+     INCLUDE_DIRS include ${EIGEN_INCLUDE_DIRS}
+     LIBRARIES ${PROJECT_NAME}
 )
 
 
@@ -39,10 +41,13 @@ catkin_package(
 
 
 # include_directories(include)
+include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
 include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 
 add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
-                            include/hqp_controllers/hqp_velocity_controller.h)
+                            include/hqp_controllers/hqp_velocity_controller.h
+                            src/task.cpp
+                            include/hqp_controllers/task.h)
 
 ## Declare a cpp executable
 # add_executable(hqp_velocity_controller_node src/hqp_velocity_controller_node.cpp)
