@@ -3,14 +3,11 @@
 
 #include <string>
 #include <boost/shared_ptr.hpp>
-#include <kdl/jacobian.hpp>
-#include <kdl/chainjnttojacsolver.hpp>
-#include <kdl/chainfksolverpos_recursive.hpp>
 #include <Eigen/Core>
 
 namespace hqp_controllers {
 
-enum TaskType {UNDEFINED=1, OBSTACLE_AVOIDANCE, IK_EE_PLANE};
+enum TaskType {UNDEFINED_TASK=1, OBSTACLE_AVOIDANCE, IK_EE_PLANE};
 
 class Task
 {
@@ -38,11 +35,6 @@ protected:
     unsigned int id_;
     TaskType type_;
     bool initialized_;
-
-    boost::shared_ptr<KDL::Jacobian> J_; ///< parent frame jacobian
-
-    boost::shared_ptr<KDL::ChainFkSolverPos>    fk_solver_;
-    boost::shared_ptr<KDL::ChainJntToJacSolver> j_solver_;
 
     boost::shared_ptr<Eigen::MatrixXd> A_; ///< task function jacobian
     boost::shared_ptr<Eigen::VectorXd> b_; ///< task function reference

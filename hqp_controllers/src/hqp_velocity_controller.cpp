@@ -1,5 +1,8 @@
 #include <hqp_controllers/hqp_velocity_controller.h>
 #include <pluginlib/class_list_macros.h>
+#include <boost/shared_ptr.hpp>
+#include <vector>
+#include <Eigen/Geometry>
 
 namespace hqp_controllers
 {
@@ -16,7 +19,7 @@ HQPVelocityController::~HQPVelocityController()
 //-----------------------------------------------------------------------
 bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw, ros::NodeHandle &n)
 {
-    // List of controlled joints
+    // Get the list of controlled joints
     std::string param_name = "joints";
     if(!n.getParam(param_name, joint_names_))
     {
@@ -30,8 +33,6 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
         try
         {
             joints_.push_back(hw->getHandle(joint_names_[i]));
-
-
         }
         catch (const hardware_interface::HardwareInterfaceException& e)
         {
@@ -40,6 +41,117 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
         }
     }
 
+    //Construct a kinematic tree from the robot description on the parameter server
+    boost::shared_ptr<KDL::Tree> k_tree(new KDL::Tree);
+    std::string searched_param;
+    std::string robot_description;
+    if(n.searchParam("robot_description",searched_param))
+    {
+        n.getParam(searched_param,robot_description);
+        ROS_ASSERT(kdl_parser::treeFromString(robot_description, *k_tree));
+        ROS_INFO("KDL tree constructed. The included elements are:");
+        KDL::SegmentMap segs = k_tree->getSegments();
+        for ( KDL::SegmentMap::const_iterator it=segs.begin(); it!=segs.end(); ++it)
+            ROS_INFO("%s",it->second.segment.getName().c_str());
+    }
+    else
+    {
+        ROS_ERROR("Failed to construct KDL tree.");
+        return false;
+    }
+
+    //Load the collision root from the parameter server
+    std::string collision_root;
+    if (n.searchParam("collision_root", searched_param))
+        n.getParam(searched_param,collision_root);
+    else
+    {
+        ROS_WARN("No collision root frame specified.");
+    }
+
+    //Load the collision objects from the parameter server
+    XmlRpc::XmlRpcValue collision_objects;
+    boost::shared_ptr<std::vector<boost::shared_ptr<TaskObject> > > t_obj_list(new std::vector<boost::shared_ptr<TaskObject> >); //this vector collects all the task objects loaded from the parameter server
+    if (n.searchParam("collision_objects", searched_param))
+    {
+        n.getParam(searched_param,collision_objects);
+        for (int32_t i = 0; i < collision_objects.size(); ++i)
+        {
+            std::string frame = (std::string)collision_objects[i]["frame"];
+            int priority = (int)collision_objects[i]["priority"];
+            boost::shared_ptr<KDL::Chain> chain(new KDL::Chain);
+            if(!k_tree->getChain(collision_root,frame,(*chain)))
+            {
+                ROS_ERROR("Could not get kinematic chain from %s to %s.", collision_root.c_str(),frame.c_str());
+                return false;
+            }
+            std::cout<<"tree jnt nr: "<<k_tree->getNrOfJoints()<<std::endl;
+            std::cout<<"tree seg nr:"<<k_tree->getNrOfSegments()<<std::endl;
+
+            boost::shared_ptr<TaskObject> t_obj(new TaskObject(frame,priority,chain)); //create a new task object
+            unsigned int m = (unsigned int)collision_objects[i]["geometries"].size();
+            ROS_ASSERT(m >= 1);
+            boost::shared_ptr<Eigen::Affine3d> offset(new Eigen::Affine3d);
+
+            //iterate through the geometries corresponding to the present collision object
+            for (int32_t j = 0; j < m ;j++)
+            {
+                Eigen::Matrix3d rot;
+                Eigen::Vector3d rpy;
+                Eigen::Vector3d t;
+                for (int32_t k = 0; k < 3 ;k++)
+                {
+                    rpy(k) = (double)collision_objects[i]["geometries"][j]["rpy"][k];
+                    t(k) = (double)collision_objects[i]["geometries"][j]["t"][k];
+                }
+
+                rot=Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
+                offset->linear() = rot;
+                offset->translation() = t;
+
+                boost::shared_ptr<TaskGeometry> t_geom;
+                std::string type = (std::string)collision_objects[i]["geometries"][j]["type"];
+                if (type == "POINT")
+                    t_geom.reset(new Point(frame,offset));
+                else if (type == "PLANE")
+                {
+                    t_geom.reset(new Plane(frame,offset));
+
+                    //read normal and offset of the plane
+                    boost::shared_ptr<Eigen::Vector3d> n(new Eigen::Vector3d);
+                    for (int32_t k = 0; k < 3 ;k++)
+                        (*n)(k) = (double)collision_objects[i]["geometries"][j]["dim"][k];
+
+                    double d = (double)collision_objects[i]["geometries"][j]["dim"][3];
+                    d=d/n->norm(); n->normalize(); //normalize the plane quantities
+                    static_cast<Plane*>(t_geom.get())->setNormal(n);
+                    static_cast<Plane*>(t_geom.get())->setOffset(d);
+                }
+                else if (type == "CAPSULE")
+                {
+                    t_geom.reset(new Capsule(frame,offset));
+                    double r= (double)collision_objects[i]["geometries"][j]["dim"][0];
+                    double l= (double)collision_objects[i]["geometries"][j]["dim"][1];
+                    static_cast<Capsule*>(t_geom.get())->setRadius(r);
+                    static_cast<Capsule*>(t_geom.get())->setLength(l);
+                }
+                else
+                {
+                    ROS_ERROR("Invalid collision geometry type!");
+                    return false;
+                }
+                t_obj->addGeometry(t_geom); //add the task geometries to the task object
+            }
+            t_obj_list->push_back(t_obj);
+        }
+        ROS_INFO("Collision objects loaded");
+    }
+    else
+    {
+        ROS_WARN("No collsion objects specified!");
+    }
+
+    task_manager_.initialize(k_tree,t_obj_list);
     sub_command_ = n.subscribe<std_msgs::Float64MultiArray>("command", 1, &HQPVelocityController::commandCB, this);
     return true;
 }
@@ -52,8 +164,19 @@ void HQPVelocityController::starting(const ros::Time& time)
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
 {
+    task_manager_.computeTaskObjectsKinematics(joints_); //compute jacobians and poses of the task objects
+
     for(unsigned int i=0; i<n_joints_; i++)
-    {  joints_[i].setCommand(commands_[i]);  }
+        joints_[i].setCommand(commands_[i]);
+
+    //    for (int i=0; i<n_joints_; i++)
+    //    {
+    //        std::cout<<joints_[i].getName()<<std::endl;
+    //        std::cout<<joints_[i].getPosition()<<std::endl;
+    //        std::cout<<joints_[i].getVelocity()<<std::endl;
+    //        std::cout<<joints_[i].getEffort()<<std::endl;
+    //        std::cout<<std::endl;
+    //    }
 }
 //-----------------------------------------------------------------------
 void HQPVelocityController::commandCB(const std_msgs::Float64MultiArrayConstPtr& msg)
@@ -64,7 +187,7 @@ void HQPVelocityController::commandCB(const std_msgs::Float64MultiArrayConstPtr&
         return;
     }
     for(unsigned int i=0; i<n_joints_; i++)
-    {  commands_[i] = msg->data[i];  }
+        commands_[i] = msg->data[i];
 }
 //-----------------------------------------------------------------------
 } //end namespace hqp_controllers

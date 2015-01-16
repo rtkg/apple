@@ -1,19 +1,23 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(hqp_controllers)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS
      cmake_modules
-     roscpp
+    roscpp
 #    urdf
 #    control_toolbox
-     controller_interface
+    controller_interface
 #    controller_manager
 #    hardware_interface
 #    realtime_tools
 #    control_msgs
+kdl_parser
 )
 
+find_package(orocos_kdl REQUIRED)
 find_package(Eigen REQUIRED)
 
 ## System dependencies are found with CMake's conventions
@@ -22,14 +26,15 @@ find_package(Eigen REQUIRED)
 # Declare catkin package
 catkin_package(
      CATKIN_DEPENDS
-     roscpp
+#     roscpp
 #    urdf
 #    control_toolbox
-     controller_interface
+#     controller_interface
 #    controller_manager
 #    hardware_interface
 #    realtime_tools
 #    control_msgs
+     DEPENDS orocos_kdl
      INCLUDE_DIRS include ${EIGEN_INCLUDE_DIRS}
      LIBRARIES ${PROJECT_NAME}
 )
@@ -47,11 +52,13 @@ include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
                             include/hqp_controllers/hqp_velocity_controller.h
                             src/task.cpp
-                            include/hqp_controllers/task_manager.h
-                            src/task_manager.cpp
                             include/hqp_controllers/task.h
+                            src/task_manager.cpp
+                            include/hqp_controllers/task_manager.h
                             src/task_object.cpp
-                            include/hqp_controllers/task_object.h)
+                            include/hqp_controllers/task_object.h
+                            src/task_geometry.cpp
+                            include/hqp_controllers/task_geometry.h)
 
 ## Declare a cpp executable
 # add_executable(hqp_velocity_controller_node src/hqp_velocity_controller_node.cpp)
@@ -60,7 +67,7 @@ add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(hqp_velocity_controller_node hqp_velocity_controller_generate_messages_cpp)
 
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${orocos_kdl_LIBRARIES})
 
 #############
 ## Install ##

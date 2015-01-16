@@ -3,11 +3,13 @@
 
 #include <vector>
 #include <string>
-
 #include <ros/node_handle.h>
+#include <hqp_controllers/task_manager.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <controller_interface/controller.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <kdl/tree.hpp>
+#include <kdl_parser/kdl_parser.hpp>
 
 namespace hqp_controllers
 {
@@ -36,6 +38,7 @@ namespace hqp_controllers
   private:
 
     ros::Subscriber sub_command_;
+    TaskManager task_manager_;
     void commandCB(const std_msgs::Float64MultiArrayConstPtr& msg); 
   };
 

@@ -19,6 +19,12 @@
   <param name="robot_description"
 	 command="$(find xacro)/xacro.py '$(find apple_description)/urdf/apple.urdf.xacro' prefix:=$(arg hardware_interface)" />
 
+  <!-- Load the collision objects -->
+  <rosparam file="$(find apple_description)/collision/collision.yaml" command="load"/>
+
+  <!--param name="/apple/apple_hqp_vel_controller/robot_description"
+	 command="$(find xacro)/xacro.py '$(find apple_description)/urdf/apple.urdf.xacro' prefix:=$(arg hardware_interface)" /-->
+
   <!-- Load joint controller configurations from YAML file to parameter server -->
   <rosparam file="$(find lbr_iiwa_control)/config/lbr_iiwa_control.yaml" command="load" ns="/apple"  />
   <rosparam file="$(find velvet_fingers_control)/config/velvet_fingers_control.yaml" command="load" ns="/apple"  />
@@ -26,7 +32,10 @@
 
   <!-- load the controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
-	output="screen" ns="/apple" args="$(arg controllers)" />
+	output="screen" ns="/apple" args="$(arg controllers)" >
+</node>
+
+
 
   <!-- convert joint states to TF transforms for rviz, etc -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
