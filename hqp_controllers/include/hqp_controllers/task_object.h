@@ -16,15 +16,14 @@ class TaskObject
 public:
 
     TaskObject();
-    TaskObject(std::string frame, unsigned int priority, boost::shared_ptr<KDL::Chain> chain);
+    TaskObject(std::string frame, boost::shared_ptr<KDL::Chain> chain);
 
     void setFrame(std::string frame);
-    void setPriority(unsigned int priority);
-    void setOffset(boost::shared_ptr<Eigen::Affine3d> offset);
+    void setChain(boost::shared_ptr<KDL::Chain> chain);
     void addGeometry(boost::shared_ptr<TaskGeometry> geometry);
 
     std::string getFrame() const;
-    unsigned int getPriority() const;
+    boost::shared_ptr<KDL::Chain> getChain() const;
     boost::shared_ptr<Eigen::Affine3d> getPose() const;
     boost::shared_ptr<Eigen::MatrixXd> getJacobian() const;
     boost::shared_ptr<std::vector<boost::shared_ptr<TaskGeometry> > > getGeometries() const;
@@ -35,7 +34,6 @@ public:
 private:
 
     std::string frame_; ///< frame to which the task object is attached
-    unsigned int priority_;
     boost::shared_ptr<Eigen::Affine3d> pose_;   ///< pose of the task object in the root frame (the chain base frame)
     boost::shared_ptr<Eigen::MatrixXd> jacobian_; ///< jacobian of the task object frame
     boost::shared_ptr<KDL::ChainFkSolverPos_recursive>    fk_solver_;

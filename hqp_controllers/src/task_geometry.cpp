@@ -1,6 +1,7 @@
 #include <hqp_controllers/task_geometry.h>
 #include <kdl/frames.hpp>
 #include <kdl/jacobian.hpp>
+#include <ros/ros.h>
 
 namespace hqp_controllers {
 
@@ -9,17 +10,11 @@ TaskGeometry::TaskGeometry() : frame_(""), type_(UNDEFINED_GEOMETRY) {}
 //----------------------------------------------------
 TaskGeometry::TaskGeometry(std::string frame) : frame_(frame), type_(UNDEFINED_GEOMETRY) {}
 //----------------------------------------------------
-TaskGeometry::TaskGeometry(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset) : frame_(frame), offset_(offset), type_(UNDEFINED_GEOMETRY) {}
-//----------------------------------------------------
 void TaskGeometry::setFrame(std::string frame) {frame_ = frame;}
-//----------------------------------------------------
-void TaskGeometry::setOffset(const boost::shared_ptr<Eigen::Affine3d> offset) {offset_ = offset;}
 //----------------------------------------------------
 std::string TaskGeometry::getFrame() const {return frame_;}
 //----------------------------------------------------
 TaskGeometryType TaskGeometry::getType() const {return type_;}
-//----------------------------------------------------
-boost::shared_ptr<Eigen::Affine3d> TaskGeometry::getOffset() const {return offset_;}
 //----------------------------------------------------
 Point::Point() : TaskGeometry()
 {
@@ -31,33 +26,46 @@ Point::Point(std::string frame) : TaskGeometry(frame)
     type_=POINT;
 }
 //----------------------------------------------------
-Point::Point(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset) : TaskGeometry(frame, offset)
+Point::Point(std::string frame, boost::shared_ptr<Eigen::Vector3d> p) : TaskGeometry(frame), p_(p)
 {
     type_=POINT;
 }
 //----------------------------------------------------
-Capsule::Capsule() : TaskGeometry(), radius_(0), length_(0)
+void Point::setPosition(boost::shared_ptr<Eigen::Vector3d> p) {p_ = p;}
+//----------------------------------------------------
+boost::shared_ptr<Eigen::Vector3d> Point::getPosition() const {return p_;}
+//----------------------------------------------------
+Capsule::Capsule() : TaskGeometry(), r_(0)
 {
     type_=CAPSULE;
 }
 //----------------------------------------------------
-Capsule::Capsule(std::string frame) : TaskGeometry(frame), radius_(0), length_(0)
+Capsule::Capsule(std::string frame) : TaskGeometry(frame), r_(0)
 {
     type_=CAPSULE;
 }
 //----------------------------------------------------
-Capsule::Capsule(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset) : TaskGeometry(frame, offset), radius_(0), length_(0)
+Capsule::Capsule(std::string frame, boost::shared_ptr<Eigen::Vector3d> p, boost::shared_ptr<Eigen::Vector3d> t, double r) : TaskGeometry(frame), p_(p), t_(t), r_(r)
 {
+    ROS_ASSERT(r_ >= 0);
     type_=CAPSULE;
 }
 //----------------------------------------------------
-void Capsule::setRadius(double radius) {radius_ = radius;}
+void Capsule::setRadius(double r)
+{
+    r_ = r;
+    ROS_ASSERT(r_ >= 0);
+}
 //----------------------------------------------------
-void Capsule::setLength(double length) {length_ = length;}
+void Capsule::setStartPosition(boost::shared_ptr<Eigen::Vector3d> p) {p_ = p;}
 //----------------------------------------------------
-double Capsule::getRadius() const {return radius_;}
+void Capsule::setEndPosition(boost::shared_ptr<Eigen::Vector3d> t) {t_ = t;}
 //----------------------------------------------------
-double Capsule::getLength() const {return length_;}
+double Capsule::getRadius() const {return r_;}
+//----------------------------------------------------
+boost::shared_ptr<Eigen::Vector3d> Capsule::getStartPosition() const {return p_;}
+//----------------------------------------------------
+boost::shared_ptr<Eigen::Vector3d> Capsule::getEndPosition() const {return t_;}
 //----------------------------------------------------
 Plane::Plane() : TaskGeometry(), d_(0.0)
 {
@@ -69,7 +77,7 @@ Plane::Plane(std::string frame) : TaskGeometry(frame), d_(0.0)
     type_=PLANE;
 }
 //----------------------------------------------------
-Plane::Plane(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset) : TaskGeometry(frame, offset)
+Plane::Plane(std::string frame, boost::shared_ptr<Eigen::Vector3d> n, double d) : TaskGeometry(frame), n_(n), d_(d)
 {
     type_=PLANE;
 }

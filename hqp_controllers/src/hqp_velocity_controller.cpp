@@ -78,62 +78,56 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
         for (int32_t i = 0; i < collision_objects.size(); ++i)
         {
             std::string frame = (std::string)collision_objects[i]["frame"];
-            int priority = (int)collision_objects[i]["priority"];
             boost::shared_ptr<KDL::Chain> chain(new KDL::Chain);
             if(!k_tree->getChain(collision_root,frame,(*chain)))
             {
                 ROS_ERROR("Could not get kinematic chain from %s to %s.", collision_root.c_str(),frame.c_str());
                 return false;
             }
-            std::cout<<"tree jnt nr: "<<k_tree->getNrOfJoints()<<std::endl;
-            std::cout<<"tree seg nr:"<<k_tree->getNrOfSegments()<<std::endl;
 
-            boost::shared_ptr<TaskObject> t_obj(new TaskObject(frame,priority,chain)); //create a new task object
+            boost::shared_ptr<TaskObject> t_obj(new TaskObject(frame,chain)); //create a new task object
             unsigned int m = (unsigned int)collision_objects[i]["geometries"].size();
-            ROS_ASSERT(m >= 1);
-            boost::shared_ptr<Eigen::Affine3d> offset(new Eigen::Affine3d);
+            ROS_ASSERT(m >= 1); //make sure there is at least one task geometry associated with the newly created task object
 
             //iterate through the geometries corresponding to the present collision object
             for (int32_t j = 0; j < m ;j++)
             {
-                Eigen::Matrix3d rot;
-                Eigen::Vector3d rpy;
-                Eigen::Vector3d t;
-                for (int32_t k = 0; k < 3 ;k++)
-                {
-                    rpy(k) = (double)collision_objects[i]["geometries"][j]["rpy"][k];
-                    t(k) = (double)collision_objects[i]["geometries"][j]["t"][k];
-                }
-
-                rot=Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
-                offset->linear() = rot;
-                offset->translation() = t;
-
                 boost::shared_ptr<TaskGeometry> t_geom;
                 std::string type = (std::string)collision_objects[i]["geometries"][j]["type"];
                 if (type == "POINT")
-                    t_geom.reset(new Point(frame,offset));
+                {
+                    //read the point's position
+                    boost::shared_ptr<Eigen::Vector3d> p(new Eigen::Vector3d);
+                   for (int32_t k = 0; k < 3; k++)
+                       (*p)(k)= (double)collision_objects[i]["geometries"][j]["p"][k];
+
+                    t_geom.reset(new Point(frame,p));
+                }
                 else if (type == "PLANE")
                 {
-                    t_geom.reset(new Plane(frame,offset));
-
                     //read normal and offset of the plane
                     boost::shared_ptr<Eigen::Vector3d> n(new Eigen::Vector3d);
                     for (int32_t k = 0; k < 3 ;k++)
-                        (*n)(k) = (double)collision_objects[i]["geometries"][j]["dim"][k];
+                        (*n)(k) = (double)collision_objects[i]["geometries"][j]["n"][k];
 
-                    double d = (double)collision_objects[i]["geometries"][j]["dim"][3];
+                    double d = (double)collision_objects[i]["geometries"][j]["d"];
                     d=d/n->norm(); n->normalize(); //normalize the plane quantities
-                    static_cast<Plane*>(t_geom.get())->setNormal(n);
-                    static_cast<Plane*>(t_geom.get())->setOffset(d);
+
+                    t_geom.reset(new Plane(frame,n,d));
                 }
                 else if (type == "CAPSULE")
                 {
-                    t_geom.reset(new Capsule(frame,offset));
-                    double r= (double)collision_objects[i]["geometries"][j]["dim"][0];
-                    double l= (double)collision_objects[i]["geometries"][j]["dim"][1];
-                    static_cast<Capsule*>(t_geom.get())->setRadius(r);
-                    static_cast<Capsule*>(t_geom.get())->setLength(l);
+                    //read the capsule's start vector, end vector and radius
+                    boost::shared_ptr<Eigen::Vector3d> p(new Eigen::Vector3d);
+                                        boost::shared_ptr<Eigen::Vector3d> t(new Eigen::Vector3d);
+                    for (int32_t k = 0; k < 3 ;k++)
+                    {
+                        (*p)(k) = (double)collision_objects[i]["geometries"][j]["p"][k];
+                                                (*t)(k) = (double)collision_objects[i]["geometries"][j]["t"][k];
+                    }
+                     double r = (double)collision_objects[i]["geometries"][j]["r"];
+
+                    t_geom.reset(new Capsule(frame,p,t,r));
                 }
                 else
                 {

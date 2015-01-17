@@ -58,7 +58,9 @@ add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
                             src/task_object.cpp
                             include/hqp_controllers/task_object.h
                             src/task_geometry.cpp
-                            include/hqp_controllers/task_geometry.h)
+                            include/hqp_controllers/task_geometry.h
+                            include/hqp_controllers/conversions.h
+                            include/hqp_controllers/utilities.h)
 
 ## Declare a cpp executable
 # add_executable(hqp_velocity_controller_node src/hqp_velocity_controller_node.cpp)

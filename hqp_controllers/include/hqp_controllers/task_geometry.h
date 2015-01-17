@@ -13,19 +13,16 @@ class TaskGeometry
 public:
     TaskGeometry();
     TaskGeometry(std::string frame);
-    TaskGeometry(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset);
     void setFrame(std::string frame);
-    void setOffset(const boost::shared_ptr<Eigen::Affine3d> offset);
 
     std::string getFrame() const;
-    boost::shared_ptr<Eigen::Affine3d> getOffset() const;
     TaskGeometryType getType() const;
 
 protected:
 
     TaskGeometryType type_;
-    std::string frame_; ///< parent frame
-    boost::shared_ptr<Eigen::Affine3d> offset_; ///<  offset transform from the parent frame
+    std::string frame_;
+
 //    boost::shared_ptr<Eigen::Affine3d> pose_;   ///< pose of the Geometry in the root frame (the chain base frame)
 //    boost::shared_ptr<Eigen::MatrixXd> jacobian_; ///< jacobian of the geometry
 };
@@ -36,7 +33,15 @@ public:
 
     Point();
     Point(std::string frame);
-    Point(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset);
+    Point(std::string frame, boost::shared_ptr<Eigen::Vector3d> p);
+
+    void setPosition(boost::shared_ptr<Eigen::Vector3d> p);
+    boost::shared_ptr<Eigen::Vector3d> getPosition() const;
+
+protected:
+
+    boost::shared_ptr<Eigen::Vector3d> p_; ///< position of the point expressed in frame
+
 };
 //----------------------------------------------------------------------------------------------------
 class Capsule: public TaskGeometry
@@ -45,18 +50,22 @@ public:
 
     Capsule();
     Capsule(std::string frame);
-    Capsule(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset);
+    Capsule(std::string frame, boost::shared_ptr<Eigen::Vector3d> p, boost::shared_ptr<Eigen::Vector3d> t, double r);
 
     void setRadius(double radius);
-    void setLength(double length);
+    void setStartPosition(boost::shared_ptr<Eigen::Vector3d> p);
+        void setEndPosition(boost::shared_ptr<Eigen::Vector3d> t);
 
     double getRadius() const;
-    double getLength() const;
+    boost::shared_ptr<Eigen::Vector3d> getStartPosition() const;
+        boost::shared_ptr<Eigen::Vector3d> getEndPosition() const;
 
 private:
 
-    double radius_;
-    double length_;
+    boost::shared_ptr<Eigen::Vector3d> p_;
+        boost::shared_ptr<Eigen::Vector3d> t_;
+    double r_;
+
 };
 //----------------------------------------------------------------------------------------------------
 class Plane: public TaskGeometry
@@ -65,7 +74,7 @@ public:
 
     Plane();
     Plane(std::string frame);
-    Plane(std::string frame, boost::shared_ptr<Eigen::Affine3d> offset);
+    Plane(std::string frame, boost::shared_ptr<Eigen::Vector3d> n, double d);
 
     void setNormal(boost::shared_ptr<Eigen::Vector3d> n);
     void setOffset(double b);

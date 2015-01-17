@@ -17,7 +17,7 @@
 
   <!-- dummy citi truck-->
   <xacro:dummy_citi_truck name="dummy_citi_truck" parent="world">
-    <origin xyz="0 0 0.15" rpy="0 0 0" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:dummy_citi_truck> 
 
   <!--lbr -->
