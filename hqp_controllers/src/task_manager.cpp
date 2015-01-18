@@ -64,10 +64,10 @@ void TaskManager::removeTask(unsigned int id)
 
 }
 //------------------t----------------------------
-void TaskManager::computeTaskObjectsKinematics(const std::vector<hardware_interface::JointHandle>& joints)
+void TaskManager::computeTaskObjectsKinematics()
 {
     for(int i=0; i<t_obj_list_->size(); i++)
-        t_obj_list_->at(i)->computeKinematics(joints);
+        t_obj_list_->at(i)->computeKinematics();
 }
 //----------------------------------------------
 }//end namespace hqp_controllers

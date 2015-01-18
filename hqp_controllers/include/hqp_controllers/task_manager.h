@@ -18,7 +18,7 @@ public:
  void initialize (boost::shared_ptr<KDL::Tree> k_tree, boost::shared_ptr<std::vector<boost::shared_ptr<TaskObject> > > t_obj_list);
  void addTask(boost::shared_ptr<Task>);
  void removeTask(unsigned int id);
- void computeTaskObjectsKinematics(const std::vector<hardware_interface::JointHandle>& joints);
+ void computeTaskObjectsKinematics();
 
 private:
  bool initialized_;

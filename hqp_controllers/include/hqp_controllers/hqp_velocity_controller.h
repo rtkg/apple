@@ -10,6 +10,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <kdl/tree.hpp>
 #include <kdl_parser/kdl_parser.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace hqp_controllers
 {
@@ -27,7 +28,8 @@ namespace hqp_controllers
     ~HQPVelocityController();
 
     std::vector< std::string > joint_names_;
-    std::vector< hardware_interface::JointHandle > joints_;
+    boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints_;
+
     std::vector< double > commands_;
     unsigned int n_joints_;
 

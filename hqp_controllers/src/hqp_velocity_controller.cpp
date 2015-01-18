@@ -9,6 +9,7 @@ namespace hqp_controllers
 //-----------------------------------------------------------------------
 HQPVelocityController::HQPVelocityController()
 {
+    joints_.reset(new std::vector< hardware_interface::JointHandle >);
     commands_.clear();
 }
 //-----------------------------------------------------------------------
@@ -32,7 +33,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
     {
         try
         {
-            joints_.push_back(hw->getHandle(joint_names_[i]));
+            joints_->push_back(hw->getHandle(joint_names_[i]));
         }
         catch (const hardware_interface::HardwareInterfaceException& e)
         {
@@ -85,7 +86,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
                 return false;
             }
 
-            boost::shared_ptr<TaskObject> t_obj(new TaskObject(frame,chain)); //create a new task object
+            boost::shared_ptr<TaskObject> t_obj(new TaskObject(chain,joints_)); //create a new task object
             unsigned int m = (unsigned int)collision_objects[i]["geometries"].size();
             ROS_ASSERT(m >= 1); //make sure there is at least one task geometry associated with the newly created task object
 
@@ -98,8 +99,8 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
                 {
                     //read the point's position
                     boost::shared_ptr<Eigen::Vector3d> p(new Eigen::Vector3d);
-                   for (int32_t k = 0; k < 3; k++)
-                       (*p)(k)= (double)collision_objects[i]["geometries"][j]["p"][k];
+                    for (int32_t k = 0; k < 3; k++)
+                        (*p)(k)= (double)collision_objects[i]["geometries"][j]["p"][k];
 
                     t_geom.reset(new Point(frame,p));
                 }
@@ -119,13 +120,13 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
                 {
                     //read the capsule's start vector, end vector and radius
                     boost::shared_ptr<Eigen::Vector3d> p(new Eigen::Vector3d);
-                                        boost::shared_ptr<Eigen::Vector3d> t(new Eigen::Vector3d);
+                    boost::shared_ptr<Eigen::Vector3d> t(new Eigen::Vector3d);
                     for (int32_t k = 0; k < 3 ;k++)
                     {
                         (*p)(k) = (double)collision_objects[i]["geometries"][j]["p"][k];
-                                                (*t)(k) = (double)collision_objects[i]["geometries"][j]["t"][k];
+                        (*t)(k) = (double)collision_objects[i]["geometries"][j]["t"][k];
                     }
-                     double r = (double)collision_objects[i]["geometries"][j]["r"];
+                    double r = (double)collision_objects[i]["geometries"][j]["r"];
 
                     t_geom.reset(new Capsule(frame,p,t,r));
                 }
@@ -158,19 +159,21 @@ void HQPVelocityController::starting(const ros::Time& time)
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
 {
-    task_manager_.computeTaskObjectsKinematics(joints_); //compute jacobians and poses of the task objects
+    task_manager_.computeTaskObjectsKinematics(); //compute jacobians and poses of the task objects
 
     for(unsigned int i=0; i<n_joints_; i++)
-        joints_[i].setCommand(commands_[i]);
+        joints_->at(i).setCommand(commands_[i]);
 
-    //    for (int i=0; i<n_joints_; i++)
-    //    {
-    //        std::cout<<joints_[i].getName()<<std::endl;
-    //        std::cout<<joints_[i].getPosition()<<std::endl;
-    //        std::cout<<joints_[i].getVelocity()<<std::endl;
-    //        std::cout<<joints_[i].getEffort()<<std::endl;
-    //        std::cout<<std::endl;
-    //    }
+    // ================= DEBUG PRINT ============================
+//    for (int i=0; i<n_joints_; i++)
+//    {
+//        std::cout<<joints_->at(i).getName()<<std::endl;
+//        std::cout<<joints_->at(i).getPosition()<<std::endl;
+//        std::cout<<joints_->at(i).getVelocity()<<std::endl;
+//        std::cout<<joints_->at(i).getEffort()<<std::endl;
+//        std::cout<<std::endl;
+//    }
+    // ================= DEBUG PRINT END ============================
 }
 //-----------------------------------------------------------------------
 void HQPVelocityController::commandCB(const std_msgs::Float64MultiArrayConstPtr& msg)

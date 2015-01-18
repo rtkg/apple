@@ -14,32 +14,36 @@ namespace hqp_controllers {
 class TaskObject
 {
 public:
-
     TaskObject();
-    TaskObject(std::string frame, boost::shared_ptr<KDL::Chain> chain);
+    TaskObject(boost::shared_ptr<KDL::Chain> chain, boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints);
 
-    void setFrame(std::string frame);
-    void setChain(boost::shared_ptr<KDL::Chain> chain);
     void addGeometry(boost::shared_ptr<TaskGeometry> geometry);
+    void setChain(boost::shared_ptr<KDL::Chain> chain);
+    void setJoints(boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints);
 
     std::string getFrame() const;
     boost::shared_ptr<KDL::Chain> getChain() const;
+    boost::shared_ptr<std::vector< hardware_interface::JointHandle > > getJoints() const;
+    boost::shared_ptr<std::vector<boost::shared_ptr<TaskGeometry> > > getGeometries() const;
     boost::shared_ptr<Eigen::Affine3d> getPose() const;
     boost::shared_ptr<Eigen::MatrixXd> getJacobian() const;
-    boost::shared_ptr<std::vector<boost::shared_ptr<TaskGeometry> > > getGeometries() const;
+    boost::shared_ptr<KDL::Jacobian> getChainJacobian() const;
    /** Computes the the pose of the task object (forward kinematics) and the jacobian.
     Input: joint angles q*/
-    void computeKinematics(const std::vector< hardware_interface::JointHandle >& joints);
+    void computeKinematics();
 
 private:
+    void updateJointMap();
 
-    std::string frame_; ///< frame to which the task object is attached
     boost::shared_ptr<Eigen::Affine3d> pose_;   ///< pose of the task object in the root frame (the chain base frame)
-    boost::shared_ptr<Eigen::MatrixXd> jacobian_; ///< jacobian of the task object frame
+    boost::shared_ptr<Eigen::MatrixXd> jacobian_; ///< full jacobian of the task object frame
+    boost::shared_ptr<KDL::Jacobian> chain_jacobian_; ///< jacobian for only those (unlocked) joints participating in the TaskObject::chain_
     boost::shared_ptr<KDL::ChainFkSolverPos_recursive>    fk_solver_;
     boost::shared_ptr<KDL::ChainJntToJacSolver> j_solver_;
     boost::shared_ptr<std::vector<boost::shared_ptr<TaskGeometry> > > geometries_;
+    boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints_;
     boost::shared_ptr<KDL::Chain> chain_;
+    boost::shared_ptr<Eigen::VectorXi> joint_map_; ///< associates the members of TaskObject::joints_ to the (unlocked) joints participating in the TaskObject::chain_, e.g., joint_map_ = [4, 2, 0]^T means that TaskObject::chain_ joints 0,1,2 correspond to the controlled joints 4,2,0 respectively
 };
 
 #endif // TASK_OBJECT_H
