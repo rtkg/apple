@@ -86,7 +86,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
                 return false;
             }
 
-            boost::shared_ptr<TaskObject> t_obj(new TaskObject(chain,joints_)); //create a new task object
+            boost::shared_ptr<TaskObject> t_obj(new TaskObject(i,chain,joints_)); //create a new task object
             unsigned int m = (unsigned int)collision_objects[i]["geometries"].size();
             ROS_ASSERT(m >= 1); //make sure there is at least one task geometry associated with the newly created task object
 

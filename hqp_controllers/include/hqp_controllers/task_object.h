@@ -15,12 +15,14 @@ class TaskObject
 {
 public:
     TaskObject();
-    TaskObject(boost::shared_ptr<KDL::Chain> chain, boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints);
+    TaskObject(unsigned int id, boost::shared_ptr<KDL::Chain> chain, boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints);
 
     void addGeometry(boost::shared_ptr<TaskGeometry> geometry);
     void setChain(boost::shared_ptr<KDL::Chain> chain);
     void setJoints(boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints);
+    void setId(unsigned int id);
 
+    unsigned int getId() const;
     std::string getFrame() const;
     boost::shared_ptr<KDL::Chain> getChain() const;
     boost::shared_ptr<std::vector< hardware_interface::JointHandle > > getJoints() const;
@@ -35,6 +37,8 @@ public:
 private:
     void updateJointMap();
 
+    unsigned int id_;
+    std::string frame_;
     boost::shared_ptr<Eigen::Affine3d> pose_;   ///< pose of the task object in the root frame (the chain base frame)
     boost::shared_ptr<Eigen::MatrixXd> jacobian_; ///< full jacobian of the task object frame
     boost::shared_ptr<KDL::Jacobian> chain_jacobian_; ///< jacobian for only those (unlocked) joints participating in the TaskObject::chain_
