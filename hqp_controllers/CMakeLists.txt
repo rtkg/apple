@@ -6,15 +6,10 @@ set(CMAKE_BUILD_TYPE Debug)
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS
      cmake_modules
-    roscpp
-#    urdf
-#    control_toolbox
-    controller_interface
-#    controller_manager
-#    hardware_interface
-#    realtime_tools
-#    control_msgs
-kdl_parser
+     roscpp
+     controller_interface
+     hqp_controllers_msgs
+     kdl_parser
 )
 
 find_package(orocos_kdl REQUIRED)
@@ -26,14 +21,10 @@ find_package(Eigen REQUIRED)
 # Declare catkin package
 catkin_package(
      CATKIN_DEPENDS
-#     roscpp
-#    urdf
-#    control_toolbox
-#     controller_interface
-#    controller_manager
-#    hardware_interface
-#    realtime_tools
-#    control_msgs
+     roscpp
+     controller_interface
+     hqp_controllers_msgs
+     kdl_parser
      DEPENDS orocos_kdl
      INCLUDE_DIRS include ${EIGEN_INCLUDE_DIRS}
      LIBRARIES ${PROJECT_NAME}
@@ -62,14 +53,15 @@ add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
                             include/hqp_controllers/conversions.h
                             include/hqp_controllers/utilities.h)
 
-## Declare a cpp executable
-# add_executable(hqp_velocity_controller_node src/hqp_velocity_controller_node.cpp)
+add_executable(hqp_velocity_controller_test test/test.cpp)
 
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${orocos_kdl_LIBRARIES})
+target_link_libraries(hqp_velocity_controller_test ${catkin_LIBRARIES})
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(hqp_velocity_controller_node hqp_velocity_controller_generate_messages_cpp)
 
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${orocos_kdl_LIBRARIES})
+
 
 #############
 ## Install ##

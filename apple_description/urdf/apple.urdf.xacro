@@ -9,8 +9,6 @@
   <xacro:include filename="$(find velvet_fingers_description)/urdf/velvet_fingers.xacro"/>
    <!--Include the CitiTruck-->
   <xacro:include filename="$(find apple_description)/urdf/citi_truck.xacro"/>
-  <!--Include the dummy CitiTruck (simplified geometry)-->
-  <!--xacro:include filename="$(find apple_description)/urdf/dummy_citi_truck.xacro"/-->
  <!-- Gazebo plugins -->
   <xacro:include filename="$(find apple_description)/gazebo/gazebo.urdf.xacro"/>
 
@@ -21,11 +19,6 @@
   <xacro:citi_truck name="citi_truck" parent="world">
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:citi_truck> 
-
-  <!-- dummy citi truck-->
-  <!--xacro:dummy_citi_truck name="dummy_citi_truck" parent="world">
-    <origin xyz="0 0 0" rpy="0 0 0" />
-  </xacro:dummy_citi_truck--> 
 
   <!--lbr -->
   <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="citi_truck_base">

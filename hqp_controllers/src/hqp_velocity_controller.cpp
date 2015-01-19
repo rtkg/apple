@@ -61,6 +61,8 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
         return false;
     }
 
+    task_manager_.setKinematicTree(k_tree);
+
     //Load the collision root from the parameter server
     std::string collision_root;
     if (n.searchParam("collision_root", searched_param))
@@ -72,8 +74,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
     //Load the collision objects from the parameter server
     XmlRpc::XmlRpcValue collision_objects;
-    boost::shared_ptr<std::vector<boost::shared_ptr<TaskObject> > > t_obj_list(new std::vector<boost::shared_ptr<TaskObject> >); //this vector collects all the task objects loaded from the parameter server
-    if (n.searchParam("collision_objects", searched_param))
+     if (n.searchParam("collision_objects", searched_param))
     {
         n.getParam(searched_param,collision_objects);
         for (int32_t i = 0; i < collision_objects.size(); ++i)
@@ -137,7 +138,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
                 }
                 t_obj->addGeometry(t_geom); //add the task geometries to the task object
             }
-            t_obj_list->push_back(t_obj);
+            task_manager_.addTaskObject(t_obj); //store the new object in the task manager
         }
         ROS_INFO("Collision objects loaded");
     }
@@ -146,7 +147,6 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
         ROS_WARN("No collsion objects specified!");
     }
 
-    task_manager_.initialize(k_tree,t_obj_list);
     sub_command_ = n.subscribe<std_msgs::Float64MultiArray>("command", 1, &HQPVelocityController::commandCB, this);
     return true;
 }

@@ -1,19 +1,44 @@
 #include <hqp_controllers/task_manager.h>
 #include <kdl/jntarray.hpp>
+#include <ros/ros.h>
 
 namespace hqp_controllers{
 
 //----------------------------------------------
-TaskManager::TaskManager() : initialized_(false){}
-//----------------------------------------------
-bool TaskManager::isInitialized() const {return initialized_;}
-//----------------------------------------------
-void TaskManager::initialize (boost::shared_ptr<KDL::Tree> k_tree, boost::shared_ptr<std::vector<boost::shared_ptr<TaskObject> > > t_obj_list)
+TaskManager::TaskManager()
 {
-    k_tree_ = k_tree;
-    t_obj_list_ = t_obj_list;
-
-    //=================== DEBUG PRINTING ==============================
+     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+}
+//----------------------------------------------
+TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree)
+{
+         t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+}
+//----------------------------------------------
+void TaskManager::setKinematicTree(boost::shared_ptr<KDL::Tree> k_tree) {k_tree_ = k_tree;}
+//----------------------------------------------
+bool TaskManager::addTaskObject(boost::shared_ptr<TaskObject> t_obj)
+{
+    //Make sure an object with the same id doesn't already exist in the map
+     std::pair<std::map<unsigned int, boost::shared_ptr<TaskObject> >::iterator,bool> it;
+    it = t_objs_->insert(std::pair<unsigned int, boost::shared_ptr<TaskObject> >(t_obj->getId(),t_obj));
+    if(it.second == false)
+    {
+        ROS_ERROR("Cannot add task object with id %d since it already exists.", t_obj->getId());
+        return false;
+    }
+    return true;
+}
+//----------------------------------------------
+boost::shared_ptr<KDL::Tree> TaskManager::getKinematicTree()const {return k_tree_;}
+//----------------------------------------------
+unsigned int TaskManager::getValidTaskObjectId() const
+{
+    //The object with the largest id (id's are also map keys) is at the end
+    return t_objs_->rbegin()->first + 1;
+}
+//----------------------------------------------
+//=================== DEBUG PRINTING ==============================
 //    std::cout<<"TASK OBJECT LIST:"<<std::endl;
 //    for(int i=0; i<t_obj_list_->size(); i++)
 //    {
@@ -49,10 +74,8 @@ void TaskManager::initialize (boost::shared_ptr<KDL::Tree> k_tree, boost::shared
 //            std::cout<<std::endl<<std::endl;
 //        }
 //    }
-    //=================== END DEBUG PRINTING ==============================
+//=================== END DEBUG PRINTING ==============================
 
-    initialized_ = true;
-}
 //----------------------------------------------
 void TaskManager::addTask(boost::shared_ptr<Task>)
 {
@@ -66,8 +89,9 @@ void TaskManager::removeTask(unsigned int id)
 //------------------t----------------------------
 void TaskManager::computeTaskObjectsKinematics()
 {
-    for(int i=0; i<t_obj_list_->size(); i++)
-        t_obj_list_->at(i)->computeKinematics();
+    //iterate through all task objects and compute the kinematics
+    for (std::map<unsigned int, boost::shared_ptr<TaskObject> >::iterator it=t_objs_->begin(); it!=t_objs_->end(); ++it)
+        it->second->computeKinematics();
 }
 //----------------------------------------------
 }//end namespace hqp_controllers

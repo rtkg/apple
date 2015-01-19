@@ -23,7 +23,9 @@ TaskObject::TaskObject() : id_(0), frame_("")
 }
 //----------------------------------------------------
 TaskObject::TaskObject(unsigned int id, boost::shared_ptr<KDL::Chain> chain, boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints) : id_(id), chain_(chain), joints_(joints)
-{    pose_.reset(new Eigen::Affine3d);
+{
+    ROS_ASSERT(id_ >= 0);
+    pose_.reset(new Eigen::Affine3d);
      geometries_.reset(new std::vector<boost::shared_ptr<TaskGeometry> >);
       fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(*chain_));
        j_solver_.reset(new KDL::ChainJntToJacSolver(*chain_));
@@ -92,7 +94,11 @@ void TaskObject::setJoints(boost::shared_ptr<std::vector< hardware_interface::Jo
     jacobian_->setZero();
 }
 //----------------------------------------------------
-void TaskObject::setId(unsigned int id){id_ = id;}
+void TaskObject::setId(unsigned int id)
+{
+    id_ = id;
+    ROS_ASSERT(id_ >= 0);
+}
 //----------------------------------------------------
 unsigned int TaskObject::getId()const {return id_;}
 //----------------------------------------------------
@@ -110,6 +116,8 @@ void TaskObject::computeKinematics()
     for(unsigned int i=0; i<n_jnts; i++)
         q.data(i) = joints_->at((*joint_map_)(i)).getPosition();
 
+    q.data.setOnes(); q.data=q.data*0.1;
+
     //compute the chain jacobian
     KDL::Frame pose;
     KDL::Jacobian jacobian(n_jnts);
@@ -126,16 +134,13 @@ void TaskObject::computeKinematics()
     for(unsigned int i=0; i<n_jnts; i++)
         jacobian_->col((*joint_map_)(i)) = chain_jacobian_->data.col(i);
 
-
-    std::cout<<"number of joints: "<<n_jnts<<std::endl;
-    std::cout<<"Task object w. frame: "<<frame_<<std::endl;
-    std::cout<<"Pose translation: "<<std::endl<< pose_->translation().transpose()<<std::endl;
-    std::cout<<"Pose rotation: "<<std::endl<< pose_->rotation()<<std::endl;
-    std::cout<<"Chain jacobian: "<<std::endl<<chain_jacobian_->data<<std::endl;
-    std::cout<<"Jacobian: "<<std::endl<< *jacobian_<<std::endl;
-    std::cout<<std::endl;
-
-    exit(0);
+//    std::cout<<"number of joints: "<<n_jnts<<std::endl;
+//    std::cout<<"Task object w. frame: "<<frame_<<" and id: "<<id_<<std::endl;
+//    std::cout<<"Pose translation: "<<std::endl<< pose_->translation().transpose()<<std::endl;
+//    std::cout<<"Pose rotation: "<<std::endl<< pose_->rotation()<<std::endl;
+//    std::cout<<"Chain jacobian: "<<std::endl<<chain_jacobian_->data<<std::endl;
+//    std::cout<<"Jacobian: "<<std::endl<< *jacobian_<<std::endl;
+//    std::cout<<std::endl;
 
     //    //========= DEBUG PRINT CHAIN ==========
     //    std::ostringstream out;
@@ -143,27 +148,6 @@ void TaskObject::computeKinematics()
     //    std::cout<<"CHAIN:"<<std::endl;
     //    std::cout<<out.str()<<std::endl;
     //    //========= DEBUG PRINT CHAIN END ==========
-
-    //    for(unsigned int i=0; i<n_jnts; i++)
-    //    {
-    //        std::cout<<"CONTROLLED JNTS VS CHAIN JNTS: "<<std::endl;
-    //        if(chain_->segments[i].getJoint().getType()==KDL::Joint::None)
-    //            continue;
-
-    //        std::string jnt_name = chain_->segments[i].getJoint().getName();
-    //        for(unsigned int j=0; j<joints.size(); j++)
-    //        {
-    //            std::cout<<joints.at(j).getName()<<" | "<<jnt_name<<std::endl;
-    //            if(joints.at(j).getName() == jnt_name)
-    //            {
-    //                active_joints(j)=1;
-    //                q.data(i)=joints[j].getPosition();
-    //                break;
-    //            }
-    //        }
-
-    //    }
-
 }
 //----------------------------------------------------
 boost::shared_ptr<Eigen::Affine3d> TaskObject::getPose() const {return pose_;}
