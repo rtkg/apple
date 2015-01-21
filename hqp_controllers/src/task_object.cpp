@@ -11,9 +11,21 @@
 namespace hqp_controllers {
 
 //----------------------------------------------------
-TaskObject::TaskObject() : id_(0), frame_("")
+std::ostream& operator<<(std::ostream& str, TaskObject const& obj)
 {
-    pose_.reset(new Eigen::Affine3d);
+    str<<"TASK OBJECT: "<<std::endl;
+    str<<"link: "<<obj.link_<<std::endl;
+    str<<"root: "<<obj.root_<<std::endl;
+    str<<"id: "<<obj.id_<<std::endl;
+    for(unsigned int i=0; i<obj.geometries_->size();i++)
+        str<< *(obj.geometries_->at(i))<<std::endl;
+
+    str<<std::endl;
+}
+//----------------------------------------------------
+TaskObject::TaskObject() : id_(0), link_(""), root_("")
+{
+    trans_l_r_.reset(new Eigen::Affine3d);
     jacobian_.reset(new Eigen::MatrixXd);
     chain_jacobian_.reset(new KDL::Jacobian);
     chain_.reset(new KDL::Chain);
@@ -22,20 +34,20 @@ TaskObject::TaskObject() : id_(0), frame_("")
     joint_map_.reset(new Eigen::VectorXi);
 }
 //----------------------------------------------------
-TaskObject::TaskObject(unsigned int id, boost::shared_ptr<KDL::Chain> chain, boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints) : id_(id), chain_(chain), joints_(joints)
+TaskObject::TaskObject(unsigned int id, boost::shared_ptr<KDL::Chain> chain, std::string root, boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints) : id_(id), chain_(chain), root_(root), joints_(joints)
 {
     ROS_ASSERT(id_ >= 0);
-    pose_.reset(new Eigen::Affine3d);
-     geometries_.reset(new std::vector<boost::shared_ptr<TaskGeometry> >);
-      fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(*chain_));
-       j_solver_.reset(new KDL::ChainJntToJacSolver(*chain_));
+    trans_l_r_.reset(new Eigen::Affine3d);
+    geometries_.reset(new std::vector<boost::shared_ptr<TaskGeometry> >);
+    fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(*chain_));
+    j_solver_.reset(new KDL::ChainJntToJacSolver(*chain_));
 
-        updateJointMap();
+    updateJointMap();
 
-         jacobian_.reset(new Eigen::MatrixXd(6,joints_->size()));
-          jacobian_->setZero();
-           chain_jacobian_.reset(new KDL::Jacobian(joint_map_->rows()));
-           frame_ = chain_->segments.back().getName();
+    jacobian_.reset(new Eigen::MatrixXd(6,joints_->size()));
+    jacobian_->setZero();
+    chain_jacobian_.reset(new KDL::Jacobian(joint_map_->rows()));
+    link_ = chain_->segments.back().getName();
 }
 //----------------------------------------------------
 void TaskObject::updateJointMap()
@@ -73,16 +85,17 @@ void TaskObject::updateJointMap()
     // ============= DEBUG PRINT END =============================
 }
 //----------------------------------------------------
-void TaskObject::setChain(boost::shared_ptr<KDL::Chain> chain)
+void TaskObject::setChain(boost::shared_ptr<KDL::Chain> chain, std::string root)
 {
     chain_ = chain;
+    root_ = root;
     updateJointMap();
 
     fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(*chain_));
     j_solver_.reset(new KDL::ChainJntToJacSolver(*chain_));
 
     chain_jacobian_->resize(joint_map_->rows());
-      frame_ = chain_->segments.back().getName();
+    link_ = chain_->segments.back().getName();
 }
 //----------------------------------------------------
 void TaskObject::setJoints(boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints)
@@ -102,7 +115,9 @@ void TaskObject::setId(unsigned int id)
 //----------------------------------------------------
 unsigned int TaskObject::getId()const {return id_;}
 //----------------------------------------------------
-std::string TaskObject::getFrame() const{return frame_;}
+std::string TaskObject::getLink() const{return link_;}
+//----------------------------------------------------
+std::string TaskObject::getRoot() const{return root_;}
 //----------------------------------------------------
 boost::shared_ptr<KDL::Chain> TaskObject::getChain() const {return chain_;}
 //----------------------------------------------------
@@ -116,31 +131,33 @@ void TaskObject::computeKinematics()
     for(unsigned int i=0; i<n_jnts; i++)
         q.data(i) = joints_->at((*joint_map_)(i)).getPosition();
 
-    q.data.setOnes(); q.data=q.data*0.1;
-
     //compute the chain jacobian
     KDL::Frame pose;
     KDL::Jacobian jacobian(n_jnts);
     if(fk_solver_->JntToCart(q,pose) < 0)
-        ROS_ERROR("Could not compute forward kinematics of task object with frame %s.",frame_.c_str());
+        ROS_ERROR("Could not compute forward kinematics of task object with link %s.",link_.c_str());
 
     if(j_solver_->JntToJac(q, *chain_jacobian_) < 0)
-        ROS_ERROR("Could not compute jacobian of task object with frame %s.",frame_.c_str());
+        ROS_ERROR("Could not compute jacobian of task object with link %s.",link_.c_str());
 
-    KDLToEigen(pose, *pose_);
+    KDLToEigen(pose, *trans_l_r_);
 
     //map the chain jacobian to the controlled joint jacobian
     jacobian_->setZero();
     for(unsigned int i=0; i<n_jnts; i++)
         jacobian_->col((*joint_map_)(i)) = chain_jacobian_->data.col(i);
 
-//    std::cout<<"number of joints: "<<n_jnts<<std::endl;
-//    std::cout<<"Task object w. frame: "<<frame_<<" and id: "<<id_<<std::endl;
-//    std::cout<<"Pose translation: "<<std::endl<< pose_->translation().transpose()<<std::endl;
-//    std::cout<<"Pose rotation: "<<std::endl<< pose_->rotation()<<std::endl;
-//    std::cout<<"Chain jacobian: "<<std::endl<<chain_jacobian_->data<<std::endl;
-//    std::cout<<"Jacobian: "<<std::endl<< *jacobian_<<std::endl;
-//    std::cout<<std::endl;
+    //Transform the associated geometries
+    for(unsigned int i=0; i<geometries_->size(); i++)
+        geometries_->at(i)->setLinkTransform( *trans_l_r_);
+
+    //    std::cout<<"number of joints: "<<n_jnts<<std::endl;
+    //    std::cout<<"Task object w. frame: "<<frame_<<" and id: "<<id_<<std::endl;
+    //    std::cout<<"Pose translation: "<<std::endl<< pose_->translation().transpose()<<std::endl;
+    //    std::cout<<"Pose rotation: "<<std::endl<< pose_->rotation()<<std::endl;
+    //    std::cout<<"Chain jacobian: "<<std::endl<<chain_jacobian_->data<<std::endl;
+    //    std::cout<<"Jacobian: "<<std::endl<< *jacobian_<<std::endl;
+    //    std::cout<<std::endl;
 
     //    //========= DEBUG PRINT CHAIN ==========
     //    std::ostringstream out;
@@ -150,7 +167,7 @@ void TaskObject::computeKinematics()
     //    //========= DEBUG PRINT CHAIN END ==========
 }
 //----------------------------------------------------
-boost::shared_ptr<Eigen::Affine3d> TaskObject::getPose() const {return pose_;}
+boost::shared_ptr<Eigen::Affine3d> TaskObject::getLinkTransform() const {return trans_l_r_;}
 //----------------------------------------------------
 boost::shared_ptr<Eigen::MatrixXd> TaskObject::getJacobian() const {return jacobian_;}
 //----------------------------------------------------
@@ -158,6 +175,10 @@ boost::shared_ptr<KDL::Jacobian> TaskObject::getChainJacobian() const {return ch
 //----------------------------------------------------
 void TaskObject::addGeometry(boost::shared_ptr<TaskGeometry> geometry)
 {
+    //Make sure link and root frames correspond
+    ROS_ASSERT(link_ == geometry->getLink());
+    ROS_ASSERT(root_ == geometry->getRoot());
+
     geometries_->push_back(geometry);
 }
 //----------------------------------------------------

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <ros/node_handle.h>
+#include <ros/ros.h>
 #include <hqp_controllers/task_manager.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <controller_interface/controller.h>
@@ -11,6 +12,8 @@
 #include <kdl/tree.hpp>
 #include <kdl_parser/kdl_parser.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
+#include <hqp_controllers_msgs/SetTaskObject.h>
 
 namespace hqp_controllers
 {
@@ -40,8 +43,16 @@ namespace hqp_controllers
   private:
 
     ros::Subscriber sub_command_;
+    ros::ServiceServer set_task_obj_srv_;
     TaskManager task_manager_;
-    void commandCB(const std_msgs::Float64MultiArrayConstPtr& msg); 
+    boost::mutex lock_;
+
+    ///////////////
+    // CALLBACKS //
+    ///////////////
+
+    void commandCB(const std_msgs::Float64MultiArrayConstPtr& msg);
+    bool setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res);
   };
 
 

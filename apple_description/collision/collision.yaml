@@ -1,16 +1,21 @@
 collision_root: lbr_iiwa_link_0 
 collision_objects:
-      - frame: lbr_iiwa_link_7
-        geometries:
-        - type: POINT
-          p: [4.0, 5.0, 6.0] #position of the point expressed in frame
+#     - link: lbr_iiwa_link_7
+#       geometries:
+#       - type: 1 #POINT
+#         data: [0.2, -0.3, 0.8] #position of the point expressed in the link
 
-#      - frame: lbr_iiwa_link_6 #lbr_iiwa_link_2
+#      - link: lbr_iiwa_link_7
 #        geometries:
-#        - type: CAPSULE
-#          p: [7.0, 8.0, 9.0] #start position expressed in frame
-#          t: [10.0, 11.0, 12.0] #end position expressed in frame
-#          r: 0.2 #capsule radius
-#        - type: PLANE
-#          n: [0.7071, 0.0, 0.7071] #plane normal vector expressed in frame
-#          d: 0.1 #plane offset
+#        - type: 5 #CAPSULE
+#          data: [7.0, 8.0, 9.0, 11.0, 12.0, 13.0, 0.2] 
+#        - type: 3 #PLANE
+#          data: [0.7071, 0.0, 0.7071, 0.1] 
+
+      - link: lbr_iiwa_link_7
+        geometries:
+        - type: 4 #FRAME
+          data: [0.2, -0.3, 0.8, 0.0, 0.0, 0.0]
+
+
+
