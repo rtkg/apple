@@ -7,12 +7,12 @@ namespace hqp_controllers{
 //----------------------------------------------
 TaskManager::TaskManager()
 {
-     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+    t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
 }
 //----------------------------------------------
 TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree)
 {
-         t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+    t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
 }
 //----------------------------------------------
 void TaskManager::setKinematicTree(boost::shared_ptr<KDL::Tree> k_tree) {k_tree_ = k_tree;}
@@ -20,7 +20,7 @@ void TaskManager::setKinematicTree(boost::shared_ptr<KDL::Tree> k_tree) {k_tree_
 bool TaskManager::addTaskObject(boost::shared_ptr<TaskObject> t_obj)
 {
     //Make sure an object with the same id doesn't already exist in the map
-     std::pair<std::map<unsigned int, boost::shared_ptr<TaskObject> >::iterator,bool> it;
+    std::pair<std::map<unsigned int, boost::shared_ptr<TaskObject> >::iterator,bool> it;
     it = t_objs_->insert(std::pair<unsigned int, boost::shared_ptr<TaskObject> >(t_obj->getId(),t_obj));
     if(it.second == false)
     {
@@ -58,6 +58,25 @@ void TaskManager::computeTaskObjectsKinematics()
     //iterate through all task objects and compute the kinematics
     for (std::map<unsigned int, boost::shared_ptr<TaskObject> >::iterator it=t_objs_->begin(); it!=t_objs_->end(); ++it)
         it->second->computeKinematics();
+}
+//----------------------------------------------
+void TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const
+{
+    for(unsigned int i=0; i<vis_ids.size(); i++)
+    {
+        //Make sure the task object with id vis_ids(i) exists
+        std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(vis_ids(i));
+        if(it == t_objs_->end())
+        {
+            ROS_WARN("Could not find task object with id %d. Associated geometries can not be visualized.", vis_ids(i));
+            continue;
+        }
+
+        //Add markers for all geometries associated to the object with id vis_ids(i)
+        for(unsigned int j=0; j<it->second->getGeometries()->size();j++)
+            it->second->getGeometries()->at(j)->addMarker(t_geoms);
+
+    }
 }
 //----------------------------------------------
 }//end namespace hqp_controllers

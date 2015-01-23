@@ -1,4 +1,5 @@
 #include <hqp_controllers/task_geometry.h>
+#include <visualization_msgs/Marker.h>
 #include <kdl/frames.hpp>
 #include <kdl/jacobian.hpp>
 #include <ros/ros.h>
@@ -103,6 +104,34 @@ void Point::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     root_data_.reset(new Eigen::VectorXd( (*trans_l_r_) * (*p_) ));
 }
 //------------------------------------------------------------------------
+void Point::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    visualization_msgs::Marker marker;
+
+    marker.header.frame_id = link_;
+    marker.header.stamp = ros::Time();
+    marker.type = visualization_msgs::Marker::POINTS;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = (*p_)(0);
+    marker.pose.position.y = (*p_)(1);
+    marker.pose.position.z = (*p_)(2);
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = POINT_SCALE;
+    marker.scale.y = POINT_SCALE;
+    marker.scale.z = POINT_SCALE;
+    marker.color.r = POINT_RGBA[0];
+    marker.color.g = POINT_RGBA[1];
+    marker.color.b = POINT_RGBA[2];
+    marker.color.a = POINT_RGBA[3];
+
+    markers.markers.push_back(marker);
+
+    std::cout<<"Point: added marker..."<<std::endl;
+}
+//------------------------------------------------------------------------
 void Point::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
 {
     ROS_WARN("Point::computeWitnessPoints(...) not implemented yet!");
@@ -132,6 +161,11 @@ void Line::setLinkData(Eigen::VectorXd const& link_data)
     v_->normalize(); //normalize the direction vector just to make sure
 }
 //------------------------------------------------------------------------
+void Line::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    ROS_WARN("Line::addMarker(...) is not implemented yet!");
+}
+//------------------------------------------------------------------------
 void Line::setLinkTransform(Eigen::Affine3d const& trans_l_r)
 {
     trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
@@ -157,6 +191,11 @@ Plane::Plane(std::string const& link, std::string const& root, Eigen::VectorXd c
 {
     type_ = PLANE;
     setLinkData(link_data);
+}
+//------------------------------------------------------------------------
+void Plane::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    ROS_WARN("Plane::addMarker(...) is not implemented yet!");
 }
 //------------------------------------------------------------------------
 void Plane::setLinkData(Eigen::VectorXd const& link_data)
@@ -215,6 +254,11 @@ void Capsule::setLinkData(Eigen::VectorXd const& link_data)
     r_ = link_data.tail<1>()(0);
 }
 //------------------------------------------------------------------------
+void Capsule::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    ROS_WARN("Capsule::addMarker(...) is not implemented yet!");
+}
+//------------------------------------------------------------------------
 void Capsule::setLinkTransform(Eigen::Affine3d const& trans_l_r)
 {
     trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
@@ -243,6 +287,33 @@ Frame::Frame(std::string const& link, std::string const& root, Eigen::VectorXd c
     setLinkData(link_data);
 }
 //------------------------------------------------------------------------
+void Frame::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    visualization_msgs::Marker e;
+
+    e.header.frame_id = link_;
+    e.header.stamp = ros::Time();
+    e.type = visualization_msgs::Marker::ARROW;
+    e.action = visualization_msgs::Marker::ADD;
+    e.pose.position.x = trans_f_l_->translation()(0);
+    e.pose.position.y = trans_f_l_->translation()(1);
+    e.pose.position.z = trans_f_l_->translation()(2);
+    Eigen::Quaterniond q(trans_f_l_->linear());
+    e.pose.orientation.x = q.x();
+    e.pose.orientation.y = q.y();
+    e.pose.orientation.z = q.z();
+    e.pose.orientation.w = q.w();
+    e.scale.x = FRAME_SCALE;
+    e.scale.y = 0.1 * FRAME_SCALE;
+    e.scale.z = 0.1 * FRAME_SCALE;
+    e.color.r = 1.0;
+    e.color.g = 0.0;
+    e.color.b = 0.0;
+    e.color.a = 1.0;
+
+    markers.markers.push_back(e);
+}
+//------------------------------------------------------------------------
 void Frame::setLinkData(Eigen::VectorXd const& link_data)
 {
     ROS_ASSERT(link_data.rows() == 6);
@@ -257,7 +328,7 @@ void Frame::setLinkData(Eigen::VectorXd const& link_data)
     trans_f_l_->translation() = transl;
     trans_f_l_->linear() = rot;
 
- }
+}
 //------------------------------------------------------------------------
 void Frame::setLinkTransform(Eigen::Affine3d const& trans_l_r)
 {

@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
      controller_interface
      hqp_controllers_msgs
      kdl_parser
+     realtime_tools
 )
 
 find_package(orocos_kdl REQUIRED)
@@ -25,6 +26,7 @@ catkin_package(
      controller_interface
      hqp_controllers_msgs
      kdl_parser
+     realtime_tools
      DEPENDS orocos_kdl
      INCLUDE_DIRS include ${EIGEN_INCLUDE_DIRS}
      LIBRARIES ${PROJECT_NAME}

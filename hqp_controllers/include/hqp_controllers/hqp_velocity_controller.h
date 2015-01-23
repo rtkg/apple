@@ -14,9 +14,13 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include <hqp_controllers_msgs/SetTaskObject.h>
+#include <hqp_controllers_msgs/VisualizeTaskObjects.h>
+#include <realtime_tools/realtime_publisher.h>
+#include <visualization_msgs/MarkerArray.h>
 
 namespace hqp_controllers
 {
+#define TASK_OBJ_PUBLISH_RATE 50 //The rate to publish task object geometries
 
   /**
    * \brief Forward command controller for a set of joints.
@@ -43,16 +47,23 @@ namespace hqp_controllers
   private:
 
     ros::Subscriber sub_command_;
-    ros::ServiceServer set_task_obj_srv_;
-    TaskManager task_manager_;
-    boost::mutex lock_;
+     ros::ServiceServer set_task_obj_srv_;
+          ros::ServiceServer vis_t_obj_srv_;
+          TaskManager task_manager_;
+     boost::mutex lock_;
 
-    ///////////////
-    // CALLBACKS //
-    ///////////////
+     realtime_tools::RealtimePublisher<visualization_msgs::MarkerArray> vis_t_obj_pub_;
+     ros::Time last_publish_time_;
+     double publish_rate_;
+     Eigen::VectorXi vis_ids_; ///< only task object geometries with ids in vis_ids_ will be published
 
-    void commandCB(const std_msgs::Float64MultiArrayConstPtr& msg);
-    bool setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res);
+     ///////////////
+     // CALLBACKS //
+     ///////////////
+
+     void commandCB(const std_msgs::Float64MultiArrayConstPtr& msg);
+     bool setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res);
+     bool visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res);
   };
 
 

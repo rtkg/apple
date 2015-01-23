@@ -5,6 +5,7 @@ project(hqp_controllers_msgs)
 find_package(catkin REQUIRED COMPONENTS 
   message_generation 
   std_msgs
+  visualization_msgs
   geometry_msgs)
 
 #catkin_python_setup()
@@ -19,6 +20,7 @@ add_message_files(
 add_service_files(
   FILES
   SetTaskObject.srv
+  VisualizeTaskObjects.srv
   )
 
 
@@ -28,6 +30,7 @@ generate_messages(
   DEPENDENCIES 
   std_msgs
   geometry_msgs
+  visualization_msgs
   )
 
 # Declare catkin package
@@ -35,6 +38,7 @@ catkin_package(
   CATKIN_DEPENDS 
   message_runtime
   std_msgs 
+  visualization_msgs
   geometry_msgs
   )
 

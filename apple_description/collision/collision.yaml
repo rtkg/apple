@@ -1,9 +1,9 @@
 collision_root: lbr_iiwa_link_0 
 collision_objects:
-#     - link: lbr_iiwa_link_7
-#       geometries:
-#       - type: 1 #POINT
-#         data: [0.2, -0.3, 0.8] #position of the point expressed in the link
+     - link: lbr_iiwa_link_7
+       geometries:
+       - type: 1 #POINT
+         data: [0.2, -0.3, 0.8] #position of the point expressed in the link
 
 #      - link: lbr_iiwa_link_7
 #        geometries:
@@ -12,10 +12,10 @@ collision_objects:
 #        - type: 3 #PLANE
 #          data: [0.7071, 0.0, 0.7071, 0.1] 
 
-      - link: lbr_iiwa_link_7
-        geometries:
-        - type: 4 #FRAME
-          data: [0.2, -0.3, 0.8, 0.0, 0.0, 0.0]
+#      - link: lbr_iiwa_link_7
+#        geometries:
+#        - type: 4 #FRAME
+#          data: [0.2, -0.3, 0.8, 0.0, 0.0, 0.0]
 
 
 

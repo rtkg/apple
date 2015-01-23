@@ -3,10 +3,15 @@
 
 #include <boost/shared_ptr.hpp>
 #include <Eigen/Geometry>
+#include <visualization_msgs/MarkerArray.h>
+
 
 namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
 enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5};
+static const double POINT_RGBA[] = { 0.5, 0.2, 0.3, 1};
+#define POINT_SCALE 1.0
+#define FRAME_SCALE 0.1
 //----------------------------------------------------------------------------------------------------
 class TaskGeometry
 {
@@ -33,6 +38,7 @@ public:
     //**Sets the TaskGeometry::trans_l_r_ member and updates the TaskGeometry::root_data_ member in the subclasses */
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r) = 0;
     virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const = 0;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 
@@ -54,6 +60,7 @@ public:
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
     virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 
@@ -70,6 +77,7 @@ public:
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
     virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+        virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 
@@ -87,6 +95,7 @@ public:
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
     virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 
@@ -104,6 +113,7 @@ public:
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
     virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 
@@ -122,6 +132,7 @@ public:
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
     virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+      virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 

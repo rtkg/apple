@@ -8,7 +8,7 @@
 namespace hqp_controllers
 {
 //-----------------------------------------------------------------------
-HQPVelocityController::HQPVelocityController()
+HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_RATE)
 {
     joints_.reset(new std::vector< hardware_interface::JointHandle >);
     commands_.clear();
@@ -118,7 +118,9 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
     //============================================== REGISTER CALLBACKS =========================================
     sub_command_ = n.subscribe<std_msgs::Float64MultiArray>("command", 1, &HQPVelocityController::commandCB, this);
     set_task_obj_srv_ = n.advertiseService("set_task_object",&HQPVelocityController::setTaskObject,this);
-    //============================================== REGISTER CALLBACKS END =========================================
+    vis_t_obj_srv_ = n.advertiseService("visualize_task_objects",&HQPVelocityController::visualizeTaskObjects,this);
+        //============================================== REGISTER CALLBACKS END =========================================
+   vis_t_obj_pub_.init(n, "task_objects", 1);
 
     return true;
 }
@@ -133,8 +135,11 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 {
     task_manager_.computeTaskObjectsKinematics(); //compute jacobians and poses of the task objects
 
+
     for(unsigned int i=0; i<n_joints_; i++)
         joints_->at(i).setCommand(commands_[i]);
+
+
 
     // ================= DEBUG PRINT ============================
     //    for (int i=0; i<n_joints_; i++)
@@ -146,8 +151,24 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
     //        std::cout<<std::endl;
     //    }
     // ================= DEBUG PRINT END ============================
-}
 
+    //======================= PUBLISH THE TASK OBJECT GEOMETRIES =================
+    // limit rate of publishing
+      if (publish_rate_ > 0.0 && last_publish_time_ + ros::Duration(1.0/publish_rate_) < time)
+      {
+        // try to publish
+        if (vis_t_obj_pub_.trylock())
+        {
+          // we're actually publishing, so increment time
+          last_publish_time_ = last_publish_time_ + ros::Duration(1.0/publish_rate_);
+
+          // populate the message
+          task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_);
+          vis_t_obj_pub_.unlockAndPublish();
+        }
+      }
+      //======================= END PUBLISH THE TASK OBJECT GEOMETRIES =================
+}
 
 ///////////////
 // CALLBACKS //
@@ -200,6 +221,16 @@ bool HQPVelocityController::setTaskObject(hqp_controllers_msgs::SetTaskObject::R
 
     res.success = true;
     return res.success;
+}
+//-----------------------------------------------------------------------
+bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res)
+{
+    lock_.lock();
+    vis_ids_.resize(req.ids.size());
+ for(unsigned int i=0; i<req.ids.size();i++)
+     vis_ids_(i)=req.ids[i];
+
+lock_.unlock();
 }
 //-----------------------------------------------------------------------
 } //end namespace hqp_controllers
