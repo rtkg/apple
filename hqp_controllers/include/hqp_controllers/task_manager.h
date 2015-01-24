@@ -27,7 +27,7 @@ public:
 
     boost::shared_ptr<KDL::Tree> getKinematicTree()const;
     unsigned int getValidTaskObjectId() const;
-    void getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const;
+    bool getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const;
 private:
 
     boost::shared_ptr<KDL::Tree> k_tree_;

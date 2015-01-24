@@ -112,13 +112,11 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.header.stamp = ros::Time();
     marker.type = visualization_msgs::Marker::POINTS;
     marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = (*p_)(0);
-    marker.pose.position.y = (*p_)(1);
-    marker.pose.position.z = (*p_)(2);
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = 0.0;
-    marker.pose.orientation.w = 1.0;
+    geometry_msgs::Point p;
+    p.x=(*p_)(0);
+    p.y=(*p_)(1);
+    p.z=(*p_)(2);
+    marker.points.push_back(p);
     marker.scale.x = POINT_SCALE;
     marker.scale.y = POINT_SCALE;
     marker.scale.z = POINT_SCALE;
@@ -129,7 +127,7 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
 
     markers.markers.push_back(marker);
 
-    std::cout<<"Point: added marker..."<<std::endl;
+    ROS_INFO("Added point geometry to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Point::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const

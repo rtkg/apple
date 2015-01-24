@@ -154,16 +154,15 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 
     //======================= PUBLISH THE TASK OBJECT GEOMETRIES =================
     // limit rate of publishing
-      if (publish_rate_ > 0.0 && last_publish_time_ + ros::Duration(1.0/publish_rate_) < time)
+    if (publish_rate_ > 0.0 && last_publish_time_ + ros::Duration(1.0/publish_rate_) < time)
       {
         // try to publish
         if (vis_t_obj_pub_.trylock())
         {
+
           // we're actually publishing, so increment time
           last_publish_time_ = last_publish_time_ + ros::Duration(1.0/publish_rate_);
 
-          // populate the message
-          task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_);
           vis_t_obj_pub_.unlockAndPublish();
         }
       }
@@ -227,10 +226,19 @@ bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::Visualize
 {
     lock_.lock();
     vis_ids_.resize(req.ids.size());
- for(unsigned int i=0; i<req.ids.size();i++)
-     vis_ids_(i)=req.ids[i];
+    for(unsigned int i=0; i<req.ids.size();i++)
+        vis_ids_(i)=req.ids[i];
 
-lock_.unlock();
+    // populate the message
+    vis_t_obj_pub_.msg_.markers.clear();
+    if(task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_))
+        res.success=true;
+    else
+        res.success=false;
+
+    lock_.unlock();
+
+    return res.success;
 }
 //-----------------------------------------------------------------------
 } //end namespace hqp_controllers

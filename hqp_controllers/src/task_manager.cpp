@@ -60,7 +60,7 @@ void TaskManager::computeTaskObjectsKinematics()
         it->second->computeKinematics();
 }
 //----------------------------------------------
-void TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const
+bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const
 {
     for(unsigned int i=0; i<vis_ids.size(); i++)
     {
@@ -68,8 +68,8 @@ void TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
         std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(vis_ids(i));
         if(it == t_objs_->end())
         {
-            ROS_WARN("Could not find task object with id %d. Associated geometries can not be visualized.", vis_ids(i));
-            continue;
+            ROS_ERROR("Could not find task object with id %d. Associated geometries can not be visualized.", vis_ids(i));
+            return false;
         }
 
         //Add markers for all geometries associated to the object with id vis_ids(i)
@@ -77,6 +77,7 @@ void TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
             it->second->getGeometries()->at(j)->addMarker(t_geoms);
 
     }
+    return true;
 }
 //----------------------------------------------
 }//end namespace hqp_controllers
