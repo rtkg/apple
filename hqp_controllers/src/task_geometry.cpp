@@ -112,6 +112,8 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.header.stamp = ros::Time();
     marker.type = visualization_msgs::Marker::POINTS;
     marker.action = visualization_msgs::Marker::ADD;
+    marker.id = markers.markers.size();
+    //    marker.lifetime = ros::Duration;
     geometry_msgs::Point p;
     p.x=(*p_)(0);
     p.y=(*p_)(1);
@@ -120,14 +122,14 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.scale.x = POINT_SCALE;
     marker.scale.y = POINT_SCALE;
     marker.scale.z = POINT_SCALE;
-    marker.color.r = POINT_RGBA[0];
-    marker.color.g = POINT_RGBA[1];
-    marker.color.b = POINT_RGBA[2];
-    marker.color.a = POINT_RGBA[3];
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    marker.color.a = 1.0;
 
     markers.markers.push_back(marker);
 
-    ROS_INFO("Added point geometry to link %s.",link_.c_str());
+    ROS_INFO("Added point visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Point::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
@@ -161,7 +163,33 @@ void Line::setLinkData(Eigen::VectorXd const& link_data)
 //------------------------------------------------------------------------
 void Line::addMarker(visualization_msgs::MarkerArray& markers)
 {
-    ROS_WARN("Line::addMarker(...) is not implemented yet!");
+    //transformation which points x in the line direction
+    Eigen::Quaterniond q;
+    q.setFromTwoVectors(Eigen::Vector3d::UnitX() ,(*v_));
+
+    visualization_msgs::Marker m;
+    m.header.frame_id = link_;
+    m.header.stamp = ros::Time();
+    m.type =  visualization_msgs::Marker::ARROW;
+    m.action = visualization_msgs::Marker::ADD;
+    m.id = markers.markers.size();
+    m.pose.position.x = (*p_)(0);
+    m.pose.position.y = (*p_)(1);
+    m.pose.position.z = (*p_)(2);
+    m.pose.orientation.x = q.x();
+    m.pose.orientation.y = q.y();
+    m.pose.orientation.z = q.z();
+    m.pose.orientation.w = q.w();
+    m.scale.x = LINE_SCALE;
+    m.scale.y = 0.05 * LINE_SCALE;
+    m.scale.z = 0.05 * LINE_SCALE;
+    m.color.r = 0.0;
+    m.color.g = 1.0;
+    m.color.b = 1.0;
+    m.color.a = 1.0;
+    markers.markers.push_back(m);
+
+    ROS_INFO("Added line visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Line::setLinkTransform(Eigen::Affine3d const& trans_l_r)
@@ -193,7 +221,52 @@ Plane::Plane(std::string const& link, std::string const& root, Eigen::VectorXd c
 //------------------------------------------------------------------------
 void Plane::addMarker(visualization_msgs::MarkerArray& markers)
 {
-    ROS_WARN("Plane::addMarker(...) is not implemented yet!");
+    //transformation which points x in the plane normal direction
+    Eigen::Quaterniond q;
+    q.setFromTwoVectors(Eigen::Vector3d::UnitX() ,(*n_));
+
+    visualization_msgs::Marker m;
+
+    //normal
+    m.header.frame_id = link_;
+    m.header.stamp = ros::Time();
+    m.type =  visualization_msgs::Marker::ARROW;
+    m.action = visualization_msgs::Marker::ADD;
+    m.id = markers.markers.size();
+    m.pose.position.x = (*n_)(0)*d_;
+    m.pose.position.y = (*n_)(1)*d_;
+    m.pose.position.z = (*n_)(2)*d_;
+    m.pose.orientation.x = q.x();
+    m.pose.orientation.y = q.y();
+    m.pose.orientation.z = q.z();
+    m.pose.orientation.w = q.w();
+    m.scale.x = LINE_SCALE;
+    m.scale.y = 0.05 * LINE_SCALE;
+    m.scale.z = 0.05 * LINE_SCALE;
+    m.color.r = 1.0;
+    m.color.g = 0.0;
+    m.color.b = 1.0;
+    m.color.a = 1.0;
+    markers.markers.push_back(m);
+
+    //plane
+    q.setFromTwoVectors(Eigen::Vector3d::UnitZ() ,(*n_));
+    m.type = visualization_msgs::Marker::CUBE;
+    m.id = markers.markers.size();
+    m.pose.orientation.x = q.x();
+    m.pose.orientation.y = q.y();
+    m.pose.orientation.z = q.z();
+    m.pose.orientation.w = q.w();
+    m.scale.x = PLANE_SCALE;
+    m.scale.y = PLANE_SCALE;
+    m.scale.z = 0.0001;
+    m.color.r = 1.0;
+    m.color.g = 0.0;
+    m.color.b = 1.0;
+    m.color.a = 0.4;
+    markers.markers.push_back(m);
+
+    ROS_INFO("Added plane visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Plane::setLinkData(Eigen::VectorXd const& link_data)
@@ -254,7 +327,55 @@ void Capsule::setLinkData(Eigen::VectorXd const& link_data)
 //------------------------------------------------------------------------
 void Capsule::addMarker(visualization_msgs::MarkerArray& markers)
 {
-    ROS_WARN("Capsule::addMarker(...) is not implemented yet!");
+    visualization_msgs::Marker m;
+
+    //spheres
+    m.header.frame_id = link_;
+    m.header.stamp = ros::Time();
+    m.type =  visualization_msgs::Marker::SPHERE;
+    m.action = visualization_msgs::Marker::ADD;
+    m.id = markers.markers.size();
+    m.pose.position.x = (*p_)(0);
+    m.pose.position.y = (*p_)(1);
+    m.pose.position.z = (*p_)(2);
+    m.pose.orientation.x = 0;
+    m.pose.orientation.y = 0;
+    m.pose.orientation.z = 0;
+    m.pose.orientation.w = 1;
+    m.scale.x = r_;
+    m.scale.y = r_;
+    m.scale.z = r_;
+    m.color.r = 1.0;
+    m.color.g = 0.85;
+    m.color.b = 0.0;
+    m.color.a = 1.0;
+    markers.markers.push_back(m);
+
+    m.id = markers.markers.size();
+    m.pose.position.x = (*t_)(0);
+    m.pose.position.y = (*t_)(1);
+    m.pose.position.z = (*t_)(2);
+    markers.markers.push_back(m);
+
+    //cylinder
+    //transformation which points z in the capsule's cylinder direction
+    Eigen::Quaterniond q;
+    Eigen::Vector3d v=(*t_)-(*p_);
+    ROS_ASSERT(v.norm() > 0.0); //spheres should be handled extra for now ...
+    q.setFromTwoVectors(Eigen::Vector3d::UnitZ() ,v);
+    m.type =  visualization_msgs::Marker::CYLINDER;
+    m.id = markers.markers.size();
+    m.pose.position.x = (*p_)(0)+v(0)/2;
+    m.pose.position.y = (*p_)(1)+v(1)/2;
+    m.pose.position.z = (*p_)(2)+v(2)/2;
+    m.pose.orientation.x = q.x();
+    m.pose.orientation.y = q.y();
+    m.pose.orientation.z = q.z();
+    m.pose.orientation.w = q.w();
+    m.scale.z = v.norm();
+    markers.markers.push_back(m);
+
+    ROS_INFO("Added capsule visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Capsule::setLinkTransform(Eigen::Affine3d const& trans_l_r)
@@ -287,29 +408,60 @@ Frame::Frame(std::string const& link, std::string const& root, Eigen::VectorXd c
 //------------------------------------------------------------------------
 void Frame::addMarker(visualization_msgs::MarkerArray& markers)
 {
+    Eigen::Quaterniond q(trans_f_l_->linear());
     visualization_msgs::Marker e;
 
+    //e_x
     e.header.frame_id = link_;
     e.header.stamp = ros::Time();
     e.type = visualization_msgs::Marker::ARROW;
     e.action = visualization_msgs::Marker::ADD;
+    e.id = markers.markers.size();
     e.pose.position.x = trans_f_l_->translation()(0);
     e.pose.position.y = trans_f_l_->translation()(1);
     e.pose.position.z = trans_f_l_->translation()(2);
-    Eigen::Quaterniond q(trans_f_l_->linear());
     e.pose.orientation.x = q.x();
     e.pose.orientation.y = q.y();
     e.pose.orientation.z = q.z();
     e.pose.orientation.w = q.w();
-    e.scale.x = FRAME_SCALE;
-    e.scale.y = 0.1 * FRAME_SCALE;
-    e.scale.z = 0.1 * FRAME_SCALE;
+    e.scale.x = LINE_SCALE;
+    e.scale.y = 0.05 * LINE_SCALE;
+    e.scale.z = 0.05 * LINE_SCALE;
     e.color.r = 1.0;
     e.color.g = 0.0;
     e.color.b = 0.0;
     e.color.a = 1.0;
-
     markers.markers.push_back(e);
+
+    //e_y
+    Eigen::Quaterniond qy(0.5, 0.5, 0.5, 0.5); //rotates from x to y
+    qy=q*qy;
+    e.id = markers.markers.size();
+    e.pose.orientation.x = qy.x();
+    e.pose.orientation.y = qy.y();
+    e.pose.orientation.z = qy.z();
+    e.pose.orientation.w = qy.w();
+    e.color.r = 0.0;
+    e.color.g = 1.0;
+    e.color.b = 0.0;
+    e.color.a = 1.0;
+    markers.markers.push_back(e);
+
+    //e_z
+    Eigen::Quaterniond qz(0.5, -0.5, -0.5, -0.5); //rotates from x to z
+    qz=q*qz;
+    e.id = markers.markers.size();
+    e.pose.orientation.x = qz.x();
+    e.pose.orientation.y = qz.y();
+    e.pose.orientation.z = qz.z();
+    e.pose.orientation.w = qz.w();
+    e.color.r = 0.0;
+    e.color.g = 0.0;
+    e.color.b = 1.0;
+    e.color.a = 1.0;
+    markers.markers.push_back(e);
+
+    ROS_INFO("Added frame visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Frame::setLinkData(Eigen::VectorXd const& link_data)
@@ -325,7 +477,6 @@ void Frame::setLinkData(Eigen::VectorXd const& link_data)
     trans_f_l_.reset(new Eigen::Affine3d);
     trans_f_l_->translation() = transl;
     trans_f_l_->linear() = rot;
-
 }
 //------------------------------------------------------------------------
 void Frame::setLinkTransform(Eigen::Affine3d const& trans_l_r)

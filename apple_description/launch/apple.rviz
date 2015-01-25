@@ -5,8 +5,11 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /Apple1
+        - /Apple1/Links1
         - /Apple1/Links1/lbr_iiwa_link_61
         - /Apple1/Links1/lbr_iiwa_link_71
+        - /Task Objects1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 745
@@ -102,7 +105,7 @@ Visualization Manager:
           Value: true
         lbr_iiwa_link_7:
           Alpha: 0.2
-          Show Axes: false
+          Show Axes: true
           Show Trail: false
           Value: true
         velvet_fingers_left:
@@ -135,7 +138,7 @@ Visualization Manager:
       Marker Topic: /apple/apple_hqp_vel_controller/task_objects
       Name: Task Objects
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: rviz/TF
@@ -188,10 +191,10 @@ Visualization Manager:
         Z: 0.418136
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.0352025
+      Pitch: 0.165202
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.452221
+      Yaw: 0.917224
     Saved: ~
 Window Geometry:
   Displays:

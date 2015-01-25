@@ -9,9 +9,9 @@
 namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
 enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5};
-static const double POINT_RGBA[] = { 1.0, 0.0, 0.0, 1};
 #define POINT_SCALE 0.02
-#define FRAME_SCALE 0.1
+#define LINE_SCALE  0.15
+#define PLANE_SCALE 1.0
 //----------------------------------------------------------------------------------------------------
 class TaskGeometry
 {

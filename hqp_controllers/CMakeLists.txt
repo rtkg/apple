@@ -46,6 +46,8 @@ add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
                             include/hqp_controllers/hqp_velocity_controller.h
                             src/task.cpp
                             include/hqp_controllers/task.h
+                            src/task_dynamics.cpp
+                            include/hqp_controllers/task_dynamics.h
                             src/task_manager.cpp
                             include/hqp_controllers/task_manager.h
                             src/task_object.cpp
