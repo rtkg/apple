@@ -137,6 +137,7 @@ public:
 protected:
 
     boost::shared_ptr<Eigen::Affine3d> trans_f_l_; ///< transformation from the frame to the TaskGeometry::link_ frame (= pose of Frame::trans_f_l_ in the link frame)
+
 };
 //------------------------------------------------------------------------------------------
 

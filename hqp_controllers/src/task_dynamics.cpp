@@ -1,20 +1,39 @@
 #include <hqp_controllers/task_dynamics.h>
-#include <ros/ros.h>
 
 namespace hqp_controllers{
+//----------------------------------------------------------
+TaskDynamics::TaskDynamics() : type_(UNDEFINED_DYNAMICS), dim_(0){}
+//----------------------------------------------------------
 
-//----------------------------------------------------------
-TaskDynamics::TaskDynamics() : dim_(0){};
-//----------------------------------------------------------
-TaskDynamics::TaskDynamics(unsigned int dim) : dim_(dim){};
-//----------------------------------------------------------
 unsigned int TaskDynamics::getDimension()const{return dim_;}
 //----------------------------------------------------------
-LinearTaskDynamics::LinearTaskDynamics(unsigned int dim) : TaskDynamics(dim){};
+TaskDynamicsType TaskDynamics::getType()const{return type_;}
 //----------------------------------------------------------
-void LinearTaskDynamics::computeDX()const
+LinearTaskDynamics::LinearTaskDynamics() : TaskDynamics()
 {
-    ROS_INFO("TODO ...");
+    type_ = LINEAR_DYNAMICS;
+}
+//----------------------------------------------------------
+LinearTaskDynamics::LinearTaskDynamics(boost::shared_ptr<Eigen::MatrixXd> A) :  A_(A)
+{
+    type_ = LINEAR_DYNAMICS;
+    setDynamicsMatrix(A);
+}
+//----------------------------------------------------------
+void LinearTaskDynamics::setDynamicsMatrix(boost::shared_ptr<Eigen::MatrixXd> A)
+{
+    ROS_ASSERT(A->cols()==A->rows());
+    ROS_ASSERT(A->cols() > 0);
+    A_ = A;
+    dim_ = A_->cols();
+}
+//----------------------------------------------------------
+boost::shared_ptr<Eigen::MatrixXd> LinearTaskDynamics::getDynamicsMatrix()const{return A_;}
+//----------------------------------------------------------
+void LinearTaskDynamics::getDX(Eigen::VectorXd& dx, Eigen::VectorXd& x)const
+{
+    ROS_ASSERT( (dx.rows() == dim_) && (x.rows() == dim_) );
+    dx=(*A_) * x;
 }
 //----------------------------------------------------------
 }//end namespace hqp_controllers

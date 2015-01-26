@@ -58,22 +58,22 @@ boost::shared_ptr<TaskGeometry>  TaskGeometry::makeTaskGeometry(TaskGeometryType
 {
     boost::shared_ptr<TaskGeometry> geom;
 
-    if(type == POINT)
-        geom.reset(new Point(link, root, link_data));
-    else if(type == LINE)
-        geom.reset(new Line(link, root, link_data));
-    else if(type == PLANE)
-        geom.reset(new Plane(link, root, link_data));
-    else if(type == FRAME)
-        geom.reset(new Frame(link, root, link_data));
-    else if(type == CAPSULE)
-        geom.reset(new Capsule(link, root, link_data));
-    else
-    {
-        ROS_ERROR("Task geometry type %d is invalid.",type);
-        ROS_BREAK();
-    }
-    return geom;
+      if(type == POINT)
+          geom.reset(new Point(link, root, link_data));
+      else if(type == LINE)
+          geom.reset(new Line(link, root, link_data));
+      else if(type == PLANE)
+          geom.reset(new Plane(link, root, link_data));
+      else if(type == FRAME)
+          geom.reset(new Frame(link, root, link_data));
+      else if(type == CAPSULE)
+          geom.reset(new Capsule(link, root, link_data));
+      else
+      {
+          ROS_ERROR("Task geometry type %d is invalid.",type);
+          ROS_BREAK();
+      }
+      return geom;
 }
 //------------------------------------------------------------------------
 Point::Point() : TaskGeometry()

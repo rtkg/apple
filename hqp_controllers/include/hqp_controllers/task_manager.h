@@ -18,7 +18,6 @@ public:
     TaskManager();
     TaskManager(boost::shared_ptr<KDL::Tree> k_tree);
 
-
     void setKinematicTree(boost::shared_ptr<KDL::Tree> k_tree);
     bool addTaskObject(boost::shared_ptr<TaskObject> t_obj);
     void addTask(boost::shared_ptr<Task>);

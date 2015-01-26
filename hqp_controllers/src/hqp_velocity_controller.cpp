@@ -106,6 +106,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
                 t_obj->addGeometry(geom);
             }
+            t_obj->computeKinematics();
             task_manager_.addTaskObject(t_obj); //store the new object in the task manager
         }
         ROS_INFO("Collision objects loaded");
@@ -214,7 +215,7 @@ bool HQPVelocityController::setTaskObject(hqp_controllers_msgs::SetTaskObject::R
         boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(type, link, root, link_data);
         t_obj->addGeometry(geom); //add the task geometries to the task object
     }
-
+    t_obj->computeKinematics();
     task_manager_.addTaskObject(t_obj);
     lock_.unlock();
 

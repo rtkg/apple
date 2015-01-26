@@ -1,31 +1,46 @@
 #ifndef TASK_DYNAMICS_H
 #define TASK_DYNAMICS_H
 
-namespace hqp_controllers{
+#include <ros/ros.h>
+#include <Eigen/Geometry>
+#include <boost/shared_ptr.hpp>
 
+
+namespace hqp_controllers{
+//----------------------------------------------------------
+enum TaskDynamicsType {UNDEFINED_DYNAMICS = 0, LINEAR_DYNAMICS = 1};
 //----------------------------------------------------------
 class TaskDynamics
 {
 public:
 
     TaskDynamics();
-    TaskDynamics(unsigned int dim);
 
-    virtual void computeDX()const=0;
+    TaskDynamicsType getType()const;
     unsigned int getDimension()const;
+    virtual void getDX(Eigen::VectorXd& dx, Eigen::VectorXd& x)const = 0;
 
 protected:
 
-    unsigned int dim_;
+    TaskDynamicsType type_;
+    unsigned int dim_; ///< dimension of the state space
 
 };
 //----------------------------------------------------------
 class LinearTaskDynamics: public TaskDynamics
 {
 public:
-    LinearTaskDynamics(unsigned int dim);
+    LinearTaskDynamics();
+    LinearTaskDynamics(boost::shared_ptr<Eigen::MatrixXd> A);
 
-    virtual void computeDX() const;
+    void setDynamicsMatrix(boost::shared_ptr<Eigen::MatrixXd> A);
+    boost::shared_ptr<Eigen::MatrixXd> getDynamicsMatrix()const;
+
+     virtual void getDX(Eigen::VectorXd& dx, Eigen::VectorXd& x)const;
+
+protected:
+
+    boost::shared_ptr<Eigen::MatrixXd> A_; ///<dynamics matrix dx=A_* x
 };
 //----------------------------------------------------------
 
