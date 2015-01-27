@@ -1,0 +1,4 @@
+uint16[] ids
+---
+bool success
+

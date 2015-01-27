@@ -4,11 +4,12 @@
 #include <boost/shared_ptr.hpp>
 #include <vector>
 #include <Eigen/Geometry>
+#include <hqp_controllers/utilities.h>
 
 namespace hqp_controllers
 {
 //-----------------------------------------------------------------------
-HQPVelocityController::HQPVelocityController()
+HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_RATE), active_(true)
 {
     joints_.reset(new std::vector< hardware_interface::JointHandle >);
     commands_.clear();
@@ -106,6 +107,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
                 t_obj->addGeometry(geom);
             }
+            t_obj->computeKinematics();
             task_manager_.addTaskObject(t_obj); //store the new object in the task manager
         }
         ROS_INFO("Collision objects loaded");
@@ -117,8 +119,11 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
     //============================================== REGISTER CALLBACKS =========================================
     sub_command_ = n.subscribe<std_msgs::Float64MultiArray>("command", 1, &HQPVelocityController::commandCB, this);
+    set_task_srv_ = n.advertiseService("set_task",&HQPVelocityController::setTask,this);
     set_task_obj_srv_ = n.advertiseService("set_task_object",&HQPVelocityController::setTaskObject,this);
+    vis_t_obj_srv_ = n.advertiseService("visualize_task_objects",&HQPVelocityController::visualizeTaskObjects,this);
     //============================================== REGISTER CALLBACKS END =========================================
+    vis_t_obj_pub_.init(n, "task_objects", 1);
 
     return true;
 }
@@ -128,26 +133,6 @@ void HQPVelocityController::starting(const ros::Time& time)
     // Start controller with 0.0 velocities
     commands_.resize(n_joints_, 0.0);
 }
-//-----------------------------------------------------------------------
-void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
-{
-    task_manager_.computeTaskObjectsKinematics(); //compute jacobians and poses of the task objects
-
-    for(unsigned int i=0; i<n_joints_; i++)
-        joints_->at(i).setCommand(commands_[i]);
-
-    // ================= DEBUG PRINT ============================
-    //    for (int i=0; i<n_joints_; i++)
-    //    {
-    //        std::cout<<joints_->at(i).getName()<<std::endl;
-    //        std::cout<<joints_->at(i).getPosition()<<std::endl;
-    //        std::cout<<joints_->at(i).getVelocity()<<std::endl;
-    //        std::cout<<joints_->at(i).getEffort()<<std::endl;
-    //        std::cout<<std::endl;
-    //    }
-    // ================= DEBUG PRINT END ============================
-}
-
 
 ///////////////
 // CALLBACKS //
@@ -163,6 +148,43 @@ void HQPVelocityController::commandCB(const std_msgs::Float64MultiArrayConstPtr&
     }
     for(unsigned int i=0; i<n_joints_; i++)
         commands_[i] = msg->data[i];
+}
+//------------------------------------------------------------------------
+bool HQPVelocityController::setTask(hqp_controllers_msgs::SetTask::Request & req, hqp_controllers_msgs::SetTask::Response &res)
+{
+    ROS_ASSERT(req.task.t_obj_ids.size() == 2);
+
+    lock_.lock();
+    //make sure both task objects associated with the given task exist
+    std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs(task_manager_.getTaskObject(req.task.t_obj_ids[0]), task_manager_.getTaskObject(req.task.t_obj_ids[1]));
+    if(t_objs.first.get() == NULL)
+    {
+        res.success = false;
+        lock_.unlock();
+        ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task map.", req.task.t_obj_ids[0]);
+        return res.success;
+    }
+    else if(t_objs.second.get() == NULL)
+    {
+        res.success = false;
+        lock_.unlock();
+        ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task map.", req.task.t_obj_ids[1]);
+        return res.success;
+    }
+
+    //Read the data for the task dynamics
+    Eigen::VectorXd data(req.task.dynamics.data.size());
+    for(unsigned int i=0; i<data.rows();i++)
+        data(i) = req.task.dynamics.data[i];
+
+    TaskType task_type = static_cast<TaskType>(req.task.type);
+    TaskDynamicsType dynamics_type = static_cast<TaskDynamicsType>(req.task.dynamics.type);
+    boost::shared_ptr<Task> task = Task::makeTask(task_manager_.getValidTaskId(),req.task.priority, task_type, req.task.sign, t_objs, TaskDynamics::makeTaskDynamics(dynamics_type,data));
+    if(task_manager_.addTask(task))
+        res.success = true;
+
+    lock_.unlock();
+    return res.success;
 }
 //------------------------------------------------------------------------
 bool HQPVelocityController::setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res)
@@ -181,6 +203,7 @@ bool HQPVelocityController::setTaskObject(hqp_controllers_msgs::SetTaskObject::R
         return res.success;
     }
 
+
     boost::shared_ptr<TaskObject> t_obj(new TaskObject(task_manager_.getValidTaskObjectId(),chain,root,joints_)); //create a new task object
     //parse the object geometries
     for (unsigned int i=0; i<req.obj.geometries.size();i++)
@@ -194,12 +217,75 @@ bool HQPVelocityController::setTaskObject(hqp_controllers_msgs::SetTaskObject::R
         boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(type, link, root, link_data);
         t_obj->addGeometry(geom); //add the task geometries to the task object
     }
-
+    t_obj->computeKinematics();
     task_manager_.addTaskObject(t_obj);
     lock_.unlock();
 
     res.success = true;
     return res.success;
+}
+//-----------------------------------------------------------------------
+bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res)
+{
+    lock_.lock();
+    vis_ids_.resize(req.ids.size());
+    for(unsigned int i=0; i<req.ids.size();i++)
+        vis_ids_(i)=req.ids[i];
+
+    // populate the message
+    vis_t_obj_pub_.msg_.markers.clear();
+    if(task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_))
+        res.success=true;
+    else
+        res.success=false;
+
+    lock_.unlock();
+
+    return res.success;
+}
+//-----------------------------------------------------------------------
+void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
+{
+    task_manager_.computeTaskObjectsKinematics(); //compute jacobians and poses of the task objects
+
+    if(active_)
+    {
+        //compute the HQP controls
+        task_manager_.computeTasks();
+
+    }
+    else
+        std::fill(commands_.begin(), commands_.end(), 0.0); //set zero velocities if inactive
+
+    for(unsigned int i=0; i<n_joints_; i++)
+        joints_->at(i).setCommand(commands_[i]);
+
+    // ================= DEBUG PRINT ============================
+    //    for (int i=0; i<n_joints_; i++)
+    //    {
+    //        std::cout<<joints_->at(i).getName()<<std::endl;
+    //        std::cout<<joints_->at(i).getPosition()<<std::endl;
+    //        std::cout<<joints_->at(i).getVelocity()<<std::endl;
+    //        std::cout<<joints_->at(i).getEffort()<<std::endl;
+    //        std::cout<<std::endl;
+    //    }
+    // ================= DEBUG PRINT END ============================
+
+    //======================= PUBLISH THE TASK OBJECT GEOMETRIES =================
+    // limit rate of publishing
+    if (publish_rate_ > 0.0 && last_publish_time_ + ros::Duration(1.0/publish_rate_) < time)
+    {
+        // try to publish
+        if (vis_t_obj_pub_.trylock())
+        {
+
+            // we're actually publishing, so increment time
+            last_publish_time_ = last_publish_time_ + ros::Duration(1.0/publish_rate_);
+
+            vis_t_obj_pub_.unlockAndPublish();
+        }
+    }
+    //======================= END PUBLISH THE TASK OBJECT GEOMETRIES =================
 }
 //-----------------------------------------------------------------------
 } //end namespace hqp_controllers

@@ -30,9 +30,10 @@ public:
     boost::shared_ptr<std::vector<boost::shared_ptr<TaskGeometry> > > getGeometries() const;
     boost::shared_ptr<Eigen::Affine3d> getLinkTransform() const;
     boost::shared_ptr<Eigen::MatrixXd> getJacobian() const;
+    //**Changes the reference point of the task object jacobian by the vector from base_AB, which is the vector from the old ref point to the new ref point expressed in the jacobian root frame */
+    boost::shared_ptr<Eigen::MatrixXd> getJacobian(Eigen::Vector3d& base_AB) const;
     boost::shared_ptr<KDL::Jacobian> getChainJacobian() const;
-   /** Computes the the pose of the task object (forward kinematics) and the jacobian.
-    Input: joint angles q*/
+   /** Computes the the pose of the task object (forward kinematics) and the jacobian.*/
     void computeKinematics();
 
     friend std::ostream& operator<<(std::ostream& str, TaskObject const& obj);
@@ -54,6 +55,6 @@ private:
     boost::shared_ptr<Eigen::VectorXi> joint_map_; ///< associates the members of TaskObject::joints_ to the (unlocked) joints participating in the TaskObject::chain_, e.g., joint_map_ = [4, 2, 0]^T means that TaskObject::chain_ joints 0,1,2 correspond to the controlled joints 4,2,0 respectively
 };
 
-#endif // TASK_OBJECT_H
-
 } //end namespace hqp_controllers
+
+#endif // TASK_OBJECT_H

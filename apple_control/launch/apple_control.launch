@@ -20,7 +20,7 @@
 	 command="$(find xacro)/xacro.py '$(find apple_description)/urdf/apple.urdf.xacro' prefix:=$(arg hardware_interface)" />
 
   <!-- Load the collision objects -->
-  <rosparam file="$(find apple_description)/collision/collision.yaml" command="load"/>
+  <!--rosparam file="$(find apple_description)/collision/collision.yaml" command="load"/-->
 
   <!--param name="/apple/apple_hqp_vel_controller/robot_description"
 	 command="$(find xacro)/xacro.py '$(find apple_description)/urdf/apple.urdf.xacro' prefix:=$(arg hardware_interface)" /-->
