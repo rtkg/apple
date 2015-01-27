@@ -3,6 +3,22 @@
 namespace hqp_controllers{
 //---------------------------------------------------------
 #define LIM_DT 0.1 ///< Limit for the time difference for state integration
+//----------------------------------------------------
+std::ostream& operator<<(std::ostream& str, Task const& task)
+{
+    str<<"TASK: "<<std::endl;
+    str<<"id: "<<task.id_<<std::endl;
+    str<<"type: "<<task.type_<<std::endl;
+    str<<"sign: "<<task.sign_<<std::endl;
+    str<<"dim: "<<task.dim_<<std::endl;
+    str<<"A_:"<<std::endl<<(*task.A_)<<std::endl;
+    str<<"E_:"<<std::endl<<(*task.E_)<<std::endl;
+    str<<"t_prev_:"<<task.t_prev_.toSec()<<std::endl;
+    str<<"first task object:"<<std::endl<< *(task.t_objs_.first);
+    str<<"second task object:"<<std::endl<< *(task.t_objs_.second);
+
+    str<<std::endl;
+}
 //---------------------------------------------------------
 Task::Task(unsigned int id, unsigned int priority, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : type_(UNDEFINED_TASK), id_(id), priority_(priority), sign_(sign), t_objs_(t_objs), t_dynamics_(t_dynamics)
 {
@@ -16,7 +32,7 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& sign, std:
     t_prev_ = ros::Time::now();
 }
 //---------------------------------------------------------
-void Task::updateTaskFunctionMatrix()
+void Task::updateTaskFunctionDerivatives()
 {
     ros::Time t = ros::Time::now();
     double dt = (t_prev_ - t).toSec();
@@ -70,7 +86,7 @@ std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > Task::g
 //---------------------------------------------------------
 boost::shared_ptr<TaskDynamics> Task::getTaskDynamics()const{return t_dynamics_;}
 //---------------------------------------------------------
-boost::shared_ptr<Task>  makeTask(unsigned int id, unsigned int priority, TaskType type, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics)
+boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, TaskType type, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics)
 {
     boost::shared_ptr<Task> task;
 
@@ -90,6 +106,7 @@ PointInHalfspace::PointInHalfspace(unsigned int id, unsigned int priority, std::
 {
     type_ = POINT_IN_HALFSPACE;
     dim_ = t_objs_.second->getGeometries()->size();
+
     verifyTaskObjects();
 
     unsigned int n_jnts = t_objs_.first->getJacobian()->cols(); //number of controlled joints
@@ -106,11 +123,11 @@ void PointInHalfspace::verifyTaskObjects()
     //check that the task object geometries are valid - first one has to be a single point, second one a set of planes
     ROS_ASSERT(t_objs_.first->getGeometries()->size() == 1);
     ROS_ASSERT(t_objs_.first->getGeometries()->at(0)->getType() == POINT);
-
     ROS_ASSERT(dim_ > 0);
     ROS_ASSERT(t_objs_.second->getChain()->getNrOfJoints() == 0);//Make sure the plane is fixed in the environment for now
-    for (unsigned int i=0; i+dim_;i++)
-        ROS_ASSERT(t_objs_.second->getGeometries()->at(i)->getType() == PLANE);
+    for (unsigned int i=0; i<dim_;i++)
+          ROS_ASSERT(t_objs_.second->getGeometries()->at(i)->getType() == PLANE);
+
 }
 //---------------------------------------------------------
 //void PointInHalfspace::setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs)
@@ -130,6 +147,8 @@ void PointInHalfspace::verifyTaskObjects()
 //---------------------------------------------------------
 void PointInHalfspace::computeTask()
 {
+    std::cout<<"BEFORE: "<<std::endl<< *this<<std::endl;
+
     //Get the vector from the link frame origin to the task point expressed in the task object root frame
     Eigen::Vector3d delta_p = (*(t_objs_.first->getGeometries()->at(0)->getRootData()));
 
@@ -137,22 +156,25 @@ void PointInHalfspace::computeTask()
     Eigen::Vector3d p = t_objs_.first->getLinkTransform()->translation()+delta_p;
 
     //Get the Jacobain w.r.t the task point p(q)
-    Eigen::MatrixXd Jp;
-//    t_objs_.first->changeJacRefPoint(Jp,delta_p);
+    boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_.first->getJacobian(delta_p);
 
     //Compute the task function values and jacobians
-        Eigen::VectorXd plane(4);
+    Eigen::VectorXd plane(4);
     for(unsigned int i=0; i<dim_;i++)
     {
         plane = (*(t_objs_.first->getGeometries()->at(0)->getRootData()));
         //task function values
         (*E_)(i,0) = plane.head<3>().transpose()*p-plane.tail<1>()(0);
 
-       A_->row(i) = plane.head<3>().transpose() * Jp;
+        A_->row(i) = plane.head<3>().transpose() * jac->topRows<3>();
     }
 
     //compute task function derivatives
-    updateTaskFunctionMatrix();
+    updateTaskFunctionDerivatives();
+        std::cout<<"AFTER: "<<std::endl;
+        std::cout<<"A_: "<<std::endl<<A_<<std::endl;
+        std::cout<<"E_: "<<std::endl<<E_<<std::endl;
+        exit(0);
 }
 //---------------------------------------------------------
 } //end namespace hqp_controllers

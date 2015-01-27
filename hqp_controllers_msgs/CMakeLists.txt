@@ -13,12 +13,15 @@ find_package(catkin REQUIRED COMPONENTS
 # Add message and service files
 add_message_files(
   FILES
+  Task.msg
   TaskObject.msg
   TaskGeometry.msg
+  TaskDynamics.msg
   )
 
 add_service_files(
   FILES
+  SetTask.srv
   SetTaskObject.srv
   VisualizeTaskObjects.srv
   )

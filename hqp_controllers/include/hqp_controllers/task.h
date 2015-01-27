@@ -38,6 +38,8 @@ public:
     //**Computes task function, velocity and jacobians. Assumes that the kinematics of the corresponding task objects have been computed prior to the call to this function.*/
     virtual void computeTask()=0;
 
+     friend std::ostream& operator<<(std::ostream& str, Task const& task);
+
 protected:
     Task(){};
 
@@ -53,7 +55,7 @@ protected:
     boost::shared_ptr<Eigen::MatrixXd> E_; ///< task function state matrix, rows \in Task::dim_ correspond to the task function dynamics of the single task dimensions, columns \in Task::t_dynamics_->getDimension()+1 hold the corresponding derivatives
     ros::Time t_prev_;
 
-    void updateTaskFunctionMatrix();
+    void updateTaskFunctionDerivatives();
 };
 //----------------------------------------------------------------
 class PointInHalfspace: public Task

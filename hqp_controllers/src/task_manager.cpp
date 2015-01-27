@@ -7,11 +7,13 @@ namespace hqp_controllers{
 //----------------------------------------------
 TaskManager::TaskManager()
 {
+    tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
 }
 //----------------------------------------------
 TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree)
 {
+    tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
 }
 //----------------------------------------------
@@ -39,25 +41,75 @@ boost::shared_ptr<KDL::Tree> TaskManager::getKinematicTree()const {return k_tree
 //----------------------------------------------
 unsigned int TaskManager::getValidTaskObjectId() const
 {
-    //The object with the largest id (id's are also map keys) is at the end
-    return t_objs_->rbegin()->first + 1;
+    if(t_objs_->size() == 0)
+        return 0;
+    else
+        return t_objs_->rbegin()->first + 1;//The object with the largest id (id's are also map keys) is at the end
 }
 //----------------------------------------------
-void TaskManager::addTask(boost::shared_ptr<Task>)
+unsigned int TaskManager::getValidTaskId() const
 {
+    if(tasks_->size() == 0)
+        return 0;
+    else
+        return tasks_->rbegin()->first + 1;    //The task with the largest id (id's are also map keys) is at the end
+}
+//----------------------------------------------
+bool TaskManager::addTask(boost::shared_ptr<Task> task)
+{
+    //make sure both task objects associated with the given task exist
+    if(getTaskObject(task->getTaskObjects().first->getId()).get() == NULL)
+    {
+        ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects().first->getId());
+        return false;
+    }
+    else if(getTaskObject(task->getTaskObjects().second->getId()).get() == NULL)
+    {
+        ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects().second->getId());
+        return false;
+    }
 
+    //Make sure a task with the same id doesn't already exist in the map
+    std::pair<std::map<unsigned int, boost::shared_ptr<Task> >::iterator,bool> it;
+    it = tasks_->insert(std::pair<unsigned int, boost::shared_ptr<Task> >(task->getId(),task));
+    if(it.second == false)
+    {
+        ROS_ERROR("Cannot add task with id %d since it already exists.", task->getId());
+        return false;
+    }
+
+    //=================== DEBUG PRINT =========================
+    //  std::cout<<"ADDED TASK: "<<std::endl<< *(task);
+    //=================== DEBUG PRINT END =========================
+
+    return true;
 }
 //----------------------------------------------
 void TaskManager::removeTask(unsigned int id)
 {
-
+    ROS_WARN("TaskManager::addTask(...) is not implemented yet!");
 }
-//------------------t----------------------------
+//----------------------------------------------
+boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<TaskObject> > > TaskManager::getTaskObjects()const{return t_objs_;}
+//----------------------------------------------
 void TaskManager::computeTaskObjectsKinematics()
 {
     //iterate through all task objects and compute the kinematics
     for (std::map<unsigned int, boost::shared_ptr<TaskObject> >::iterator it=t_objs_->begin(); it!=t_objs_->end(); ++it)
         it->second->computeKinematics();
+}
+//----------------------------------------------
+boost::shared_ptr<TaskObject> TaskManager::getTaskObject(unsigned int id)const
+{
+    boost::shared_ptr<TaskObject> t_obj; //gets initialized to NULL
+
+    std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(id);
+    if(it == t_objs_->end())
+        ROS_WARN("TaskManager::getTaskObject(...): could not find task object with id %d.",id);
+    else
+        t_obj = it->second;
+
+    return t_obj;
 }
 //----------------------------------------------
 bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const
@@ -78,6 +130,13 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
 
     }
     return true;
+}
+//----------------------------------------------
+void TaskManager::computeTasks()
+{
+    //iterate through all tasks and compute the task velocities and jacobians
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_->begin(); it!=tasks_->end(); ++it)
+        it->second->computeTask();
 }
 //----------------------------------------------
 }//end namespace hqp_controllers

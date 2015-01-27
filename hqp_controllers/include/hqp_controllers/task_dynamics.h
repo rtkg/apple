@@ -19,7 +19,7 @@ public:
     TaskDynamicsType getType()const;
     unsigned int getDimension()const;
     virtual void getDX(Eigen::VectorXd& dx, Eigen::VectorXd& x)const = 0;
-
+    static boost::shared_ptr<TaskDynamics>  makeTaskDynamics(TaskDynamicsType type, Eigen::VectorXd const& data); ///<factory method
 protected:
 
     TaskDynamicsType type_;

@@ -5,7 +5,6 @@
 #include <string>
 #include <ros/node_handle.h>
 #include <ros/ros.h>
-#include <hqp_controllers/task_manager.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <controller_interface/controller.h>
 #include <std_msgs/Float64MultiArray.h>
@@ -13,10 +12,12 @@
 #include <kdl_parser/kdl_parser.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
-#include <hqp_controllers_msgs/SetTaskObject.h>
 #include <hqp_controllers_msgs/VisualizeTaskObjects.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <hqp_controllers/task_manager.h>
+#include <hqp_controllers_msgs/SetTask.h>
+#include <hqp_controllers_msgs/SetTaskObject.h>
 
 namespace hqp_controllers
 {
@@ -47,6 +48,7 @@ namespace hqp_controllers
   private:
 
     ros::Subscriber sub_command_;
+         ros::ServiceServer set_task_srv_;
      ros::ServiceServer set_task_obj_srv_;
           ros::ServiceServer vis_t_obj_srv_;
           TaskManager task_manager_;
@@ -56,13 +58,15 @@ namespace hqp_controllers
      ros::Time last_publish_time_;
      double publish_rate_;
      Eigen::VectorXi vis_ids_; ///< only task object geometries with ids in vis_ids_ will be published
+     bool active_;
 
      ///////////////
      // CALLBACKS //
      ///////////////
 
      void commandCB(const std_msgs::Float64MultiArrayConstPtr& msg);
-     bool setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res);
+     bool setTask(hqp_controllers_msgs::SetTask::Request & req, hqp_controllers_msgs::SetTask::Response &res);
+       bool setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res);
      bool visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res);
   };
 

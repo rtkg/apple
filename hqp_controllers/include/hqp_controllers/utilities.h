@@ -8,8 +8,9 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------
-void printKDLFrame(std::ostringstream& out, const KDL::Frame& frame)
+inline void printKDLFrame(std::ostringstream& out, const KDL::Frame& frame)
 {
+  out<<"FRAME:"<<std::endl;
   out<<"Origin: "<<frame.p(0)<<" "<<frame.p(1)<<" "<<frame.p(2)<<std::endl;
   KDL::Vector e1 = frame.M.UnitX();  KDL::Vector e2 = frame.M.UnitY();  KDL::Vector e3 = frame.M.UnitZ();
   Eigen::Matrix3d rot;
@@ -17,8 +18,9 @@ void printKDLFrame(std::ostringstream& out, const KDL::Frame& frame)
   out<<rot<<std::endl;
 }
 //----------------------------------------------------------
-void printKDLChain(std::ostringstream& out, const KDL::Chain& chain)
+inline void printKDLChain(std::ostringstream& out, const KDL::Chain& chain)
 {
+    out<<"CHAIN:"<<std::endl;
     out<<"Nr. of joints: "<<chain.getNrOfJoints()<<" | nr. of segments: "<<chain.getNrOfSegments()<<std::endl;
         for(unsigned int i=0; i<chain.getNrOfSegments();i++)
         {
