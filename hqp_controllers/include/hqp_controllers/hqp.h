@@ -32,11 +32,13 @@ class HQPSolver
     HQPSolver();
 
     bool solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > const& hqp)const;
+    Eigen::VectorXd getSolution()const;
 
 private:
 
     GRBEnv env_;
    // boost::mutex env_lock_;
+    Eigen::VectorXd solution_;
 
 };
 //--------------------------------------------------------------

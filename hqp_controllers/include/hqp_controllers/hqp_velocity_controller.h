@@ -39,6 +39,7 @@ namespace hqp_controllers
     boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints_;
 
     std::vector< double > commands_;
+    Eigen::VectorXd dq_; ///<supposed to replace the commands_ vector and hold the desired joint velocities computed via the HQP
     unsigned int n_joints_;
 
     bool init(hardware_interface::VelocityJointInterface *hw, ros::NodeHandle &n);

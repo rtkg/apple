@@ -135,7 +135,7 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
 }
 
 //----------------------------------------------
-void TaskManager::formHQP()
+void TaskManager::computeHQP(Eigen::VectorXd& dq)
 {
     hqp_->clear();
 
@@ -152,6 +152,9 @@ void TaskManager::formHQP()
         else
             stage_it->second->appendTask(*task_it->second);
     }
+
+    hqp_solver_.solve(*hqp_);
+     dq = hqp_solver_.getSolution();
 }
 //----------------------------------------------
 void TaskManager::writeHQP()
