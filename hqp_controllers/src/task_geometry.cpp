@@ -288,13 +288,13 @@ void Plane::setLinkTransform(Eigen::Affine3d const& trans_l_r)
 {
     trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
 
-    Eigen::Hyperplane<double,3> h((*n_),d_); //the plane in the link frame
-    h.transform( *trans_l_r_); //transform the plane to the root frame
-
-    //Express the plane in the root frame
+    //Express the plane in the root frame:nR = rot_l_r*nL; dR=rot_l_r*nL*trans_l_r*(nL*dl)
     root_data_.reset(new Eigen::VectorXd(4));
-    root_data_->head<3>() = h.normal();
-    root_data_->head<1>()(0) = h.offset();
+    root_data_->head<3>() = trans_l_r_->linear() * (*n_);
+    root_data_->tail<1>() = root_data_->head<3>().transpose() * ((*trans_l_r_) * ((*n_) * d_));
+
+//    Eigen::Hyperplane<double,3> h((*n_),d_); //the plane in the link frame
+//    h.transform( *trans_l_r_); //transform the plane to the root frame
 }
 //------------------------------------------------------------------------
 void Plane::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const

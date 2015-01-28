@@ -22,13 +22,14 @@ public:
     //  void setTaskDynamics(boost::shared_ptr<std::vector<TaskDynamics> > t_dynamics);
 
     boost::shared_ptr<TaskDynamics> getTaskDynamics()const;
-    unsigned int getId();
-    TaskType getType();
-    unsigned int getPriority();
+    unsigned int getId()const;
+    TaskType getType()const;
+    unsigned int getDimension()const;
+    unsigned int getPriority()const;
     std::string getSign()const;
     boost::shared_ptr<Eigen::MatrixXd> getTaskJacobian()const;
-    void getTaskFunction(Eigen::VectorXd& e)const;
-    //    boost::shared_ptr<Eigen::VectorXd> getTaskVelocity()const;
+    boost::shared_ptr<Eigen::VectorXd> getTaskFunction()const;
+        boost::shared_ptr<Eigen::VectorXd> getTaskVelocity()const;
     std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > getTaskObjects()const;
 
     static boost::shared_ptr<Task>  makeTask(unsigned int id, unsigned int priority, TaskType type, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics); ///<factory method

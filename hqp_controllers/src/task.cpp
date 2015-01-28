@@ -9,6 +9,7 @@ std::ostream& operator<<(std::ostream& str, Task const& task)
     str<<"TASK: "<<std::endl;
     str<<"id: "<<task.id_<<std::endl;
     str<<"type: "<<task.type_<<std::endl;
+    str<<"priority: "<<task.priority_<<std::endl;
     str<<"sign: "<<task.sign_<<std::endl;
     str<<"dim: "<<task.dim_<<std::endl;
     str<<"A_:"<<std::endl<<(*task.A_)<<std::endl;
@@ -35,14 +36,19 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& sign, std:
 void Task::updateTaskFunctionDerivatives()
 {
     ros::Time t = ros::Time::now();
-    double dt = (t_prev_ - t).toSec();
-    ROS_ASSERT(dt < LIM_DT);
-    std::cout<<"dt: "<<dt<<std::endl;
+    double dt = (t - t_prev_).toSec();
+     ROS_ASSERT(dt > -1e-8);
+    if(dt > LIM_DT)
+    {
+        ROS_WARN("In task id %d, Task::updateTaskFunctionDerivatives(...): sampling time dt=%f exeeds sampling time limit %f, setting dt=0.0.",id_,dt,LIM_DT);
+        dt = 0.0;
+    }
 
     unsigned int t_state_dim = t_dynamics_->getDimension();
     //Euler integration
-    for(unsigned int i=0; i < t_state_dim - 1; i++)
-        E_->col(t_state_dim - i - 1) = E_->col(t_state_dim - i - 1) + E_->col(t_state_dim - i) * dt;
+    Eigen::VectorXd e=E_->col(0); //save the task function values - those are not integrated
+    E_->leftCols(t_state_dim) = E_->leftCols(t_state_dim) + E_->rightCols(t_state_dim)*dt;
+    E_->col(0) = e;//put back the task function values
 
     //compute new task function derivatives
     Eigen::VectorXd dx(t_state_dim);
@@ -56,25 +62,32 @@ void Task::updateTaskFunctionDerivatives()
     t_prev_ = t;
 }
 //---------------------------------------------------------
-unsigned int Task::getId() {return id_;}
+unsigned int Task::getId()const {return id_;}
 //---------------------------------------------------------
-TaskType Task::getType() {return type_;}
+TaskType Task::getType()const {return type_;}
 //---------------------------------------------------------
 void Task::setId(unsigned int id) {id_=id;}
 //---------------------------------------------------------
 void Task::setSign(const std::string &sign){sign_ = sign;}
 //---------------------------------------------------------
 std::string Task::getSign()const{return sign_;}
+unsigned int Task::getDimension()const{return dim_;}
 //---------------------------------------------------------
-unsigned int Task::getPriority() {return priority_;}
+unsigned int Task::getPriority()const {return priority_;}
 //---------------------------------------------------------
 void Task::setPriority(unsigned int priority) {priority_= priority;}
 //---------------------------------------------------------
 boost::shared_ptr<Eigen::MatrixXd> Task::getTaskJacobian()const{return A_;}
 //---------------------------------------------------------
-void Task::getTaskFunction(Eigen::VectorXd& e)const{ e = E_->col(0);}
+boost::shared_ptr<Eigen::VectorXd> Task::getTaskFunction()const
+{
+ return boost::shared_ptr<Eigen::VectorXd>(new Eigen::VectorXd(E_->col(0)));
+}
 //---------------------------------------------------------
-//boost::shared_ptr<Eigen::VectorXd> Task::getTaskVelocity()const{return de_;}
+boost::shared_ptr<Eigen::VectorXd> Task::getTaskVelocity()const
+{
+ return boost::shared_ptr<Eigen::VectorXd>(new Eigen::VectorXd(E_->col(1)));
+}
 //---------------------------------------------------------
 std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > Task::getTaskObjects()const{return t_objs_;}
 //---------------------------------------------------------
@@ -126,7 +139,7 @@ void PointInHalfspace::verifyTaskObjects()
     ROS_ASSERT(dim_ > 0);
     ROS_ASSERT(t_objs_.second->getChain()->getNrOfJoints() == 0);//Make sure the plane is fixed in the environment for now
     for (unsigned int i=0; i<dim_;i++)
-          ROS_ASSERT(t_objs_.second->getGeometries()->at(i)->getType() == PLANE);
+        ROS_ASSERT(t_objs_.second->getGeometries()->at(i)->getType() == PLANE);
 
 }
 //---------------------------------------------------------
@@ -147,13 +160,15 @@ void PointInHalfspace::verifyTaskObjects()
 //---------------------------------------------------------
 void PointInHalfspace::computeTask()
 {
-    std::cout<<"BEFORE: "<<std::endl<< *this<<std::endl;
-
-    //Get the vector from the link frame origin to the task point expressed in the task object root frame
-    Eigen::Vector3d delta_p = (*(t_objs_.first->getGeometries()->at(0)->getRootData()));
+//    std::cout<<"joints: ";
+//    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)
+//        std::cout<<t_objs_.first->getJoints()->at(i).getPosition()<<" ";
 
     //Get the task point p(q) expressed in the task root frame
-    Eigen::Vector3d p = t_objs_.first->getLinkTransform()->translation()+delta_p;
+    Eigen::Vector3d p = (*(t_objs_.first->getGeometries()->at(0)->getRootData()));
+
+    //Get the vector from the link frame origin to the task point expressed in the task object root frame
+    Eigen::Vector3d delta_p = p - t_objs_.first->getLinkTransform()->translation();
 
     //Get the Jacobain w.r.t the task point p(q)
     boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_.first->getJacobian(delta_p);
@@ -162,19 +177,23 @@ void PointInHalfspace::computeTask()
     Eigen::VectorXd plane(4);
     for(unsigned int i=0; i<dim_;i++)
     {
-        plane = (*(t_objs_.first->getGeometries()->at(0)->getRootData()));
+        plane = (*(t_objs_.second->getGeometries()->at(0)->getRootData()));
         //task function values
         (*E_)(i,0) = plane.head<3>().transpose()*p-plane.tail<1>()(0);
 
         A_->row(i) = plane.head<3>().transpose() * jac->topRows<3>();
     }
 
+//    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
+//    std::cout<<"p: "<<p.transpose()<<std::endl;
+//    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
+//    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
+//    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
+
     //compute task function derivatives
     updateTaskFunctionDerivatives();
-        std::cout<<"AFTER: "<<std::endl;
-        std::cout<<"A_: "<<std::endl<<A_<<std::endl;
-        std::cout<<"E_: "<<std::endl<<E_<<std::endl;
-        exit(0);
+
+    std::cout<<GRB_DoubleParam_Cutoff<<std::endl;
 }
 //---------------------------------------------------------
 } //end namespace hqp_controllers

@@ -3,11 +3,13 @@
 
 #include <hqp_controllers/task_object.h>
 #include <hqp_controllers/task.h>
+#include <hqp_controllers/hqp.h>
 #include <boost/shared_ptr.hpp>
 #include <kdl/tree.hpp>
 #include <map>
 #include <hardware_interface/joint_command_interface.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <gurobi_c++.h>
 
 namespace hqp_controllers {
 
@@ -36,6 +38,7 @@ private:
     boost::shared_ptr<KDL::Tree> k_tree_;
     boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<TaskObject> > > t_objs_;
     boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<Task> > > tasks_;
+    boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<HQPStage> > > hqp_;
 
 };
 

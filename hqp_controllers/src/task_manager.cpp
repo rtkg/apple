@@ -9,12 +9,14 @@ TaskManager::TaskManager()
 {
     tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+    hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
 }
 //----------------------------------------------
 TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree)
 {
     tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+        hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
 }
 //----------------------------------------------
 void TaskManager::setKinematicTree(boost::shared_ptr<KDL::Tree> k_tree) {k_tree_ = k_tree;}

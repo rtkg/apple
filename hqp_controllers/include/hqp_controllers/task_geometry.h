@@ -46,7 +46,7 @@ protected:
     std::string link_;
     std::string root_;
     boost::shared_ptr<Eigen::VectorXd> link_data_; ///< the geometry data expressed in the link frame
-    boost::shared_ptr<Eigen::VectorXd> root_data_; ///< the geometry data expressed in the root frame
+    boost::shared_ptr<Eigen::VectorXd> root_data_; ///< the geometry data expressed in the root frame (translated and rotated!)
     boost::shared_ptr<Eigen::Affine3d> trans_l_r_; ///< the transformation fromt the link frame to the root frame (= the pose of the link frame expressed in the root frame)
 };
 //------------------------------------------------------------------------------------------
