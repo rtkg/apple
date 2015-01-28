@@ -4,8 +4,8 @@ project(hqp_controllers)
 set(CMAKE_BUILD_TYPE Debug)
 
 # GUROBI libs and includes
-set(GUROBI_INCLUDE_DIR "~/Data/Programs/gurobi600/linux64/include") 
-set(GUROBI_LIB_DIR "~/Data/Programs/gurobi600/linux64/lib")
+set(GUROBI_INCLUDE_DIR "$ENV{GUROBI_HOME}/include") 
+set(GUROBI_LIB_DIR "$ENV{GUROBI_HOME}/lib")
 set(GUROBI_LIBS gurobi_c++ gurobi60)
 
 # Load catkin and all dependencies required for this package
