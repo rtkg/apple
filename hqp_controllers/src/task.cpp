@@ -43,8 +43,8 @@ void Task::updateTaskFunctionDerivatives()
         ROS_WARN("In task id %d, Task::updateTaskFunctionDerivatives(...): sampling time dt=%f exeeds sampling time limit %f, setting dt=0.0.",id_,dt,LIM_DT);
         dt = 0.0;
     }
+      unsigned int t_state_dim = t_dynamics_->getDimension();
 
-    unsigned int t_state_dim = t_dynamics_->getDimension();
     //Euler integration
     Eigen::VectorXd e=E_->col(0); //save the task function values - those are not integrated
     E_->leftCols(t_state_dim) = E_->leftCols(t_state_dim) + E_->rightCols(t_state_dim)*dt;
@@ -53,7 +53,7 @@ void Task::updateTaskFunctionDerivatives()
     //compute new task function derivatives
     Eigen::VectorXd dx(t_state_dim);
     Eigen::VectorXd x(t_state_dim);
-    for(unsigned int i=0; i < t_state_dim - 1; i++)
+    for(unsigned int i=0; i < dim_; i++)
     {
         x = E_->row(i).head(t_state_dim).transpose();
         t_dynamics_->getDX(dx,x);
@@ -177,23 +177,25 @@ void PointInHalfspace::computeTask()
     Eigen::VectorXd plane(4);
     for(unsigned int i=0; i<dim_;i++)
     {
-        plane = (*(t_objs_.second->getGeometries()->at(0)->getRootData()));
+        plane = (*(t_objs_.second->getGeometries()->at(i)->getRootData()));
         //task function values
         (*E_)(i,0) = plane.head<3>().transpose()*p-plane.tail<1>()(0);
 
         A_->row(i) = plane.head<3>().transpose() * jac->topRows<3>();
     }
 
+//    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
 //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
 //    std::cout<<"p: "<<p.transpose()<<std::endl;
 //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
 //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
 //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
+//    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
 
     //compute task function derivatives
     updateTaskFunctionDerivatives();
 
-    std::cout<<GRB_DoubleParam_Cutoff<<std::endl;
+//    std::cout<<GRB_DoubleParam_Cutoff<<std::endl;
 }
 //---------------------------------------------------------
 } //end namespace hqp_controllers

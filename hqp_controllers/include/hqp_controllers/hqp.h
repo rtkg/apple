@@ -4,6 +4,8 @@
 #include <hqp_controllers/task.h>
 #include <Eigen/Geometry>
 #include <boost/shared_ptr.hpp>
+#include <vector>
+#include <gurobi_c++.h>
 
 namespace hqp_controllers {
 //--------------------------------------------------------------
@@ -15,14 +17,29 @@ struct HQPStage
     void appendTask(Task const& task);
 
     boost::shared_ptr<Eigen::VectorXd> de_;
-    boost::shared_ptr<char []> signs_;
+    boost::shared_ptr<std::vector<std::string> > signs_;
     boost::shared_ptr<Eigen::MatrixXd> A_;
 
     unsigned int dim_;
+
+     friend std::ostream& operator<<(std::ostream& str, HQPStage const& stage);
 };
 //--------------------------------------------------------------
+class HQPSolver
+{
+   public:
 
+    HQPSolver();
 
+    bool solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > const& hqp)const;
+
+private:
+
+    GRBEnv env_;
+   // boost::mutex env_lock_;
+
+};
+//--------------------------------------------------------------
 }//end namespace hqp_controllers
 
 #endif

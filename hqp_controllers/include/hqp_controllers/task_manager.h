@@ -9,7 +9,6 @@
 #include <map>
 #include <hardware_interface/joint_command_interface.h>
 #include <visualization_msgs/MarkerArray.h>
-#include <gurobi_c++.h>
 
 namespace hqp_controllers {
 
@@ -25,7 +24,8 @@ public:
     void removeTask(unsigned int id);
     void computeTaskObjectsKinematics();
     /**Computes the task jacobians and velocities of all tasks */
-    void computeTasks();
+    void formHQP();
+    void writeHQP();
 
     boost::shared_ptr<KDL::Tree> getKinematicTree()const;
     unsigned int getValidTaskId() const;
@@ -40,6 +40,7 @@ private:
     boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<Task> > > tasks_;
     boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<HQPStage> > > hqp_;
 
+    HQPSolver hqp_solver_;
 };
 
 }//end namespace hqp_controllers

@@ -203,7 +203,6 @@ bool HQPVelocityController::setTaskObject(hqp_controllers_msgs::SetTaskObject::R
         return res.success;
     }
 
-
     boost::shared_ptr<TaskObject> t_obj(new TaskObject(task_manager_.getValidTaskObjectId(),chain,root,joints_)); //create a new task object
     //parse the object geometries
     for (unsigned int i=0; i<req.obj.geometries.size();i++)
@@ -250,9 +249,8 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 
     if(active_)
     {
-        //compute the HQP controls
-        task_manager_.computeTasks();
-
+       //compute the HQP controls
+        task_manager_.formHQP();
     }
     else
         std::fill(commands_.begin(), commands_.end(), 0.0); //set zero velocities if inactive

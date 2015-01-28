@@ -16,7 +16,7 @@ TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree)
 {
     tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
-        hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
+    hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
 }
 //----------------------------------------------
 void TaskManager::setKinematicTree(boost::shared_ptr<KDL::Tree> k_tree) {k_tree_ = k_tree;}
@@ -133,12 +133,44 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
     }
     return true;
 }
+
 //----------------------------------------------
-void TaskManager::computeTasks()
+void TaskManager::formHQP()
 {
-    //iterate through all tasks and compute the task velocities and jacobians
-    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_->begin(); it!=tasks_->end(); ++it)
-        it->second->computeTask();
+    hqp_->clear();
+
+    //iterate through all tasks, compute task velocities and jacobians and insert the corresponding HQP stages
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_->begin(); task_it!=tasks_->end(); ++task_it)
+    {
+        task_it->second->computeTask();
+        unsigned int priority =  task_it->second->getPriority();
+
+        //if no stage with the given priority is in the hqp yet, create one, otherwise append the task to the existing stage
+        std::map<unsigned int,boost::shared_ptr<HQPStage> >::iterator stage_it = hqp_->find(priority);
+        if(stage_it == hqp_->end())
+              (*hqp_)[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
+        else
+            stage_it->second->appendTask(*task_it->second);
+    }
+}
+//----------------------------------------------
+void TaskManager::writeHQP()
+{
+//    FILE* f=fopen ("/home/rkg/Desktop/hqp.dat","w");
+//    if(f==NULL)
+//    {
+//        ROS_ERROR("Error in TaskManager::writeHQP(): could not open hqp.dat");
+//        ROS_BREAK();
+//    }
+
+//    for (std::map<unsigned int, boost::shared_ptr<HQPStage> >::iterator it=hqp_->begin(); it!=hqp_->end(); ++it)
+//    {
+//        HQPStage stage = (*it->second);
+//        std::ostringstream str;
+//        str<< (*stage.de_);
+//        fprintf(f, "%s, \n", str.str().c_str());
+//    }
+//    fclose (f);
 }
 //----------------------------------------------
 }//end namespace hqp_controllers
