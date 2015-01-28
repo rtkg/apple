@@ -6,7 +6,7 @@
   <!-- Import all Gazebo-customization elements, including Gazebo colors -->
   <xacro:include filename="$(find apple_description)/urdf/apple.gazebo.xacro" />
 
-  <xacro:macro name="dummy_citi_truck" params="parent name *origin">
+  <xacro:macro name="citi_truck" params="parent name *origin">
 
     <!--joint between {parent} and City Truck base -->
     <joint name="${parent}_joint" type="fixed">
@@ -25,7 +25,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://apple_description/meshes/dummy_citi_truck.stl"/>
+          <mesh filename="package://apple_description/meshes/citi_truck.stl"/>
         </geometry>
         <material name="Aluminium"/>
       </visual>
@@ -33,7 +33,7 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://apple_description/meshes/dummy_citi_truck.stl"/>
+          <mesh filename="package://apple_description/meshes/citi_truck.stl"/>
         </geometry>
         <material name="Aluminium"/>
       </collision>

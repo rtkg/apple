@@ -6,28 +6,28 @@
   <!--Include the KUKA LBR iiwa-->
   <xacro:include filename="$(find lbr_iiwa_description)/urdf/lbr_iiwa.xacro"/> 
   <!--Include the Velvet Fingers gripper-->
-  <xacro:include filename="$(find velvet_fingers_description)/urdf/velvet_fingers.xacro"/> 
-  <!--Include a dummy CitiTruck for now-->
-  <xacro:include filename="$(find apple_description)/urdf/dummy_citi_truck.xacro"/>
+  <xacro:include filename="$(find velvet_fingers_description)/urdf/velvet_fingers.xacro"/>
+   <!--Include the CitiTruck-->
+  <xacro:include filename="$(find apple_description)/urdf/citi_truck.xacro"/>
  <!-- Gazebo plugins -->
   <xacro:include filename="$(find apple_description)/gazebo/gazebo.urdf.xacro"/>
 
   <!-- Fix to world just for testing -->
   <link name="world"/>
 
-  <!-- dummy citi truck-->
-  <xacro:dummy_citi_truck name="dummy_citi_truck" parent="world">
-    <origin xyz="0 0 0.15" rpy="0 0 0" />
-  </xacro:dummy_citi_truck> 
+  <!-- citi truck-->
+  <xacro:citi_truck name="citi_truck" parent="world">
+    <origin xyz="0 0 0.2" rpy="0 0 0" />
+  </xacro:citi_truck> 
 
   <!--lbr -->
-  <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="dummy_citi_truck_base">
-    <origin xyz="0.1 -0.2 0.45" rpy="0 ${PI / 2} ${-PI / 4}" />
+  <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="citi_truck_base">
+    <origin xyz="0.114 -0.265 0.5" rpy="0 ${PI / 2} ${-PI / 4}" />
   </xacro:lbr_iiwa>
 
   <!--velvet fingers gripper -->
   <xacro:velvet_fingers name="velvet_fingers" hardware_interface="$(arg prefix)" parent="lbr_iiwa_link_7">
-    <origin xyz="0 0 0.045" rpy="0 ${-PI / 2} 0" />
+    <origin xyz="0 0 0.065" rpy="0 ${-PI / 2} 0" />
   </xacro:velvet_fingers>
 
 </robot>

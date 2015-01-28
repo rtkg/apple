@@ -18,7 +18,7 @@
 
   # HQP Velocity Controller ----------------------------------------
   apple_hqp_vel_controller:
-    type: velocity_controllers/JointGroupVelocityController
+    type: hqp_controllers/HQPVelocityController
     joints:
       - lbr_iiwa_joint_1
       - lbr_iiwa_joint_2

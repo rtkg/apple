@@ -1,0 +1,5 @@
+TaskObject obj
+---
+uint16 id #The id which is assigned to the task object
+bool success
+

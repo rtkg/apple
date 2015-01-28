@@ -1,10 +1,10 @@
 <library path="lib/libhqp_controllers">
 
-  <class name="hqp_controllers/JointGroupVelocityController" 
-         type="hqp_controllers::JointGroupVelocityController" 
+  <class name="hqp_controllers/HQPVelocityController" 
+         type="hqp_controllers::HQPVelocityController" 
          base_class_type="controller_interface::ControllerBase">
     <description>
-      The JointGroupVelocityController tracks velocity commands for a set of joints. It expects a VelocityJointInterface type of hardware interface.
+      The HQPVelocityController generates velocity commands for a set of joints. It expects a VelocityJointInterface type of hardware interface.
     </description>
   </class>
 

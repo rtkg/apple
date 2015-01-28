@@ -1,0 +1,5 @@
+Task task
+---
+uint16 id #The id which is assigned to the task 
+bool success
+
