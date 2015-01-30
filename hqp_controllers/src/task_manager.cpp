@@ -135,7 +135,7 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
 }
 
 //----------------------------------------------
-void TaskManager::computeHQP(Eigen::VectorXd& dq)
+void TaskManager::computeHQP()
 {
     hqp_->clear();
 
@@ -148,32 +148,32 @@ void TaskManager::computeHQP(Eigen::VectorXd& dq)
         //if no stage with the given priority is in the hqp yet, create one, otherwise append the task to the existing stage
         std::map<unsigned int,boost::shared_ptr<HQPStage> >::iterator stage_it = hqp_->find(priority);
         if(stage_it == hqp_->end())
-              (*hqp_)[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
+            (*hqp_)[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
         else
             stage_it->second->appendTask(*task_it->second);
     }
 
-    hqp_solver_.solve(*hqp_);
-     dq = hqp_solver_.getSolution();
+    if(!hqp_solver_.solve(*hqp_))
+        ROS_BREAK();
 }
 //----------------------------------------------
 void TaskManager::writeHQP()
 {
-//    FILE* f=fopen ("/home/rkg/Desktop/hqp.dat","w");
-//    if(f==NULL)
-//    {
-//        ROS_ERROR("Error in TaskManager::writeHQP(): could not open hqp.dat");
-//        ROS_BREAK();
-//    }
+    //    FILE* f=fopen ("/home/rkg/Desktop/hqp.dat","w");
+    //    if(f==NULL)
+    //    {
+    //        ROS_ERROR("Error in TaskManager::writeHQP(): could not open hqp.dat");
+    //        ROS_BREAK();
+    //    }
 
-//    for (std::map<unsigned int, boost::shared_ptr<HQPStage> >::iterator it=hqp_->begin(); it!=hqp_->end(); ++it)
-//    {
-//        HQPStage stage = (*it->second);
-//        std::ostringstream str;
-//        str<< (*stage.de_);
-//        fprintf(f, "%s, \n", str.str().c_str());
-//    }
-//    fclose (f);
+    //    for (std::map<unsigned int, boost::shared_ptr<HQPStage> >::iterator it=hqp_->begin(); it!=hqp_->end(); ++it)
+    //    {
+    //        HQPStage stage = (*it->second);
+    //        std::ostringstream str;
+    //        str<< (*stage.de_);
+    //        fprintf(f, "%s, \n", str.str().c_str());
+    //    }
+    //    fclose (f);
 }
 //----------------------------------------------
 }//end namespace hqp_controllers

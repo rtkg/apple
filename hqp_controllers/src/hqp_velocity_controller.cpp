@@ -250,7 +250,7 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
     if(active_)
     {
        //compute the HQP controls
-        task_manager_.computeHQP(dq_);
+        task_manager_.computeHQP();
     }
     else
         std::fill(commands_.begin(), commands_.end(), 0.0); //set zero velocities if inactive

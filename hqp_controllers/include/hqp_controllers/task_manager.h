@@ -24,7 +24,7 @@ public:
     void removeTask(unsigned int id);
     void computeTaskObjectsKinematics();
     /**Computes the task jacobians and velocities of all tasks ans solves the corresponding HQP. The solution is returned in dq */
-    void computeHQP(Eigen::VectorXd& dq);
+    void computeHQP();
 
     void writeHQP();
 
