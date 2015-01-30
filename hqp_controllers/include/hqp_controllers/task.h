@@ -9,7 +9,7 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------
-enum TaskType {UNDEFINED_TASK = 0, POINT_IN_HALFSPACE = 1};
+enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1};
 //----------------------------------------------------------------
 class Task
 {
@@ -59,18 +59,18 @@ protected:
     void updateTaskFunctionDerivatives();
 };
 //----------------------------------------------------------------
-class PointInHalfspace: public Task
+class ProjectPointPlane: public Task
 {
 public:
 
-    PointInHalfspace(unsigned int id, unsigned int priority, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+    ProjectPointPlane(unsigned int id, unsigned int priority, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
 
     //  virtual void setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs);
     virtual void computeTask();
 
 protected:
 
-    PointInHalfspace(){};
+    ProjectPointPlane(){};
 
 private:
 

@@ -103,8 +103,8 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, T
 {
     boost::shared_ptr<Task> task;
 
-    if(type == POINT_IN_HALFSPACE)
-        task.reset(new PointInHalfspace(id,priority, sign,t_objs,t_dynamics));
+    if(type == PROJECT_POINT_PLANE)
+        task.reset(new ProjectPointPlane(id,priority, sign,t_objs,t_dynamics));
     // else if(type == LINE)
     // geom.reset(new Line(link, root, link_data));
     else
@@ -115,9 +115,9 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, T
     return task;
 }
 //---------------------------------------------------------
-PointInHalfspace::PointInHalfspace(unsigned int id, unsigned int priority, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
+ProjectPointPlane::ProjectPointPlane(unsigned int id, unsigned int priority, std::string const& sign, std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
 {
-    type_ = POINT_IN_HALFSPACE;
+    type_ = PROJECT_POINT_PLANE;
     dim_ = t_objs_.second->getGeometries()->size();
 
     verifyTaskObjects();
@@ -129,7 +129,7 @@ PointInHalfspace::PointInHalfspace(unsigned int id, unsigned int priority, std::
     E_->setZero();
 }
 //---------------------------------------------------------
-void PointInHalfspace::verifyTaskObjects()
+void ProjectPointPlane::verifyTaskObjects()
 {
     ROS_ASSERT(t_objs_.first && t_objs_.second);
     ROS_ASSERT(t_objs_.first->getRoot() == t_objs_.second->getRoot()); //make sure the geometries associated with the task objects are formed in the same root frame
@@ -143,7 +143,7 @@ void PointInHalfspace::verifyTaskObjects()
 
 }
 //---------------------------------------------------------
-//void PointInHalfspace::setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs)
+//void ProjectPointPlane::setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs)
 //{
 //    t_objs_ = t_objs;
 //    n_planes_ = t_objs_.second->getGeometries()->size();
@@ -158,7 +158,7 @@ void PointInHalfspace::verifyTaskObjects()
 //    de_->setZero();
 //}
 //---------------------------------------------------------
-void PointInHalfspace::computeTask()
+void ProjectPointPlane::computeTask()
 {
 //    std::cout<<"joints: ";
 //    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)

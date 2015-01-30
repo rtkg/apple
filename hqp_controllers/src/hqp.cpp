@@ -75,7 +75,7 @@ void HQPSolver::reset()
 bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
 {
     if(hqp.empty())
-        return true;
+        return false;
 
     reset();
 
@@ -160,10 +160,14 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
             //========== SOLVE ===================
             model.optimize();
             int status = model.get(GRB_IntAttr_Status);
+            double runtime = model.get(GRB_DoubleAttr_Runtime);
 
             if (status != GRB_OPTIMAL)
             {
-                ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d", it->first , status);
+                ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d.", it->first , status);
+                if(status == GRB_TIME_LIMIT)
+                    ROS_WARN("Stage solving runtime %f sec exceeds the set time limit of %f sec.", runtime, TIME_LIMIT);
+
                 return false;
             }
 
@@ -182,10 +186,11 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
 
             it->second->solved_ = true;
 
-            model.write("/home/rkg/Desktop/model.lp");
-            model.write("/home/rkg/Desktop/model.sol");
-            std::cout<<"SOLVED STAGE: "<<it->first<<std::endl;
-            std::cout<< *it->second<<std::endl;
+            //            model.write("/home/rkg/Desktop/model.lp");
+            //            model.write("/home/rkg/Desktop/model.sol");
+            //            std::cout<<"SOLVED STAGE: "<<it->first<<std::endl;
+            //            std::cout<< *it->second<<std::endl;
+            //            std::cout<<"runtime: "<<runtime<<std::endl;
 
             delete[] x;
             delete[] w;
@@ -202,6 +207,7 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
         return false;
     }
 
+    //    std::cout<<"Solved HQP! Yay!"<<std::endl;
     return true;
 }
 //-----------------------------------------

@@ -11,7 +11,7 @@ namespace hqp_controllers {
 enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5};
 #define POINT_SCALE 0.02
 #define LINE_SCALE  0.15
-#define PLANE_SCALE 1.0
+#define PLANE_SCALE 3.0
 //----------------------------------------------------------------------------------------------------
 class TaskGeometry
 {
@@ -85,6 +85,7 @@ protected:
     boost::shared_ptr<Eigen::Vector3d> v_; ///< coordinates of the line's unit direction vector expressed in TaskGeometry::link_ frame
 };
 //------------------------------------------------------------------------------------------
+//** Plane defined as Plane::n_^T*x - Plane::d_ = 0.0 */
 class Plane: public TaskGeometry
 {
 public:

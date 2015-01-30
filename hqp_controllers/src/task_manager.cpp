@@ -5,14 +5,14 @@
 namespace hqp_controllers{
 
 //----------------------------------------------
-TaskManager::TaskManager()
+TaskManager::TaskManager() : hqp_computed_(false)
 {
     tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
     hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
 }
 //----------------------------------------------
-TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree)
+TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree), hqp_computed_(false)
 {
     tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
@@ -101,6 +101,17 @@ void TaskManager::computeTaskObjectsKinematics()
         it->second->computeKinematics();
 }
 //----------------------------------------------
+bool TaskManager::getDQ(Eigen::VectorXd& dq)const
+{
+    if(!hqp_computed_)
+        return false;
+
+    //final solution is in the last stage of the hqp
+    ROS_ASSERT(hqp_->rbegin()->second->solved_); //just to be sure ...
+    dq = *(hqp_->rbegin()->second->x_);
+    return true;
+}
+//----------------------------------------------
 boost::shared_ptr<TaskObject> TaskManager::getTaskObject(unsigned int id)const
 {
     boost::shared_ptr<TaskObject> t_obj; //gets initialized to NULL
@@ -112,6 +123,27 @@ boost::shared_ptr<TaskObject> TaskManager::getTaskObject(unsigned int id)const
         t_obj = it->second;
 
     return t_obj;
+}
+//----------------------------------------------
+void TaskManager::getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses)
+{
+    t_statuses.statuses.clear();
+
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_->begin(); it!=tasks_->end(); ++it)
+    {
+        hqp_controllers_msgs::TaskStatus status;
+        status.id = it->second->getId();
+        unsigned int t_dim = it->second->getTaskFunction()->size();
+        ROS_ASSERT(t_dim == it->second->getTaskVelocity()->size()); //just to be sure ...
+
+        for(unsigned int i=0; i < t_dim; i++)
+        {
+            status.e.push_back( (*it->second->getTaskFunction())(i));
+            status.de.push_back( (*it->second->getTaskVelocity())(i));
+        }
+
+        t_statuses.statuses.push_back(status);
+    }
 }
 //----------------------------------------------
 bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const
@@ -138,7 +170,7 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
 void TaskManager::computeHQP()
 {
     hqp_->clear();
-
+    hqp_computed_ = false;
     //iterate through all tasks, compute task velocities and jacobians and insert the corresponding HQP stages
     for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_->begin(); task_it!=tasks_->end(); ++task_it)
     {
@@ -153,8 +185,9 @@ void TaskManager::computeHQP()
             stage_it->second->appendTask(*task_it->second);
     }
 
-    if(!hqp_solver_.solve(*hqp_))
-        ROS_BREAK();
+    if(hqp_solver_.solve(*hqp_))
+        hqp_computed_ = true;
+
 }
 //----------------------------------------------
 void TaskManager::writeHQP()
