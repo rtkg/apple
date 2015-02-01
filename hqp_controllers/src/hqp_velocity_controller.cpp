@@ -12,13 +12,13 @@ namespace hqp_controllers
 HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_RATE), active_(true)
 {
     joints_.reset(new std::vector< hardware_interface::JointHandle >);
-    commands_.clear();
 }
 //-----------------------------------------------------------------------
 HQPVelocityController::~HQPVelocityController()
 {
-    sub_command_.shutdown();
-    set_task_obj_srv_.shutdown();
+    set_task_srv_.shutdown();
+        set_task_obj_srv_.shutdown();
+            vis_t_obj_srv_.shutdown();
 }
 //-----------------------------------------------------------------------
 bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw, ros::NodeHandle &n)
@@ -118,12 +118,12 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
     }
 
     //============================================== REGISTER CALLBACKS =========================================
-    sub_command_ = n.subscribe<std_msgs::Float64MultiArray>("command", 1, &HQPVelocityController::commandCB, this);
-    set_task_srv_ = n.advertiseService("set_task",&HQPVelocityController::setTask,this);
-    set_task_obj_srv_ = n.advertiseService("set_task_object",&HQPVelocityController::setTaskObject,this);
+    set_task_srv_ = n.advertiseService("set_tasks",&HQPVelocityController::setTasks,this);
+    set_task_obj_srv_ = n.advertiseService("set_task_objects",&HQPVelocityController::setTaskObjects,this);
     vis_t_obj_srv_ = n.advertiseService("visualize_task_objects",&HQPVelocityController::visualizeTaskObjects,this);
     //============================================== REGISTER CALLBACKS END =========================================
     vis_t_obj_pub_.init(n, "task_objects", 1);
+    t_statuses_pub_.init(n, "task_statuses", 1);
 
     return true;
 }
@@ -131,96 +131,98 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 void HQPVelocityController::starting(const ros::Time& time)
 {
     // Start controller with 0.0 velocities
-    commands_.resize(n_joints_, 0.0);
+    commands_.resize(n_joints_);
+    commands_.setZero();
 }
 
 ///////////////
 // CALLBACKS //
 ///////////////
 
-//-----------------------------------------------------------------------
-void HQPVelocityController::commandCB(const std_msgs::Float64MultiArrayConstPtr& msg)
-{
-    if(msg->data.size()!=n_joints_)
-    {
-        ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
-        return;
-    }
-    for(unsigned int i=0; i<n_joints_; i++)
-        commands_[i] = msg->data[i];
-}
 //------------------------------------------------------------------------
-bool HQPVelocityController::setTask(hqp_controllers_msgs::SetTask::Request & req, hqp_controllers_msgs::SetTask::Response &res)
+bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res)
 {
-    ROS_ASSERT(req.task.t_obj_ids.size() == 2);
-
     lock_.lock();
-    //make sure both task objects associated with the given task exist
-    std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs(task_manager_.getTaskObject(req.task.t_obj_ids[0]), task_manager_.getTaskObject(req.task.t_obj_ids[1]));
-    if(t_objs.first.get() == NULL)
-    {
-        res.success = false;
-        lock_.unlock();
-        ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task map.", req.task.t_obj_ids[0]);
-        return res.success;
-    }
-    else if(t_objs.second.get() == NULL)
-    {
-        res.success = false;
-        lock_.unlock();
-        ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task map.", req.task.t_obj_ids[1]);
-        return res.success;
-    }
 
-    //Read the data for the task dynamics
-    Eigen::VectorXd data(req.task.dynamics.data.size());
-    for(unsigned int i=0; i<data.rows();i++)
-        data(i) = req.task.dynamics.data[i];
+    for(unsigned int i = 0; i<req.tasks.size(); i++)
+    {
+        hqp_controllers_msgs::Task task = req.tasks[i];
+        unsigned int n_t_obj = task.t_obj_ids.size();
+        //make sure all task objects associated with the given task exist
+        boost::shared_ptr<std::vector<TaskObject> > t_objs(new std::vector<TaskObject>(n_t_obj));
+        for(unsigned int j=0; j<n_t_obj; j++)
+        {
+            TaskObject t_obj;
+            if(!task_manager_.getTaskObject(task.t_obj_ids[j], t_obj))
+            {
+                res.success = false;
+                lock_.unlock();
+                ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task object map.", task.t_obj_ids[j]);
+                return res.success;
+            }
+            t_objs->at(j) = t_obj;
+        }
 
-    TaskType task_type = static_cast<TaskType>(req.task.type);
-    TaskDynamicsType dynamics_type = static_cast<TaskDynamicsType>(req.task.dynamics.type);
-    boost::shared_ptr<Task> task = Task::makeTask(task_manager_.getValidTaskId(),req.task.priority, task_type, req.task.sign, t_objs, TaskDynamics::makeTaskDynamics(dynamics_type,data));
-    if(task_manager_.addTask(task))
-        res.success = true;
+        //Read the data for the task dynamics
+        Eigen::VectorXd data(task.dynamics.data.size());
+        for(unsigned int j=0; j<data.rows();j++)
+            data(j) = task.dynamics.data[j];
+
+        TaskType task_type = static_cast<TaskType>(task.type);
+        unsigned int id = task_manager_.getValidTaskId();
+        TaskDynamicsType dynamics_type = static_cast<TaskDynamicsType>(task.dynamics.type);
+        if(!task_manager_.addTask(Task::makeTask(id, task.priority, task_type, task.sign, t_objs, TaskDynamics::makeTaskDynamics(dynamics_type,data))))
+        {
+            res.success = false;
+            return res.success;
+        }
+        res.ids.push_back(id);
+    }
 
     lock_.unlock();
+    res.success = true;
     return res.success;
 }
 //------------------------------------------------------------------------
-bool HQPVelocityController::setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res)
+bool HQPVelocityController::setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res)
 {
-    std::string root = req.obj.root;
-    std::string link = req.obj.link;
-
-    //try to get the assoicated kinematic chain
-    boost::shared_ptr<KDL::Chain> chain(new KDL::Chain);
     lock_.lock();
-    if(!task_manager_.getKinematicTree()->getChain(root,link,(*chain)))
+
+    for(unsigned int i=0; i<req.objs.size();i++)
     {
-        ROS_ERROR("Could not get kinematic chain from %s to %s.", root.c_str(),link.c_str());
-        res.success =false;
-        lock_.unlock();
-        return res.success;
+        std::string root = req.objs[i].root;
+        std::string link = req.objs[i].link;
+
+        //try to get the assoicated kinematic chain
+        boost::shared_ptr<KDL::Chain> chain(new KDL::Chain);
+
+        if(!task_manager_.getKinematicTree()->getChain(root,link,(*chain)))
+        {
+            ROS_ERROR("Could not get kinematic chain from %s to %s.", root.c_str(),link.c_str());
+            res.success =false;
+            lock_.unlock();
+            return res.success;
+        }
+
+        unsigned int id = task_manager_.getValidTaskObjectId();
+        boost::shared_ptr<TaskObject> t_obj(new TaskObject(id, chain,root,joints_)); //create a new task object
+        //parse the object geometries
+        for (unsigned int j=0; j<req.objs[i].geometries.size();j++)
+        {
+            unsigned int n_data = req.objs[i].geometries[j].data.size();
+            Eigen::VectorXd link_data(n_data);
+            for (unsigned int k=0; k<n_data; k++)
+                link_data(k)=req.objs[i].geometries[j].data[k];
+
+            TaskGeometryType type = static_cast<TaskGeometryType>(req.objs[i].geometries[j].type);
+            boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(type, link, root, link_data);
+            t_obj->addGeometry(geom); //add the task geometries to the task object
+        }
+        t_obj->computeKinematics();
+        task_manager_.addTaskObject(t_obj);
+        res.ids.push_back(id);
     }
-
-
-    boost::shared_ptr<TaskObject> t_obj(new TaskObject(task_manager_.getValidTaskObjectId(),chain,root,joints_)); //create a new task object
-    //parse the object geometries
-    for (unsigned int i=0; i<req.obj.geometries.size();i++)
-    {
-        unsigned int n_data = req.obj.geometries[i].data.size();
-        Eigen::VectorXd link_data(n_data);
-        for (unsigned int j=0; j<n_data; j++)
-            link_data(j)=req.obj.geometries[i].data[j];
-
-        TaskGeometryType type = static_cast<TaskGeometryType>(req.obj.geometries[i].type);
-        boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(type, link, root, link_data);
-        t_obj->addGeometry(geom); //add the task geometries to the task object
-    }
-    t_obj->computeKinematics();
-    task_manager_.addTaskObject(t_obj);
     lock_.unlock();
-
     res.success = true;
     return res.success;
 }
@@ -251,14 +253,18 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
     if(active_)
     {
         //compute the HQP controls
-        task_manager_.computeTasks();
+        task_manager_.computeHQP();
+        //set the computed task velocities if the computation was succesful, otherwise set them to zero
+        if(!task_manager_.getDQ(commands_))
+            commands_.setZero();
 
+        //        std::cout<<"commands: "<<commands_.transpose()<<std::endl;
     }
     else
-        std::fill(commands_.begin(), commands_.end(), 0.0); //set zero velocities if inactive
+        commands_.setZero();
 
     for(unsigned int i=0; i<n_joints_; i++)
-        joints_->at(i).setCommand(commands_[i]);
+        joints_->at(i).setCommand(commands_(i));
 
     // ================= DEBUG PRINT ============================
     //    for (int i=0; i<n_joints_; i++)
@@ -271,21 +277,25 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
     //    }
     // ================= DEBUG PRINT END ============================
 
-    //======================= PUBLISH THE TASK OBJECT GEOMETRIES =================
+    //======================= PUBLISH =================
     // limit rate of publishing
     if (publish_rate_ > 0.0 && last_publish_time_ + ros::Duration(1.0/publish_rate_) < time)
     {
-        // try to publish
+        // we're actually publishing, so increment time
+        last_publish_time_ = last_publish_time_ + ros::Duration(1.0/publish_rate_);
+
+        // try to publish the task object geometries
         if (vis_t_obj_pub_.trylock())
-        {
-
-            // we're actually publishing, so increment time
-            last_publish_time_ = last_publish_time_ + ros::Duration(1.0/publish_rate_);
-
             vis_t_obj_pub_.unlockAndPublish();
-        }
+
+        // try to publish the task statuses
+        task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
+
+        if (t_statuses_pub_.trylock())
+            t_statuses_pub_.unlockAndPublish();
+
     }
-    //======================= END PUBLISH THE TASK OBJECT GEOMETRIES =================
+    //======================= END PUBLISH =================
 }
 //-----------------------------------------------------------------------
 } //end namespace hqp_controllers

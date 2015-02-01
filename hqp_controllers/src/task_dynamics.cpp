@@ -52,6 +52,7 @@ void LinearTaskDynamics::setDynamicsMatrix(boost::shared_ptr<Eigen::MatrixXd> A)
 {
     ROS_ASSERT(A->cols()==A->rows());
     ROS_ASSERT(A->cols() > 0);
+
     A_ = A;
     dim_ = A_->cols();
 }
@@ -61,6 +62,7 @@ boost::shared_ptr<Eigen::MatrixXd> LinearTaskDynamics::getDynamicsMatrix()const{
 void LinearTaskDynamics::getDX(Eigen::VectorXd& dx, Eigen::VectorXd& x)const
 {
     ROS_ASSERT( (dx.rows() == dim_) && (x.rows() == dim_) );
+
     dx=(*A_) * x;
 }
 //----------------------------------------------------------

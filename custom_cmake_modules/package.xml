@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package>
+  <name>custom_cmake_modules</name>
+  <version>0.0.1</version>
+  <description>a port of cmake_modules to add some custom stuff</description>
+
+  <maintainer email="tsv@todo.com">Todor Stoyanov</maintainer>
+  <author email="tsv@todo.com">Todor Stoyanov</author>
+
+  <license>BSD</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+    <architecture_independent/>
+  </export>
+</package>

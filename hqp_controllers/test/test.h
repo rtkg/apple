@@ -3,7 +3,7 @@
 
 #include <ros/ros.h>
 #include <boost/thread/mutex.hpp>
-#include <hqp_controllers_msgs/SetTaskObject.h>
+#include <hqp_controllers_msgs/SetTaskObjects.h>
 
 namespace hqp_controllers
 {
@@ -36,7 +36,7 @@ private:
     //  CALLBACKS  //
     /////////////////
 
-    bool setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res);
+    bool setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res);
 };
 
 }//end namespace hqp controllers

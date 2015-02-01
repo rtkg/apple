@@ -1,0 +1,5 @@
+Task[] tasks
+---
+uint16[] ids #The ids which are assigned to the given tasks
+bool success
+

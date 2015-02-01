@@ -17,12 +17,14 @@ add_message_files(
   TaskObject.msg
   TaskGeometry.msg
   TaskDynamics.msg
+  TaskStatus.msg
+  TaskStatuses.msg
   )
 
 add_service_files(
   FILES
-  SetTask.srv
-  SetTaskObject.srv
+  SetTasks.srv
+  SetTaskObjects.srv
   VisualizeTaskObjects.srv
   )
 

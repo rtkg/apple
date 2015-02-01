@@ -5,16 +5,18 @@
 namespace hqp_controllers{
 
 //----------------------------------------------
-TaskManager::TaskManager()
+TaskManager::TaskManager() : hqp_computed_(false)
 {
     tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+    hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
 }
 //----------------------------------------------
-TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree)
+TaskManager::TaskManager(boost::shared_ptr<KDL::Tree> k_tree) : k_tree_(k_tree), hqp_computed_(false)
 {
     tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
     t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
+    hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
 }
 //----------------------------------------------
 void TaskManager::setKinematicTree(boost::shared_ptr<KDL::Tree> k_tree) {k_tree_ = k_tree;}
@@ -57,17 +59,14 @@ unsigned int TaskManager::getValidTaskId() const
 //----------------------------------------------
 bool TaskManager::addTask(boost::shared_ptr<Task> task)
 {
-    //make sure both task objects associated with the given task exist
-    if(getTaskObject(task->getTaskObjects().first->getId()).get() == NULL)
-    {
-        ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects().first->getId());
-        return false;
-    }
-    else if(getTaskObject(task->getTaskObjects().second->getId()).get() == NULL)
-    {
-        ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects().second->getId());
-        return false;
-    }
+    //make sure the task objects associated with the given task exist
+    TaskObject t_obj;
+    for(unsigned int i = 0; i<task->getTaskObjects()->size(); i++)
+        if(!getTaskObject(task->getTaskObjects()->at(i).getId(), t_obj))
+        {
+            ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects()->at(i).getId());
+            return false;
+        }
 
     //Make sure a task with the same id doesn't already exist in the map
     std::pair<std::map<unsigned int, boost::shared_ptr<Task> >::iterator,bool> it;
@@ -79,7 +78,7 @@ bool TaskManager::addTask(boost::shared_ptr<Task> task)
     }
 
     //=================== DEBUG PRINT =========================
-    //  std::cout<<"ADDED TASK: "<<std::endl<< *(task);
+    //std::cout<<"ADDED TASK: "<<std::endl<< *(task);
     //=================== DEBUG PRINT END =========================
 
     return true;
@@ -99,17 +98,50 @@ void TaskManager::computeTaskObjectsKinematics()
         it->second->computeKinematics();
 }
 //----------------------------------------------
-boost::shared_ptr<TaskObject> TaskManager::getTaskObject(unsigned int id)const
+bool TaskManager::getDQ(Eigen::VectorXd& dq)const
 {
-    boost::shared_ptr<TaskObject> t_obj; //gets initialized to NULL
+    if(!hqp_computed_)
+        return false;
 
+    //final solution is in the last stage of the hqp
+    ROS_ASSERT(hqp_->rbegin()->second->solved_); //just to be sure ...
+    dq = *(hqp_->rbegin()->second->x_);
+    return true;
+}
+//----------------------------------------------
+bool TaskManager::getTaskObject(unsigned int id, TaskObject& t_obj)const
+{
     std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(id);
     if(it == t_objs_->end())
+    {
         ROS_WARN("TaskManager::getTaskObject(...): could not find task object with id %d.",id);
+        return false;
+    }
     else
-        t_obj = it->second;
+        t_obj = *it->second;
 
-    return t_obj;
+    return true;
+}
+//----------------------------------------------
+void TaskManager::getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses)
+{
+    t_statuses.statuses.clear();
+
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_->begin(); it!=tasks_->end(); ++it)
+    {
+        hqp_controllers_msgs::TaskStatus status;
+        status.id = it->second->getId();
+        unsigned int t_dim = it->second->getTaskFunction()->size();
+        ROS_ASSERT(t_dim == it->second->getTaskVelocity()->size()); //just to be sure ...
+
+        for(unsigned int i=0; i < t_dim; i++)
+        {
+            status.e.push_back( (*it->second->getTaskFunction())(i));
+            status.de.push_back( (*it->second->getTaskVelocity())(i));
+        }
+
+        t_statuses.statuses.push_back(status);
+    }
 }
 //----------------------------------------------
 bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const
@@ -131,12 +163,48 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geom
     }
     return true;
 }
+
 //----------------------------------------------
-void TaskManager::computeTasks()
+void TaskManager::computeHQP()
 {
-    //iterate through all tasks and compute the task velocities and jacobians
-    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_->begin(); it!=tasks_->end(); ++it)
-        it->second->computeTask();
+    hqp_->clear();
+    hqp_computed_ = false;
+    //iterate through all tasks, compute task velocities and jacobians and insert the corresponding HQP stages
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_->begin(); task_it!=tasks_->end(); ++task_it)
+    {
+        task_it->second->computeTask();
+        unsigned int priority =  task_it->second->getPriority();
+
+        //if no stage with the given priority is in the hqp yet, create one, otherwise append the task to the existing stage
+        std::map<unsigned int,boost::shared_ptr<HQPStage> >::iterator stage_it = hqp_->find(priority);
+        if(stage_it == hqp_->end())
+            (*hqp_)[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
+        else
+            stage_it->second->appendTask(*task_it->second);
+    }
+
+    if(hqp_solver_.solve(*hqp_))
+        hqp_computed_ = true;
+
+}
+//----------------------------------------------
+void TaskManager::writeHQP()
+{
+    //    FILE* f=fopen ("/home/rkg/Desktop/hqp.dat","w");
+    //    if(f==NULL)
+    //    {
+    //        ROS_ERROR("Error in TaskManager::writeHQP(): could not open hqp.dat");
+    //        ROS_BREAK();
+    //    }
+
+    //    for (std::map<unsigned int, boost::shared_ptr<HQPStage> >::iterator it=hqp_->begin(); it!=hqp_->end(); ++it)
+    //    {
+    //        HQPStage stage = (*it->second);
+    //        std::ostringstream str;
+    //        str<< (*stage.de_);
+    //        fprintf(f, "%s, \n", str.str().c_str());
+    //    }
+    //    fclose (f);
 }
 //----------------------------------------------
 }//end namespace hqp_controllers

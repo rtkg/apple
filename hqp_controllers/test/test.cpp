@@ -7,13 +7,13 @@ namespace hqp_controllers
 //-----------------------------------------------------------------
 HQPTest::HQPTest()
 {
-    set_task_obj_srv_ = nh_.advertiseService("set_task_object",&HQPTest::setTaskObject,this);
+    set_task_obj_srv_ = nh_.advertiseService("set_task_objects",&HQPTest::setTaskObjects,this);
 }
 //-----------------------------------------------------------------
-bool HQPTest::setTaskObject(hqp_controllers_msgs::SetTaskObject::Request & req, hqp_controllers_msgs::SetTaskObject::Response &res)
+bool HQPTest::setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res)
 {
     lock_.lock();
-    ROS_INFO("Called setTaskObject callback...");
+    ROS_INFO("Called setTaskObjects callback...");
     lock_.unlock();
     return res.success;
 }
