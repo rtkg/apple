@@ -8,10 +8,11 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
-enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5};
-#define POINT_SCALE 0.02
-#define LINE_SCALE  0.15
-#define PLANE_SCALE 3.0
+enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6};
+#define POINT_SCALE  0.02
+#define LINE_SCALE   0.15
+#define PLANE_SCALE  3.0
+#define LINE_WIDTH   0.01
 //----------------------------------------------------------------------------------------------------
 class TaskGeometry
 {
@@ -37,7 +38,7 @@ public:
     virtual void setLinkData(Eigen::VectorXd const& link_data) = 0;
     //**Sets the TaskGeometry::trans_l_r_ member and updates the TaskGeometry::root_data_ member in the subclasses */
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r) = 0;
-    virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const = 0;
+    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const = 0;
     virtual void addMarker(visualization_msgs::MarkerArray& markers) = 0;
 
 protected:
@@ -59,7 +60,7 @@ public:
 
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
-    virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    // virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
     virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
@@ -76,8 +77,8 @@ public:
 
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
-    virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
-        virtual void addMarker(visualization_msgs::MarkerArray& markers);
+    //virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 
@@ -95,7 +96,7 @@ public:
 
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
-    virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    //virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
     virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
@@ -113,7 +114,7 @@ public:
 
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
-    virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    //   virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
     virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
@@ -132,8 +133,8 @@ public:
 
     virtual void setLinkData(Eigen::VectorXd const& link_data);
     virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
-    virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
-      virtual void addMarker(visualization_msgs::MarkerArray& markers);
+    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
 protected:
 
@@ -141,7 +142,22 @@ protected:
 
 };
 //------------------------------------------------------------------------------------------
+class JointPosition: public TaskGeometry
+{
+public:
+    JointPosition();
+    JointPosition(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
 
+    virtual void setLinkData(Eigen::VectorXd const& link_data);
+    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
+    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+
+protected:
+    boost::shared_ptr<Eigen::Affine3d> trans_j_l_; ///< transformation from the joint frame to the TaskGeometry::link_ frame (= pose of Frame::trans_j_l_ in the link frame)
+    double q_pos_; ///<Joint position value
+};
+//------------------------------------------------------------------------------------------
 } //end namespace hqp_controllers
 
 #endif // TASK_GEOMETRY_H

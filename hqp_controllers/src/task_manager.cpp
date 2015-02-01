@@ -59,17 +59,14 @@ unsigned int TaskManager::getValidTaskId() const
 //----------------------------------------------
 bool TaskManager::addTask(boost::shared_ptr<Task> task)
 {
-    //make sure both task objects associated with the given task exist
-    if(getTaskObject(task->getTaskObjects().first->getId()).get() == NULL)
-    {
-        ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects().first->getId());
-        return false;
-    }
-    else if(getTaskObject(task->getTaskObjects().second->getId()).get() == NULL)
-    {
-        ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects().second->getId());
-        return false;
-    }
+    //make sure the task objects associated with the given task exist
+    TaskObject t_obj;
+    for(unsigned int i = 0; i<task->getTaskObjects()->size(); i++)
+        if(!getTaskObject(task->getTaskObjects()->at(i).getId(), t_obj))
+        {
+            ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects()->at(i).getId());
+            return false;
+        }
 
     //Make sure a task with the same id doesn't already exist in the map
     std::pair<std::map<unsigned int, boost::shared_ptr<Task> >::iterator,bool> it;
@@ -81,7 +78,7 @@ bool TaskManager::addTask(boost::shared_ptr<Task> task)
     }
 
     //=================== DEBUG PRINT =========================
-    //  std::cout<<"ADDED TASK: "<<std::endl<< *(task);
+    //std::cout<<"ADDED TASK: "<<std::endl<< *(task);
     //=================== DEBUG PRINT END =========================
 
     return true;
@@ -112,17 +109,18 @@ bool TaskManager::getDQ(Eigen::VectorXd& dq)const
     return true;
 }
 //----------------------------------------------
-boost::shared_ptr<TaskObject> TaskManager::getTaskObject(unsigned int id)const
+bool TaskManager::getTaskObject(unsigned int id, TaskObject& t_obj)const
 {
-    boost::shared_ptr<TaskObject> t_obj; //gets initialized to NULL
-
     std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(id);
     if(it == t_objs_->end())
+    {
         ROS_WARN("TaskManager::getTaskObject(...): could not find task object with id %d.",id);
+        return false;
+    }
     else
-        t_obj = it->second;
+        t_obj = *it->second;
 
-    return t_obj;
+    return true;
 }
 //----------------------------------------------
 void TaskManager::getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses)

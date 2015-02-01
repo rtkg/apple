@@ -3,6 +3,7 @@
 #include <kdl/frames.hpp>
 #include <kdl/jacobian.hpp>
 #include <ros/ros.h>
+#include <math.h>
 
 namespace hqp_controllers {
 
@@ -58,22 +59,24 @@ boost::shared_ptr<TaskGeometry>  TaskGeometry::makeTaskGeometry(TaskGeometryType
 {
     boost::shared_ptr<TaskGeometry> geom;
 
-      if(type == POINT)
-          geom.reset(new Point(link, root, link_data));
-      else if(type == LINE)
-          geom.reset(new Line(link, root, link_data));
-      else if(type == PLANE)
-          geom.reset(new Plane(link, root, link_data));
-      else if(type == FRAME)
-          geom.reset(new Frame(link, root, link_data));
-      else if(type == CAPSULE)
-          geom.reset(new Capsule(link, root, link_data));
-      else
-      {
-          ROS_ERROR("Task geometry type %d is invalid.",type);
-          ROS_BREAK();
-      }
-      return geom;
+    if(type == POINT)
+        geom.reset(new Point(link, root, link_data));
+    else if(type == LINE)
+        geom.reset(new Line(link, root, link_data));
+    else if(type == PLANE)
+        geom.reset(new Plane(link, root, link_data));
+    else if(type == FRAME)
+        geom.reset(new Frame(link, root, link_data));
+    else if(type == CAPSULE)
+        geom.reset(new Capsule(link, root, link_data));
+    else if(type == JOINT_POSITION)
+        geom.reset(new JointPosition(link, root, link_data));
+    else
+    {
+        ROS_ERROR("Task geometry type %d is invalid.",type);
+        ROS_BREAK();
+    }
+    return geom;
 }
 //------------------------------------------------------------------------
 Point::Point() : TaskGeometry()
@@ -109,7 +112,7 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     visualization_msgs::Marker marker;
 
     marker.header.frame_id = link_;
-    marker.header.stamp = ros::Time();
+    marker.header.stamp = ros::Time::now();
     marker.type = visualization_msgs::Marker::POINTS;
     marker.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
@@ -132,10 +135,10 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     ROS_INFO("Added point visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
-void Point::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
-{
-    ROS_WARN("Point::computeWitnessPoints(...) not implemented yet!");
-}
+//void Point::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
+//{
+//    ROS_WARN("Point::computeWitnessPoints(...) not implemented yet!");
+//}
 //------------------------------------------------------------------------
 Line::Line() : TaskGeometry()
 {
@@ -169,7 +172,7 @@ void Line::addMarker(visualization_msgs::MarkerArray& markers)
 
     visualization_msgs::Marker m;
     m.header.frame_id = link_;
-    m.header.stamp = ros::Time();
+    m.header.stamp = ros::Time::now();
     m.type =  visualization_msgs::Marker::ARROW;
     m.action = visualization_msgs::Marker::ADD;
     m.id = markers.markers.size();
@@ -202,10 +205,10 @@ void Line::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     root_data_->tail<3>() = trans_l_r_->linear() * (*v_);
 }
 //------------------------------------------------------------------------
-void Line::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
-{
-    ROS_WARN("Line::computeWitnessPoints(...) not implemented yet!");
-}
+//void Line::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
+//{
+//    ROS_WARN("Line::computeWitnessPoints(...) not implemented yet!");
+//}
 //------------------------------------------------------------------------
 Plane::Plane() : TaskGeometry(), d_(0.0)
 {
@@ -229,7 +232,7 @@ void Plane::addMarker(visualization_msgs::MarkerArray& markers)
 
     //normal
     m.header.frame_id = link_;
-    m.header.stamp = ros::Time();
+    m.header.stamp = ros::Time::now();
     m.type =  visualization_msgs::Marker::ARROW;
     m.action = visualization_msgs::Marker::ADD;
     m.id = markers.markers.size();
@@ -293,14 +296,14 @@ void Plane::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     root_data_->head<3>() = trans_l_r_->linear() * (*n_);
     root_data_->tail<1>() = root_data_->head<3>().transpose() * ((*trans_l_r_) * ((*n_) * d_));
 
-//    Eigen::Hyperplane<double,3> h((*n_),d_); //the plane in the link frame
-//    h.transform( *trans_l_r_); //transform the plane to the root frame
+    //    Eigen::Hyperplane<double,3> h((*n_),d_); //the plane in the link frame
+    //    h.transform( *trans_l_r_); //transform the plane to the root frame
 }
 //------------------------------------------------------------------------
-void Plane::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
-{
-    ROS_WARN("Plane::computeWitnessPoints(...) not implemented yet!");
-}
+//void Plane::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
+//{
+//    ROS_WARN("Plane::computeWitnessPoints(...) not implemented yet!");
+//}
 //------------------------------------------------------------------------
 Capsule::Capsule() : TaskGeometry(), r_(0.0)
 {
@@ -331,7 +334,7 @@ void Capsule::addMarker(visualization_msgs::MarkerArray& markers)
 
     //spheres
     m.header.frame_id = link_;
-    m.header.stamp = ros::Time();
+    m.header.stamp = ros::Time::now();
     m.type =  visualization_msgs::Marker::SPHERE;
     m.action = visualization_msgs::Marker::ADD;
     m.id = markers.markers.size();
@@ -389,10 +392,10 @@ void Capsule::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     root_data_->tail<1>()(0) = r_;
 }
 //------------------------------------------------------------------------
-void Capsule::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
-{
-    ROS_WARN("Capsule::computeWitnessPoints(...) not implemented yet!");
-}
+//void Capsule::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
+//{
+//    ROS_WARN("Capsule::computeWitnessPoints(...) not implemented yet!");
+//}
 //------------------------------------------------------------------------
 Frame::Frame() : TaskGeometry()
 {
@@ -413,7 +416,7 @@ void Frame::addMarker(visualization_msgs::MarkerArray& markers)
 
     //e_x
     e.header.frame_id = link_;
-    e.header.stamp = ros::Time();
+    e.header.stamp = ros::Time::now();
     e.type = visualization_msgs::Marker::ARROW;
     e.action = visualization_msgs::Marker::ADD;
     e.id = markers.markers.size();
@@ -489,10 +492,117 @@ void Frame::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     root_data_->tail<3>() = trans_f_r.linear().eulerAngles(0, 1, 2);
 }
 //------------------------------------------------------------------------
-void Frame::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
+//void Frame::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
+//{
+//    ROS_WARN("Frame::computeWitnessPoints(...) not implemented yet!");
+//}
+//------------------------------------------------------------------------
+JointPosition::JointPosition() : q_pos_(0.0)
 {
-    ROS_WARN("Frame::computeWitnessPoints(...) not implemented yet!");
+    type_ = JOINT_POSITION;
+    trans_j_l_.reset(new Eigen::Affine3d);
 }
 //------------------------------------------------------------------------
+JointPosition::JointPosition(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
+{
+    type_ = JOINT_POSITION;
+    setLinkData(link_data);
 
+    std::cout<<"JointPosition constructor: "<<std::endl;
+    std::cout<<"link: "<<link_<<std::endl;
+    std::cout<<"root: "<<root_<<std::endl;
+
+}
+//------------------------------------------------------------------------
+void JointPosition::setLinkData(Eigen::VectorXd const& link_data)
+{
+    //Joint position is described by a frame expressed in the link with z pointing in the joint axis and zero angle pointing in x
+    ROS_ASSERT(link_data.rows() == 7);
+    link_data_.reset(new Eigen::VectorXd(link_data));
+    q_pos_ = link_data(0);
+    Eigen::Vector3d transl = link_data.segment(1,3);
+    Eigen::Vector3d rpy = link_data.tail<3>();
+
+    Eigen::Matrix3d rot;
+    //create a x-y-z rotation matrix
+    rot = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
+    trans_j_l_.reset(new Eigen::Affine3d);
+    trans_j_l_->translation() = transl;
+    trans_j_l_->linear() = rot;
+}
+//------------------------------------------------------------------------
+void JointPosition::setLinkTransform(Eigen::Affine3d const& trans_l_r)
+{
+    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
+    Eigen::Affine3d trans_j_r( (*trans_l_r_) * (*trans_j_l_) ); //joint frame expressed in root
+
+    root_data_.reset(new Eigen::VectorXd(6));
+    (*root_data_)(0) = q_pos_;
+    root_data_->segment(1,3) = trans_j_r.translation();
+    root_data_->tail<3>() = trans_j_r.linear().eulerAngles(0, 1, 2);
+}
+//------------------------------------------------------------------------
+void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    Eigen::Quaterniond q(trans_j_l_->linear());
+    visualization_msgs::Marker a;
+
+    //transformation which points x in z direction for plotting the arrow
+    Eigen::Quaterniond q_rot;
+    q_rot.setFromTwoVectors(Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ());
+    q_rot = q_rot * q;
+    //joint axis
+    a.header.frame_id = link_;
+    a.header.stamp = ros::Time::now();
+    a.type = visualization_msgs::Marker::ARROW;
+    a.action = visualization_msgs::Marker::ADD;
+    a.id = markers.markers.size();
+    a.pose.position.x = trans_j_l_->translation()(0);
+    a.pose.position.y = trans_j_l_->translation()(1);
+    a.pose.position.z = trans_j_l_->translation()(2);
+    a.pose.orientation.x = q_rot.x();
+    a.pose.orientation.y = q_rot.y();
+    a.pose.orientation.z = q_rot.z();
+    a.pose.orientation.w = q_rot.w();
+    a.scale.x = LINE_SCALE;
+    a.scale.y = 0.05 * LINE_SCALE;
+    a.scale.z = 0.05 * LINE_SCALE;
+    a.color.r = 1.0;
+    a.color.g = 0.4;
+    a.color.b = 0.0;
+    a.color.a = 1.0;
+    markers.markers.push_back(a);
+
+    //joint position indication line
+    visualization_msgs::Marker l;
+    geometry_msgs::Point p;
+    l.header.frame_id = link_;
+    l.header.stamp = ros::Time::now();
+    l.type = visualization_msgs::Marker::LINE_LIST;
+    l.action = visualization_msgs::Marker::ADD;
+    l.id = markers.markers.size();
+    l.pose.position.x = trans_j_l_->translation()(0);
+    l.pose.position.y = trans_j_l_->translation()(1);
+    l.pose.position.z = trans_j_l_->translation()(2);
+    l.pose.orientation.x = q.x();
+    l.pose.orientation.y = q.y();
+    l.pose.orientation.z = q.z();
+    l.pose.orientation.w = q.w();
+    l.scale.x = LINE_WIDTH;
+    l.color.r = 1.0;
+    l.color.g = 0.0;
+    l.color.b = 1.0;
+    l.color.a = 1.0;
+    p.x = trans_j_l_->translation()(0);
+    p.y = trans_j_l_->translation()(1);
+    p.z = trans_j_l_->translation()(2);
+    l.points.push_back(p);
+    p.x = p.x + LINE_SCALE * cos(q_pos_);
+    p.y = p.y + LINE_SCALE * sin(q_pos_);
+    l.points.push_back(p);
+    markers.markers.push_back(l);
+
+    ROS_INFO("Added joint position visualization to link %s.",link_.c_str());
+}
+//------------------------------------------------------------------------
 } //end namespace hqp_controllers

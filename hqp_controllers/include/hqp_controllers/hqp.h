@@ -9,11 +9,13 @@
 
 namespace hqp_controllers {
 //--------------------------------------------------------------
-#define TIKHONOV_FACTOR 1e-4
-#define PRESOLVE        -1
-#define OPTIMALITY_TOL  1e-6
-#define SCALE_FLAG      1
-#define TIME_LIMIT      1e-3
+#define TIKHONOV_FACTOR  1e-4
+#define PRESOLVE         -1
+#define OPTIMALITY_TOL   1e-6
+#define SCALE_FLAG       1
+#define TIME_LIMIT       1e-3
+#define OUTPUT_FLAG      0
+#define DUAL_REDUCTIONS  1
 //--------------------------------------------------------------
 struct HQPStage
 {

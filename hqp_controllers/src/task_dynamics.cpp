@@ -1,6 +1,5 @@
 #include <hqp_controllers/task_dynamics.h>
 #include <math.h>
-#include <Eigen/Eigenvalues>
 
 namespace hqp_controllers{
 //----------------------------------------------------------
@@ -56,13 +55,6 @@ void LinearTaskDynamics::setDynamicsMatrix(boost::shared_ptr<Eigen::MatrixXd> A)
 
     A_ = A;
     dim_ = A_->cols();
-
-    //Make sure the dynamics are stable (i.e., the real part of all eigenvalues is negative)
-    Eigen::EigenSolver<Eigen::MatrixXd> es(*A);
-    Eigen::VectorXd e(es.eigenvalues().real());
-    for(unsigned int i=0; i<dim_;i++)
-        ROS_ASSERT(e(i) < 0.0);
-
 }
 //----------------------------------------------------------
 boost::shared_ptr<Eigen::MatrixXd> LinearTaskDynamics::getDynamicsMatrix()const{return A_;}

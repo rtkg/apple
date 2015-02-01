@@ -5,6 +5,11 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /Apple1
+        - /Apple1/Links1
+        - /Apple1/Links1/lbr_iiwa_link_61
+        - /Apple1/Links1/lbr_iiwa_link_71
+        - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 277
@@ -53,7 +58,7 @@ Visualization Manager:
       Collision Enabled: false
       Enabled: true
       Links:
-        All Links Enabled: true
+        All Links Enabled: false
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
@@ -67,39 +72,39 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         lbr_iiwa_link_1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         lbr_iiwa_link_2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         lbr_iiwa_link_3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         lbr_iiwa_link_4:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         lbr_iiwa_link_5:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         lbr_iiwa_link_6:
-          Alpha: 1
+          Alpha: 0.2
           Show Axes: false
           Show Trail: false
           Value: true
         lbr_iiwa_link_7:
-          Alpha: 1
+          Alpha: 0.2
           Show Axes: true
           Show Trail: false
           Value: true
@@ -107,17 +112,17 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         velvet_fingers_palm:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         velvet_fingers_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
+          Value: false
         world:
           Alpha: 1
           Show Axes: false
@@ -140,11 +145,11 @@ Visualization Manager:
       Enabled: false
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
-      Show Axes: true
+      Show Axes: false
       Show Names: true
       Tree:
         {}
@@ -174,22 +179,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.59178
+      Distance: 0.755987
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.280671
-        Y: -0.771984
-        Z: 0.307271
+        X: 0.969748
+        Y: -1.25034
+        Z: 0.663462
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.400202
+      Pitch: 0.550202
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.787223
+      Yaw: 0.885347
     Saved: ~
 Window Geometry:
   Displays:
@@ -207,5 +212,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1141
-  X: 499
-  Y: 14
+  X: 475
+  Y: 22

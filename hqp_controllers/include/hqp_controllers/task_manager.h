@@ -33,7 +33,7 @@ public:
     boost::shared_ptr<KDL::Tree> getKinematicTree()const;
     unsigned int getValidTaskId() const;
     unsigned int getValidTaskObjectId() const;
-    boost::shared_ptr<TaskObject> getTaskObject(unsigned int id)const;
+    bool getTaskObject(unsigned int id, TaskObject& t_obj)const;
     void getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses);
     bool getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const;
     boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<TaskObject> > > getTaskObjects()const;

@@ -48,7 +48,6 @@ public:
 
 private:
 
-    ros::Subscriber sub_command_;
     ros::ServiceServer set_task_srv_;
     ros::ServiceServer set_task_obj_srv_;
     ros::ServiceServer vis_t_obj_srv_;
@@ -66,7 +65,6 @@ private:
     // CALLBACKS //
     ///////////////
 
-    void commandCB(const std_msgs::Float64MultiArrayConstPtr& msg);
     bool setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res);
     bool setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res);
     bool visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res);

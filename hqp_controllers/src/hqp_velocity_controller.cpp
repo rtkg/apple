@@ -16,8 +16,9 @@ HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_
 //-----------------------------------------------------------------------
 HQPVelocityController::~HQPVelocityController()
 {
-    sub_command_.shutdown();
-    set_task_obj_srv_.shutdown();
+    set_task_srv_.shutdown();
+        set_task_obj_srv_.shutdown();
+            vis_t_obj_srv_.shutdown();
 }
 //-----------------------------------------------------------------------
 bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw, ros::NodeHandle &n)
@@ -117,7 +118,6 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
     }
 
     //============================================== REGISTER CALLBACKS =========================================
-    sub_command_ = n.subscribe<std_msgs::Float64MultiArray>("command", 1, &HQPVelocityController::commandCB, this);
     set_task_srv_ = n.advertiseService("set_tasks",&HQPVelocityController::setTasks,this);
     set_task_obj_srv_ = n.advertiseService("set_task_objects",&HQPVelocityController::setTaskObjects,this);
     vis_t_obj_srv_ = n.advertiseService("visualize_task_objects",&HQPVelocityController::visualizeTaskObjects,this);
@@ -139,17 +139,6 @@ void HQPVelocityController::starting(const ros::Time& time)
 // CALLBACKS //
 ///////////////
 
-//-----------------------------------------------------------------------
-void HQPVelocityController::commandCB(const std_msgs::Float64MultiArrayConstPtr& msg)
-{
-    if(msg->data.size()!=n_joints_)
-    {
-        ROS_ERROR_STREAM("Dimension of command (" << msg->data.size() << ") does not match number of joints (" << n_joints_ << ")! Not executing!");
-        return;
-    }
-    for(unsigned int i=0; i<n_joints_; i++)
-        commands_[i] = msg->data[i];
-}
 //------------------------------------------------------------------------
 bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res)
 {
@@ -158,23 +147,20 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
     for(unsigned int i = 0; i<req.tasks.size(); i++)
     {
         hqp_controllers_msgs::Task task = req.tasks[i];
-        ROS_ASSERT(task.t_obj_ids.size() == 2);
-
-        //make sure both task objects associated with the given task exist
-        std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs(task_manager_.getTaskObject(task.t_obj_ids[0]), task_manager_.getTaskObject(task.t_obj_ids[1]));
-        if(t_objs.first.get() == NULL)
+        unsigned int n_t_obj = task.t_obj_ids.size();
+        //make sure all task objects associated with the given task exist
+        boost::shared_ptr<std::vector<TaskObject> > t_objs(new std::vector<TaskObject>(n_t_obj));
+        for(unsigned int j=0; j<n_t_obj; j++)
         {
-            res.success = false;
-            lock_.unlock();
-            ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task object map.", task.t_obj_ids[0]);
-            return res.success;
-        }
-        else if(t_objs.second.get() == NULL)
-        {
-            res.success = false;
-            lock_.unlock();
-            ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task object map.", task.t_obj_ids[1]);
-            return res.success;
+            TaskObject t_obj;
+            if(!task_manager_.getTaskObject(task.t_obj_ids[j], t_obj))
+            {
+                res.success = false;
+                lock_.unlock();
+                ROS_ERROR("Cannot add task since the required task object with id %d does not exist in the task object map.", task.t_obj_ids[j]);
+                return res.success;
+            }
+            t_objs->at(j) = t_obj;
         }
 
         //Read the data for the task dynamics
@@ -272,7 +258,7 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
         if(!task_manager_.getDQ(commands_))
             commands_.setZero();
 
-//        std::cout<<"commands: "<<commands_.transpose()<<std::endl;
+        //        std::cout<<"commands: "<<commands_.transpose()<<std::endl;
     }
     else
         commands_.setZero();
@@ -303,7 +289,7 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
             vis_t_obj_pub_.unlockAndPublish();
 
         // try to publish the task statuses
-         task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
+        task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
 
         if (t_statuses_pub_.trylock())
             t_statuses_pub_.unlockAndPublish();
