@@ -71,6 +71,8 @@ boost::shared_ptr<TaskGeometry>  TaskGeometry::makeTaskGeometry(TaskGeometryType
         geom.reset(new Capsule(link, root, link_data));
     else if(type == JOINT_POSITION)
         geom.reset(new JointPosition(link, root, link_data));
+    else if(type == JOINT_LIMITS)
+        geom.reset(new JointLimits(link, root, link_data));
     else
     {
         ROS_ERROR("Task geometry type %d is invalid.",type);
@@ -131,8 +133,6 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.color.a = 1.0;
 
     markers.markers.push_back(marker);
-
-    ROS_INFO("Added point visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 //void Point::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
@@ -191,8 +191,6 @@ void Line::addMarker(visualization_msgs::MarkerArray& markers)
     m.color.b = 1.0;
     m.color.a = 1.0;
     markers.markers.push_back(m);
-
-    ROS_INFO("Added line visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Line::setLinkTransform(Eigen::Affine3d const& trans_l_r)
@@ -268,8 +266,6 @@ void Plane::addMarker(visualization_msgs::MarkerArray& markers)
     m.color.b = 1.0;
     m.color.a = 0.4;
     markers.markers.push_back(m);
-
-    ROS_INFO("Added plane visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Plane::setLinkData(Eigen::VectorXd const& link_data)
@@ -377,8 +373,6 @@ void Capsule::addMarker(visualization_msgs::MarkerArray& markers)
     m.pose.orientation.w = q.w();
     m.scale.z = v.norm();
     markers.markers.push_back(m);
-
-    ROS_INFO("Added capsule visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Capsule::setLinkTransform(Eigen::Affine3d const& trans_l_r)
@@ -463,8 +457,6 @@ void Frame::addMarker(visualization_msgs::MarkerArray& markers)
     e.color.b = 1.0;
     e.color.a = 1.0;
     markers.markers.push_back(e);
-
-    ROS_INFO("Added frame visualization to link %s.",link_.c_str());
 }
 //------------------------------------------------------------------------
 void Frame::setLinkData(Eigen::VectorXd const& link_data)
@@ -501,27 +493,25 @@ JointPosition::JointPosition() : q_pos_(0.0)
 {
     type_ = JOINT_POSITION;
     trans_j_l_.reset(new Eigen::Affine3d);
+    trans_j_r_0_.reset(new Eigen::Affine3d);
 }
 //------------------------------------------------------------------------
 JointPosition::JointPosition(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
 {
     type_ = JOINT_POSITION;
     setLinkData(link_data);
-
-    std::cout<<"JointPosition constructor: "<<std::endl;
-    std::cout<<"link: "<<link_<<std::endl;
-    std::cout<<"root: "<<root_<<std::endl;
-
 }
 //------------------------------------------------------------------------
 void JointPosition::setLinkData(Eigen::VectorXd const& link_data)
 {
     //Joint position is described by a frame expressed in the link with z pointing in the joint axis and zero angle pointing in x
-    ROS_ASSERT(link_data.rows() == 7);
+    //link_data.tail<6>() is the initial transformation of the joint to the root
+    //the position angle q = link_data(0)
+    ROS_ASSERT(link_data.rows() == 13);
     link_data_.reset(new Eigen::VectorXd(link_data));
     q_pos_ = link_data(0);
     Eigen::Vector3d transl = link_data.segment(1,3);
-    Eigen::Vector3d rpy = link_data.tail<3>();
+    Eigen::Vector3d rpy = link_data.segment(4,3);
 
     Eigen::Matrix3d rot;
     //create a x-y-z rotation matrix
@@ -529,6 +519,13 @@ void JointPosition::setLinkData(Eigen::VectorXd const& link_data)
     trans_j_l_.reset(new Eigen::Affine3d);
     trans_j_l_->translation() = transl;
     trans_j_l_->linear() = rot;
+
+    trans_j_r_0_.reset(new Eigen::Affine3d);
+    transl = link_data.segment(7,3);
+    rpy = link_data.tail<3>();
+    rot = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
+    trans_j_r_0_->translation() = transl;
+    trans_j_r_0_->linear() = rot;
 }
 //------------------------------------------------------------------------
 void JointPosition::setLinkTransform(Eigen::Affine3d const& trans_l_r)
@@ -536,30 +533,31 @@ void JointPosition::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
     Eigen::Affine3d trans_j_r( (*trans_l_r_) * (*trans_j_l_) ); //joint frame expressed in root
 
-    root_data_.reset(new Eigen::VectorXd(6));
+    root_data_.reset(new Eigen::VectorXd(13));
     (*root_data_)(0) = q_pos_;
     root_data_->segment(1,3) = trans_j_r.translation();
-    root_data_->tail<3>() = trans_j_r.linear().eulerAngles(0, 1, 2);
+    root_data_->segment(4,3) = trans_j_r.linear().eulerAngles(0, 1, 2);
+    root_data_->tail<6>() = link_data_->tail<6>(); //initial transform from joint to root doesn't change
 }
 //------------------------------------------------------------------------
 void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
 {
-    Eigen::Quaterniond q(trans_j_l_->linear());
+    Eigen::Quaterniond q(trans_j_r_0_->linear());
     visualization_msgs::Marker a;
 
     //transformation which points x in z direction for plotting the arrow
     Eigen::Quaterniond q_rot;
     q_rot.setFromTwoVectors(Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ());
-    q_rot = q_rot * q;
+    q_rot = q * q_rot;
     //joint axis
-    a.header.frame_id = link_;
+    a.header.frame_id = root_;
     a.header.stamp = ros::Time::now();
     a.type = visualization_msgs::Marker::ARROW;
     a.action = visualization_msgs::Marker::ADD;
     a.id = markers.markers.size();
-    a.pose.position.x = trans_j_l_->translation()(0);
-    a.pose.position.y = trans_j_l_->translation()(1);
-    a.pose.position.z = trans_j_l_->translation()(2);
+    a.pose.position.x = trans_j_r_0_->translation()(0);
+    a.pose.position.y = trans_j_r_0_->translation()(1);
+    a.pose.position.z = trans_j_r_0_->translation()(2);
     a.pose.orientation.x = q_rot.x();
     a.pose.orientation.y = q_rot.y();
     a.pose.orientation.z = q_rot.z();
@@ -576,14 +574,14 @@ void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
     //joint position indication line
     visualization_msgs::Marker l;
     geometry_msgs::Point p;
-    l.header.frame_id = link_;
+    l.header.frame_id = root_;
     l.header.stamp = ros::Time::now();
     l.type = visualization_msgs::Marker::LINE_LIST;
     l.action = visualization_msgs::Marker::ADD;
     l.id = markers.markers.size();
-    l.pose.position.x = trans_j_l_->translation()(0);
-    l.pose.position.y = trans_j_l_->translation()(1);
-    l.pose.position.z = trans_j_l_->translation()(2);
+    l.pose.position.x = trans_j_r_0_->translation()(0);
+    l.pose.position.y = trans_j_r_0_->translation()(1);
+    l.pose.position.z = trans_j_r_0_->translation()(2);
     l.pose.orientation.x = q.x();
     l.pose.orientation.y = q.y();
     l.pose.orientation.z = q.z();
@@ -593,16 +591,247 @@ void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
     l.color.g = 0.0;
     l.color.b = 1.0;
     l.color.a = 1.0;
-    p.x = trans_j_l_->translation()(0);
-    p.y = trans_j_l_->translation()(1);
-    p.z = trans_j_l_->translation()(2);
+    p.x = 0;
+    p.y = 0;
+    p.z = 0;
     l.points.push_back(p);
     p.x = p.x + LINE_SCALE * cos(q_pos_);
     p.y = p.y + LINE_SCALE * sin(q_pos_);
+    p.z = 0;
     l.points.push_back(p);
     markers.markers.push_back(l);
 
-    ROS_INFO("Added joint position visualization to link %s.",link_.c_str());
+    //current joint position indication line
+    q = Eigen::Quaterniond(trans_j_l_->linear());
+    l = visualization_msgs::Marker();
+    l.header.stamp = ros::Time::now();
+    l.type = visualization_msgs::Marker::LINE_LIST;
+    l.action = visualization_msgs::Marker::ADD;
+    l.header.frame_id = link_;
+    l.id = markers.markers.size();
+    l.pose.position.x = trans_j_l_->translation()(0);
+    l.pose.position.y = trans_j_l_->translation()(1);
+    l.pose.position.z = trans_j_l_->translation()(2);
+    l.pose.orientation.x = q.x();
+    l.pose.orientation.y = q.y();
+    l.pose.orientation.z = q.z();
+    l.pose.orientation.w = q.w();
+    l.scale.x = 1.2 * LINE_WIDTH;
+    l.color.r = 0.0;
+    l.color.g = 1.0;
+    l.color.b = 1.0;
+    l.color.a = 1.0;
+    p.x = 0;
+    p.y = 0;
+    p.z = 0;
+    l.points.push_back(p);
+    p.x = 0.8 * LINE_SCALE;
+    p.y = 0;
+    p.z = 0;
+    l.points.push_back(p);
+    markers.markers.push_back(l);
+}
+//------------------------------------------------------------------------
+JointLimits::JointLimits()
+{
+    type_ = JOINT_LIMITS;
+    trans_j_l_.reset(new Eigen::Affine3d);
+    trans_j_r_0_.reset(new Eigen::Affine3d);
+    lb_.reset(new Eigen::Vector3d);
+    ub_.reset(new Eigen::Vector3d);
+}
+//------------------------------------------------------------------------
+JointLimits::JointLimits(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
+{
+    type_ = JOINT_LIMITS;
+    setLinkData(link_data);
+}
+//------------------------------------------------------------------------
+void JointLimits::setLinkData(Eigen::VectorXd const& link_data)
+{
+    //Joint limits is described by a frame expressed in the link with z pointing in the joint axis and zero angle pointing in x
+    //link_data.segment(6,6) is the initial transformation of the joint to the root
+    //link_data.tail<6>() are the upper and lower bounds
+    ROS_ASSERT(link_data.rows() == 18);
+    link_data_.reset(new Eigen::VectorXd(link_data));
+
+    Eigen::Matrix3d rot;
+    Eigen::Vector3d transl = link_data.head<3>();
+    Eigen::Vector3d rpy = link_data.segment(3,3);
+
+    //transform from the joint frame to the link frame
+    rot = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
+    trans_j_l_.reset(new Eigen::Affine3d);
+    trans_j_l_->translation() = transl;
+    trans_j_l_->linear() = rot;
+
+    //transform from the joint frame at q==0 to the root frame
+    trans_j_r_0_.reset(new Eigen::Affine3d);
+    transl = link_data.segment(6,3);
+    rpy = link_data.segment(9,3);
+    rot = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
+    trans_j_r_0_->translation() = transl;
+    trans_j_r_0_->linear() = rot;
+
+    //lower bounds q_min, q_mins and q_mini
+    lb_.reset(new Eigen::Vector3d(link_data.segment(12,3)));
+    //upper bounds q_max, q_maxs and q_maxi
+    ub_.reset(new Eigen::Vector3d(link_data.tail<3>()));
+
+    //Make sure the given limits are consistent
+    ROS_ASSERT((*lb_)(2) <= (*ub_)(2));
+    for(unsigned int i=0;  i<2; i++)
+    {
+        ROS_ASSERT((*lb_)(i+1) >= (*lb_)(i));
+        ROS_ASSERT((*ub_)(i+1) <= (*ub_)(i));
+    }
+}
+//------------------------------------------------------------------------
+void JointLimits::setLinkTransform(Eigen::Affine3d const& trans_l_r)
+{
+    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
+    Eigen::Affine3d trans_j_r( (*trans_l_r_) * (*trans_j_l_) ); //joint frame expressed in root
+
+    root_data_.reset(new Eigen::VectorXd(18));
+    root_data_->head<3>() = trans_j_r.translation();
+    root_data_->segment(3,3) = trans_j_r.linear().eulerAngles(0, 1, 2);
+    root_data_->tail<12>() = link_data_->tail<12>(); //initial transform from joint to root and the limits don't change
+}
+//------------------------------------------------------------------------
+void JointLimits::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    Eigen::Quaterniond q(trans_j_r_0_->linear());
+    visualization_msgs::Marker a;
+    //transformation which points x in z direction for plotting the arrow
+    Eigen::Quaterniond q_rot;
+    q_rot.setFromTwoVectors(Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ());
+    q_rot = q * q_rot;
+    //joint axis
+    a.header.frame_id = root_;
+    a.header.stamp = ros::Time::now();
+    a.type = visualization_msgs::Marker::ARROW;
+    a.action = visualization_msgs::Marker::ADD;
+    a.id = markers.markers.size();
+    a.pose.position.x = trans_j_r_0_->translation()(0);
+    a.pose.position.y = trans_j_r_0_->translation()(1);
+    a.pose.position.z = trans_j_r_0_->translation()(2);
+    a.pose.orientation.x = q_rot.x();
+    a.pose.orientation.y = q_rot.y();
+    a.pose.orientation.z = q_rot.z();
+    a.pose.orientation.w = q_rot.w();
+    a.scale.x = LINE_SCALE;
+    a.scale.y = 0.05 * LINE_SCALE;
+    a.scale.z = 0.05 * LINE_SCALE;
+    a.color.r = 1.0;
+    a.color.g = 0.4;
+    a.color.b = 0.0;
+    a.color.a = 1.0;
+    markers.markers.push_back(a);
+
+    //lb, ub indication lines
+    visualization_msgs::Marker l;
+    geometry_msgs::Point p;
+    l.header.frame_id = root_;
+    l.header.stamp = ros::Time::now();
+    l.type = visualization_msgs::Marker::LINE_LIST;
+    l.action = visualization_msgs::Marker::ADD;
+    l.id = markers.markers.size();
+    l.pose.position.x = trans_j_r_0_->translation()(0);
+    l.pose.position.y = trans_j_r_0_->translation()(1);
+    l.pose.position.z = trans_j_r_0_->translation()(2);
+    l.pose.orientation.x = q.x();
+    l.pose.orientation.y = q.y();
+    l.pose.orientation.z = q.z();
+    l.pose.orientation.w = q.w();
+    l.scale.x = LINE_WIDTH;
+    l.color.r = 1.0;
+    l.color.g = 0.0;
+    l.color.b = 0.0;
+    l.color.a = 0.5;
+    p.x =LINE_SCALE * cos((*lb_)(0));
+    p.y =LINE_SCALE * sin((*lb_)(0));
+    p.z = 0;
+    l.points.push_back(p);
+    p.x = 0;
+    p.y = 0;
+    p.z = 0;
+    l.points.push_back(p);
+    l.points.push_back(p);
+    p.x =LINE_SCALE * cos((*ub_)(0));
+    p.y =LINE_SCALE * sin((*ub_)(0));
+    p.z = 0;
+    l.points.push_back(p);
+    p.x =LINE_SCALE * cos((*lb_)(1));
+    p.y =LINE_SCALE * sin((*lb_)(1));
+    p.z = 0;
+    l.points.push_back(p);
+    p.x = 0;
+    p.y = 0;
+    p.z = 0;
+    l.points.push_back(p);
+    l.points.push_back(p);
+    p.x =LINE_SCALE * cos((*ub_)(1));
+    p.y =LINE_SCALE * sin((*ub_)(1));
+    p.z = 0;
+    l.points.push_back(p);
+    p.x =LINE_SCALE * cos((*lb_)(2));
+    p.y =LINE_SCALE * sin((*lb_)(2));
+    p.z = 0;
+    l.points.push_back(p);
+    p.x = 0;
+    p.y = 0;
+    p.z = 0;
+    l.points.push_back(p);
+    l.points.push_back(p);
+    p.x =LINE_SCALE * cos((*ub_)(2));
+    p.y =LINE_SCALE * sin((*ub_)(2));
+    p.z = 0;
+    l.points.push_back(p);
+
+    std_msgs::ColorRGBA color;
+    color.r = 1.0; color.g = 0.0; color.b = 0.0; color.a = 1.0;
+    for(unsigned int i = 0; i<4; i++)
+        l.colors.push_back(color);
+
+    color.r = 1.0; color.g = 1.0; color.b = 0.0; color.a = 1.0;
+    for(unsigned int i = 0; i<4; i++)
+        l.colors.push_back(color);
+
+    color.r = 0.0; color.g = 1.0; color.b = 0.0; color.a = 1.0;
+    for(unsigned int i = 0; i<4; i++)
+        l.colors.push_back(color);
+
+    markers.markers.push_back(l);
+
+    //current joint position indication line
+    q = Eigen::Quaterniond(trans_j_l_->linear());
+    l = visualization_msgs::Marker();
+    l.header.stamp = ros::Time::now();
+    l.type = visualization_msgs::Marker::LINE_LIST;
+    l.action = visualization_msgs::Marker::ADD;
+    l.header.frame_id = link_;
+    l.id = markers.markers.size();
+    l.pose.position.x = trans_j_l_->translation()(0);
+    l.pose.position.y = trans_j_l_->translation()(1);
+    l.pose.position.z = trans_j_l_->translation()(2);
+    l.pose.orientation.x = q.x();
+    l.pose.orientation.y = q.y();
+    l.pose.orientation.z = q.z();
+    l.pose.orientation.w = q.w();
+    l.scale.x = 1.2 * LINE_WIDTH;
+    l.color.r = 0.0;
+    l.color.g = 1.0;
+    l.color.b = 1.0;
+    l.color.a = 1.0;
+    p.x = 0;
+    p.y = 0;
+    p.z = 0;
+    l.points.push_back(p);
+    p.x = 0.8 * LINE_SCALE;
+    p.y = 0;
+    p.z = 0;
+    l.points.push_back(p);
+    markers.markers.push_back(l);
 }
 //------------------------------------------------------------------------
 } //end namespace hqp_controllers

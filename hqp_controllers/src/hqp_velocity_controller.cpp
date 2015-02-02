@@ -234,15 +234,19 @@ bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::Visualize
     for(unsigned int i=0; i<req.ids.size();i++)
         vis_ids_(i)=req.ids[i];
 
-    // populate the message
-    vis_t_obj_pub_.msg_.markers.clear();
-    if(task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_))
-        res.success=true;
+    //check wether task objects with the requested ids exist
+    TaskObject t_obj;
+     for(unsigned int i=0; i<vis_ids_.size(); i++)
+         if(!task_manager_.getTaskObject(vis_ids_(i), t_obj))
+     {
+         res.success = false;
+         ROS_ERROR("Task object with id %d does not exist, cannot visualize.", vis_ids_(i));
+         vis_ids_.resize(0);
+     }
     else
-        res.success=false;
+             res.success = true;
 
     lock_.unlock();
-
     return res.success;
 }
 //-----------------------------------------------------------------------
@@ -285,12 +289,15 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
         last_publish_time_ = last_publish_time_ + ros::Duration(1.0/publish_rate_);
 
         // try to publish the task object geometries
+        // populate the message
+        vis_t_obj_pub_.msg_.markers.clear();
+        task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_);
+
         if (vis_t_obj_pub_.trylock())
             vis_t_obj_pub_.unlockAndPublish();
 
         // try to publish the task statuses
         task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
-
         if (t_statuses_pub_.trylock())
             t_statuses_pub_.unlockAndPublish();
 

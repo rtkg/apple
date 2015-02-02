@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Apple1
         - /Apple1/Links1
+        - /Apple1/Links1/lbr_iiwa_link_51
         - /Apple1/Links1/lbr_iiwa_link_61
         - /Apple1/Links1/lbr_iiwa_link_71
         - /TF1
@@ -94,7 +95,7 @@ Visualization Manager:
           Show Trail: false
           Value: false
         lbr_iiwa_link_5:
-          Alpha: 1
+          Alpha: 0.2
           Show Axes: false
           Show Trail: false
           Value: false
@@ -105,7 +106,7 @@ Visualization Manager:
           Value: true
         lbr_iiwa_link_7:
           Alpha: 0.2
-          Show Axes: true
+          Show Axes: false
           Show Trail: false
           Value: true
         velvet_fingers_left:
@@ -148,8 +149,8 @@ Visualization Manager:
         All Enabled: false
       Marker Scale: 1
       Name: TF
-      Show Arrows: true
-      Show Axes: false
+      Show Arrows: false
+      Show Axes: true
       Show Names: true
       Tree:
         {}
@@ -179,7 +180,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.755987
+      Distance: 0.671341
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -191,10 +192,10 @@ Visualization Manager:
         Z: 0.663462
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.550202
+      Pitch: 1.0252
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.885347
+      Yaw: 1.42035
     Saved: ~
 Window Geometry:
   Displays:
@@ -212,5 +213,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1141
-  X: 475
-  Y: 22
+  X: 458
+  Y: 54

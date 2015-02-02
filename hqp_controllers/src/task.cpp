@@ -1,4 +1,5 @@
 #include <hqp_controllers/task.h>
+#include <hqp_controllers/utilities.h>
 
 namespace hqp_controllers{
 //---------------------------------------------------------
@@ -109,6 +110,10 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, T
         task.reset(new ProjectPointPlane(id, priority, sign, t_objs, t_dynamics));
     else if(type == JOINT_SETPOINT)
         task.reset(new JointSetpoint(id, priority, sign, t_objs, t_dynamics));
+    else if(type == JOINT_VELOCITY_LIMITS)
+        task.reset(new JointVelocityLimits(id, priority, sign, t_objs, t_dynamics));
+    else if(type == PARALLEL_LINES)
+        task.reset(new ParallelLines(id, priority, sign, t_objs, t_dynamics));
     else
     {
         ROS_ERROR("Task type %d is invalid.",type);
@@ -215,7 +220,10 @@ JointSetpoint::JointSetpoint(unsigned int id, unsigned int priority, std::string
     E_->setZero();
 
     unsigned int n_sgmnts =  t_objs_->at(0).getChain()->getNrOfSegments();
-    std::string jnt_name =  t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getName();
+    std::string jnt_name = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getName();
+    KDL::Joint::JointType type = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getType();
+    //Translational joints are not allowed for now ...
+    ROS_ASSERT( (type == KDL::Joint::RotAxis) || (type == KDL::Joint::RotX) || (type == KDL::Joint::RotY) || (type == KDL::Joint::RotZ));
 
     jnt_index_ = -1;
     for(unsigned int i=0; i<t_objs_->at(0).getJoints()->size(); i++)
@@ -245,6 +253,163 @@ void JointSetpoint::computeTask()
 
     //Compute the task jacobian
     (*A_)(0,jnt_index_) = -1.0;
+
+    //compute task function derivatives
+    updateTaskFunctionDerivatives();
+
+    //    std::cout<<"JointSetpoint: A_: "<<std::endl<<(*A_)<<std::endl;
+    //    std::cout<<"JointSetpoint: E_: "<<std::endl<<(*E_)<<std::endl;
+}
+//---------------------------------------------------------
+JointVelocityLimits::JointVelocityLimits(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
+{
+    type_ = JOINT_VELOCITY_LIMITS;
+    dim_ = 2;
+
+    verifyTaskObjects();
+
+    unsigned int n_jnts = t_objs_->at(0).getJacobian()->cols(); //number of controlled joints
+    A_->resize(dim_, n_jnts);
+    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
+    A_->setZero();
+    E_->setZero();
+
+    unsigned int n_sgmnts =  t_objs_->at(0).getChain()->getNrOfSegments();
+    std::string jnt_name = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getName();
+    KDL::Joint::JointType type = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getType();
+    //Translational joints are not allowed for now ...
+    ROS_ASSERT( (type == KDL::Joint::RotAxis) || (type == KDL::Joint::RotX) || (type == KDL::Joint::RotY) || (type == KDL::Joint::RotZ));
+
+    jnt_index_ = -1;
+    for(unsigned int i=0; i<t_objs_->at(0).getJoints()->size(); i++)
+        if(jnt_name == t_objs_->at(0).getJoints()->at(i).getName())
+            jnt_index_ = i;
+
+    ROS_ASSERT(jnt_index_ > -1); //make sure the joint was found
+    //Check the dynamics - for this task the gain of 1d linear dynamics is used as the value for the l1 norm of the joint velocity maximum
+    ROS_ASSERT(t_dynamics_->getType() == LINEAR_DYNAMICS);
+    ROS_ASSERT(t_dynamics_->getDimension() == 1);
+    ROS_ASSERT((*static_cast<LinearTaskDynamics*>(t_dynamics_.get())->getDynamicsMatrix())(0,0) >= 0.0); //velocity maximum has to be positive
+    //sign has to be smaller/equal for this task
+    ROS_ASSERT(sign == "<=");
+}
+//---------------------------------------------------------
+void JointVelocityLimits::verifyTaskObjects()
+{
+    ROS_ASSERT(t_objs_->size() == 1); //need one Joint Limits geometry
+    ROS_ASSERT(t_objs_->at(0).getGeometries().get()); //make sure a task geometry exists
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == JOINT_LIMITS);
+}
+//---------------------------------------------------------
+void JointVelocityLimits::computeTask()
+{
+    //Get the current joint value
+    double q = t_objs_->at(0).getJoints()->at(jnt_index_).getPosition();
+
+    //Get the joint limits
+    Eigen::VectorXd limits = t_objs_->at(0).getGeometries()->at(0)->getRootData()->tail<6>();
+
+    //Compute the task function
+    if(q >= limits(5))
+        (*E_)(0,0) = (q - limits(4))/(limits(5) - limits(4));
+    else
+        (*E_)(0,0) = 1.0;
+
+    if(q <= limits(2))
+        (*E_)(1,0) = (q - limits(1))/(limits(2) - limits(1));
+    else
+        (*E_)(1,0) = 1.0;
+
+    //Compute the task jacobian
+    (*A_)(0,jnt_index_) = 1.0;
+    (*A_)(1,jnt_index_) = (-1.0);
+
+    //compute task function derivatives
+    updateTaskFunctionDerivatives();
+
+    //std::cout<<"JointVelocityLimits: A_: "<<std::endl<<(*A_)<<std::endl;
+    //std::cout<<"JointVelocityLimits: E_: "<<std::endl<<(*E_)<<std::endl;
+}
+//---------------------------------------------------------
+ParallelLines::ParallelLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
+{
+    type_ = PARALLEL_LINES;
+    dim_ = 3;
+
+    verifyTaskObjects();
+
+        unsigned int n_jnts = t_objs_->at(0).getJacobian()->cols(); //number of controlled joints
+        A_->resize(dim_, n_jnts);
+        E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
+        A_->setZero();
+        E_->setZero();
+
+    //    unsigned int n_sgmnts =  t_objs_->at(0).getChain()->getNrOfSegments();
+    //    std::string jnt_name = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getName();
+    //    KDL::Joint::JointType type = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getType();
+    //    //Translational joints are not allowed for now ...
+    //    ROS_ASSERT( (type == KDL::Joint::RotAxis) || (type == KDL::Joint::RotX) || (type == KDL::Joint::RotY) || (type == KDL::Joint::RotZ));
+
+    //    jnt_index_ = -1;
+    //    for(unsigned int i=0; i<t_objs_->at(0).getJoints()->size(); i++)
+    //        if(jnt_name == t_objs_->at(0).getJoints()->at(i).getName())
+    //            jnt_index_ = i;
+
+    //    ROS_ASSERT(jnt_index_ > -1); //make sure the joint was found
+    //    //Check the dynamics - for this task the gain of 1d linear dynamics is used as the value for the l1 norm of the joint velocity maximum
+    //    ROS_ASSERT(t_dynamics_->getType() == LINEAR_DYNAMICS);
+    //    ROS_ASSERT(t_dynamics_->getDimension() == 1);
+    //    ROS_ASSERT((*static_cast<LinearTaskDynamics*>(t_dynamics_.get())->getDynamicsMatrix())(0,0) >= 0.0); //velocity maximum has to be positive
+    //    //sign has to be smaller/equal for this task
+    //    ROS_ASSERT(sign == "<=");
+}
+//---------------------------------------------------------
+void ParallelLines::verifyTaskObjects()
+{
+    ROS_ASSERT(t_objs_->size() == 2); //need two Line geometries
+    ROS_ASSERT(t_objs_->at(0).getGeometries().get()); //make sure a task geometry exists
+    ROS_ASSERT(t_objs_->at(1).getGeometries().get()); //make sure a task geometry exists
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1); //need only one line geometry per task object
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->size() == 1);
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == LINE);
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->at(0)->getType() == LINE);
+    //make sure that the first line is fixed in the environment for now
+      ROS_ASSERT(t_objs_->at(0).getChain()->getNrOfJoints() == 0);
+}
+//---------------------------------------------------------
+void ParallelLines::computeTask()
+{
+    //   std::cout<<"joints: ";
+    //    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)
+    //        std::cout<<t_objs_.first->getJoints()->at(i).getPosition()<<" ";
+
+    //Get the task point p(q) expressed in the task root frame
+//    Eigen::Vector3d p = (*(t_objs_->at(0).getGeometries()->at(0)->getRootData()));
+
+//    //Get the vector from the link frame origin to the task point expressed in the task object root frame
+//    Eigen::Vector3d delta_p = p - t_objs_->at(0).getLinkTransform()->translation();
+
+    //Get the Jacobain w.r.t the task point p(q)
+    boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_->at(1).getJacobian();
+
+//    //Compute the task function values and jacobians
+//    Eigen::VectorXd plane(4);
+//    for(unsigned int i=0; i<dim_;i++)
+//    {
+//        plane = (*(t_objs_->at(1).getGeometries()->at(i)->getRootData()));
+//        //task function values
+//        (*E_)(i,0) = plane.head<3>().transpose()*p-plane.tail<1>()(0);
+
+//        A_->row(i) = plane.head<3>().transpose() * jac->topRows<3>();
+//    }
+
+//    //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
+//    //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
+//    //    std::cout<<"p: "<<p.transpose()<<std::endl;
+//    //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
+//    //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
+//    //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
+//    //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
 
     //compute task function derivatives
     updateTaskFunctionDerivatives();

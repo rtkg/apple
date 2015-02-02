@@ -10,7 +10,7 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------
-enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2};
+enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2, JOINT_VELOCITY_LIMITS = 3, PARALLEL_LINES = 4};
 //----------------------------------------------------------------
 class Task
 {
@@ -42,7 +42,7 @@ public:
     //**Computes task function, velocity and jacobians. Assumes that the kinematics of the corresponding task objects have been computed prior to the call to this function.*/
     virtual void computeTask()=0;
 
-     friend std::ostream& operator<<(std::ostream& str, Task const& task);
+    friend std::ostream& operator<<(std::ostream& str, Task const& task);
 
 protected:
     Task(){};
@@ -83,6 +83,7 @@ class JointSetpoint: public Task
 {
 public:
     JointSetpoint(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+
     virtual void computeTask();
 
 protected:
@@ -92,6 +93,36 @@ private:
     //**Helper function to make sure that the given task objects are valid in the context of the task */
     void verifyTaskObjects();
     int jnt_index_;
+};
+//----------------------------------------------------------------
+class JointVelocityLimits: public Task
+{
+public:
+    JointVelocityLimits(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+
+    virtual void computeTask();
+
+protected:
+    JointVelocityLimits(){};
+
+private:
+    //**Helper function to make sure that the given task objects are valid in the context of the task */
+    void verifyTaskObjects();
+    int jnt_index_;
+};
+//----------------------------------------------------------------
+class ParallelLines: public Task
+{
+public:
+    ParallelLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+
+    virtual void computeTask();
+
+protected:
+    ParallelLines(){};
+
+private:
+    void verifyTaskObjects();
 };
 //----------------------------------------------------------------
 } //end namespace hqp_controllers

@@ -8,11 +8,11 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
-enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6};
+enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7};
 #define POINT_SCALE  0.02
 #define LINE_SCALE   0.15
-#define PLANE_SCALE  3.0
-#define LINE_WIDTH   0.01
+#define PLANE_SCALE  3.5
+#define LINE_WIDTH   0.005
 //----------------------------------------------------------------------------------------------------
 class TaskGeometry
 {
@@ -155,7 +155,26 @@ public:
 
 protected:
     boost::shared_ptr<Eigen::Affine3d> trans_j_l_; ///< transformation from the joint frame to the TaskGeometry::link_ frame (= pose of Frame::trans_j_l_ in the link frame)
+    boost::shared_ptr<Eigen::Affine3d> trans_j_r_0_; ///< initial transformation from the joint frame to the TaskGeometry::root_ frame
     double q_pos_; ///<Joint position value
+};
+//------------------------------------------------------------------------------------------
+class JointLimits: public TaskGeometry
+{
+public:
+    JointLimits();
+    JointLimits(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
+
+    virtual void setLinkData(Eigen::VectorXd const& link_data);
+    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
+    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+
+protected:
+    boost::shared_ptr<Eigen::Affine3d> trans_j_l_; ///< transformation from the joint frame to the TaskGeometry::link_ frame (= pose of Frame::trans_j_l_ in the link frame)
+    boost::shared_ptr<Eigen::Affine3d> trans_j_r_0_; ///< initial transformation from the joint frame to the TaskGeometry::root_ frame
+    boost::shared_ptr<Eigen::Vector3d> lb_; ///< vector of lower bounds holding q_min, q_mins and q_mini
+    boost::shared_ptr<Eigen::Vector3d> ub_; ///< vector of upper bounds holding q_max, q_maxs and q_maxi
 };
 //------------------------------------------------------------------------------------------
 } //end namespace hqp_controllers

@@ -53,7 +53,7 @@ private:
     Eigen::VectorXd b_;
     Eigen::VectorXd w_;
     Eigen::MatrixXd A_;
-    Eigen::VectorXd x_;
+//    Eigen::VectorXd x_;
     std::vector<std::string> signs_;
 
     void reset();
