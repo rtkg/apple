@@ -61,6 +61,9 @@ private:
     Eigen::VectorXi vis_ids_; ///< only task object geometries with ids in vis_ids_ will be published
     bool active_;
 
+    //**Helper function to read joint limits from the parameter server and generate the corresponding tasks.*/
+    bool jointLimitsParser(ros::NodeHandle &n);
+
     ///////////////
     // CALLBACKS //
     ///////////////

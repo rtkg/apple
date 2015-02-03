@@ -8,6 +8,9 @@
     <arg name="hardware_interface" value="VelocityJointInterface" />
   </include>
 
+ <!--load predifined task descriptions (joint limit avoidance, self-collision avoidance ...) definitions for the HQP controller -->
+ <rosparam file="$(find apple_launch)/hqp_tasks/joint_limits.yaml" command="load" ns="/apple"  />
+
   <include file="$(find apple_control)/launch/apple_control.launch">
     <arg name="hardware_interface" value="VelocityJointInterface" />
     <arg name="controllers" value="joint_state_controller
@@ -15,9 +18,12 @@
 
   </include>
 
- <node name="hqp_velocity_controller_test" pkg="hqp_controllers" type="hqp_velocity_controller_test"
+
+
+
+ <!--node name="hqp_velocity_controller_test" pkg="hqp_controllers" type="hqp_velocity_controller_test"
        output="screen">
- </node>
+ </node-->
 
   <!-- Show in Rviz   -->
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find apple_description)/launch/apple.rviz"/>
@@ -27,13 +33,4 @@
 
 </launch>
 
-<!--
-rostopic pub /apple/apple_hqp_vel_controller/command std_msgs/Float64MultiArray """ 
-layout: 
-  dim: [{label: 'x', size: 1234, stride: 1},{label: 'y', size: 1234, 
-stride: 1} ] 
-  data_offset: 0 
-data: [-0.1, -0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1] 
-"""
--->
 

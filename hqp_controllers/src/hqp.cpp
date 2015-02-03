@@ -51,7 +51,11 @@ void HQPStage::appendTask(Task const& task)
     for(unsigned int i=0; i<dim; i++)
         signs_->push_back(task.getSign());
 
+    w_->resize(dim_ + dim);
+    w_->setZero();
+
     dim_ = dim_ +dim;
+    solved_ = false;
 }
 //-----------------------------------------
 HQPSolver::HQPSolver()
