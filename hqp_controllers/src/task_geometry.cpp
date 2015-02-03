@@ -73,6 +73,8 @@ boost::shared_ptr<TaskGeometry>  TaskGeometry::makeTaskGeometry(TaskGeometryType
         geom.reset(new JointPosition(link, root, link_data));
     else if(type == JOINT_LIMITS)
         geom.reset(new JointLimits(link, root, link_data));
+    else if(type == CONE)
+        geom.reset(new Cone(link, root, link_data));
     else
     {
         ROS_ERROR("Task geometry type %d is invalid.",type);
@@ -832,6 +834,96 @@ void JointLimits::addMarker(visualization_msgs::MarkerArray& markers)
     p.z = 0;
     l.points.push_back(p);
     markers.markers.push_back(l);
+}
+//------------------------------------------------------------------------
+Cone::Cone() : TaskGeometry(), alpha_(0.0)
+{
+    type_ = CONE;
+    p_.reset(new Eigen::Vector3d);
+    v_.reset(new Eigen::Vector3d);
+}
+//------------------------------------------------------------------------
+Cone::Cone(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
+{
+    type_ = CONE;
+    setLinkData(link_data);
+}
+//------------------------------------------------------------------------
+void Cone::setLinkData(Eigen::VectorXd const& link_data)
+{
+    ROS_ASSERT(link_data.rows() == 7);
+    link_data_.reset(new Eigen::VectorXd(link_data));
+
+    //first 3 entries of link_data are the cone's reference point, the second 3 entries the direction, the last entry is the opening angle
+    p_.reset(new Eigen::Vector3d(link_data.head<3>()));
+    v_.reset(new Eigen::Vector3d(link_data.segment(3,3)));
+    v_->normalize(); //normalize the direction vector just to make sure
+    alpha_ = link_data(6);
+
+    ROS_ASSERT((alpha_ <= 3.1416) && (alpha_ >= -3.1416)); //make sure the angle is between +/- PI
+}
+//------------------------------------------------------------------------
+void Cone::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    visualization_msgs::Marker m;
+
+    //cylinder for the cone opening
+    //transformation which points z in the cone's direction
+    Eigen::Quaterniond q;
+    q.setFromTwoVectors(Eigen::Vector3d::UnitZ() ,(*v_));
+    m.header.stamp = ros::Time::now();
+    m.header.frame_id = link_;
+    m.type =  visualization_msgs::Marker::CYLINDER;
+    //    m.action = visualization_msgs::Marker::ADD;
+    m.id = markers.markers.size();
+    m.pose.position.x = (*p_)(0) + (*v_)(0) * cos(alpha_) * CONE_SCALE;
+    m.pose.position.y = (*p_)(1) + (*v_)(1) * cos(alpha_) * CONE_SCALE;
+    m.pose.position.z = (*p_)(2) + (*v_)(2) * cos(alpha_) * CONE_SCALE;
+    m.pose.orientation.x = q.x();
+    m.pose.orientation.y = q.y();
+    m.pose.orientation.z = q.z();
+    m.pose.orientation.w = q.w();
+    m.color.r = 1.0;
+    m.color.g = 0.0;
+    m.color.b = 1.0;
+    m.color.a = 0.8;
+    m.scale.z = LINE_WIDTH;
+    m.scale.x = 2 * CONE_SCALE * sin(alpha_);
+    m.scale.y = 2 * CONE_SCALE * sin(alpha_);
+    markers.markers.push_back(m);
+
+    //line for the cylinder axis
+    m.type =  visualization_msgs::Marker::LINE_LIST;
+    m.id = markers.markers.size();
+    m.pose.position.x = 0;
+    m.pose.position.y = 0;
+    m.pose.position.z = 0;
+    m.pose.orientation.x = 0;
+    m.pose.orientation.y = 0;
+    m.pose.orientation.z = 0;
+    m.pose.orientation.w = 1;
+    geometry_msgs::Point p;
+    p.x = (*p_)(0);
+    p.y = (*p_)(1);
+    p.z = (*p_)(2);
+    m.points.push_back(p);
+    p.x = (*p_)(0) + (*v_)(0) * cos(alpha_) * CONE_SCALE;
+    p.y = (*p_)(1) + (*v_)(1) * cos(alpha_) * CONE_SCALE;
+    p.z = (*p_)(2) + (*v_)(2) * cos(alpha_) * CONE_SCALE;
+    m.points.push_back(p);
+    m.scale.x =  LINE_WIDTH;
+    markers.markers.push_back(m);
+}
+//------------------------------------------------------------------------
+void Cone::setLinkTransform(Eigen::Affine3d const& trans_l_r)
+{
+    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
+
+    root_data_.reset(new Eigen::VectorXd(7));
+    //Express the Cone's reference point in the root frame
+    root_data_->head<3>() = (*trans_l_r_) * (*p_);
+    root_data_->segment(3,3) = trans_l_r_->linear() * (*v_);
+    (*root_data_)(6) = alpha_; //opening angle doesn't change
 }
 //------------------------------------------------------------------------
 } //end namespace hqp_controllers

@@ -8,10 +8,11 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
-enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7};
+enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7, CONE = 8};
 #define POINT_SCALE  0.02
 #define LINE_SCALE   0.15
 #define PLANE_SCALE  3.5
+#define CONE_SCALE   0.3
 #define LINE_WIDTH   0.005
 //----------------------------------------------------------------------------------------------------
 class TaskGeometry
@@ -157,6 +158,25 @@ protected:
     boost::shared_ptr<Eigen::Affine3d> trans_j_l_; ///< transformation from the joint frame to the TaskGeometry::link_ frame (= pose of Frame::trans_j_l_ in the link frame)
     boost::shared_ptr<Eigen::Affine3d> trans_j_r_0_; ///< initial transformation from the joint frame to the TaskGeometry::root_ frame
     double q_pos_; ///<Joint position value
+};
+//------------------------------------------------------------------------------------------
+class Cone: public TaskGeometry
+{
+public:
+
+    Cone();
+    Cone(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
+
+    virtual void setLinkData(Eigen::VectorXd const& link_data);
+    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
+    //virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+
+protected:
+
+    boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the cone's start point in the TaskGeometry::link_ frame
+    boost::shared_ptr<Eigen::Vector3d> v_; ///< coordinates of the cones's unit direction vector expressed in TaskGeometry::link_ frame
+    double alpha_; ///< the cone's opening angle
 };
 //------------------------------------------------------------------------------------------
 class JointLimits: public TaskGeometry

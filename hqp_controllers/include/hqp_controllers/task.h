@@ -10,7 +10,7 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------
-enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2, JOINT_VELOCITY_LIMITS = 3, PARALLEL_LINES = 4};
+enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2, JOINT_VELOCITY_LIMITS = 3, PARALLEL_LINES = 4, ANGLE_LINES = 5};
 //----------------------------------------------------------------
 class Task
 {
@@ -120,6 +120,20 @@ public:
 
 protected:
     ParallelLines(){};
+
+private:
+    void verifyTaskObjects();
+};
+//----------------------------------------------------------------
+class AngleLines: public Task
+{
+public:
+   AngleLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+
+    virtual void computeTask();
+
+protected:
+    AngleLines(){};
 
 private:
     void verifyTaskObjects();

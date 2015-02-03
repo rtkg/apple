@@ -114,6 +114,8 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, T
         task.reset(new JointVelocityLimits(id, priority, sign, t_objs, t_dynamics));
     else if(type == PARALLEL_LINES)
         task.reset(new ParallelLines(id, priority, sign, t_objs, t_dynamics));
+    else if(type == ANGLE_LINES)
+        task.reset(new AngleLines(id, priority, sign, t_objs, t_dynamics));
     else
     {
         ROS_ERROR("Task type %d is invalid.",type);
@@ -338,30 +340,13 @@ ParallelLines::ParallelLines(unsigned int id, unsigned int priority, std::string
 
     verifyTaskObjects();
 
-        unsigned int n_jnts = t_objs_->at(0).getJacobian()->cols(); //number of controlled joints
-        A_->resize(dim_, n_jnts);
-        E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
-        A_->setZero();
-        E_->setZero();
+    unsigned int n_jnts = t_objs_->at(0).getJacobian()->cols(); //number of controlled joints
+    A_->resize(dim_, n_jnts);
+    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
+    A_->setZero();
+    E_->setZero();
 
-    //    unsigned int n_sgmnts =  t_objs_->at(0).getChain()->getNrOfSegments();
-    //    std::string jnt_name = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getName();
-    //    KDL::Joint::JointType type = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getType();
-    //    //Translational joints are not allowed for now ...
-    //    ROS_ASSERT( (type == KDL::Joint::RotAxis) || (type == KDL::Joint::RotX) || (type == KDL::Joint::RotY) || (type == KDL::Joint::RotZ));
-
-    //    jnt_index_ = -1;
-    //    for(unsigned int i=0; i<t_objs_->at(0).getJoints()->size(); i++)
-    //        if(jnt_name == t_objs_->at(0).getJoints()->at(i).getName())
-    //            jnt_index_ = i;
-
-    //    ROS_ASSERT(jnt_index_ > -1); //make sure the joint was found
-    //    //Check the dynamics - for this task the gain of 1d linear dynamics is used as the value for the l1 norm of the joint velocity maximum
-    //    ROS_ASSERT(t_dynamics_->getType() == LINEAR_DYNAMICS);
-    //    ROS_ASSERT(t_dynamics_->getDimension() == 1);
-    //    ROS_ASSERT((*static_cast<LinearTaskDynamics*>(t_dynamics_.get())->getDynamicsMatrix())(0,0) >= 0.0); //velocity maximum has to be positive
-    //    //sign has to be smaller/equal for this task
-    //    ROS_ASSERT(sign == "<=");
+    ROS_ASSERT(sign == "=");
 }
 //---------------------------------------------------------
 void ParallelLines::verifyTaskObjects()
@@ -371,48 +356,89 @@ void ParallelLines::verifyTaskObjects()
     ROS_ASSERT(t_objs_->at(1).getGeometries().get()); //make sure a task geometry exists
     ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1); //need only one line geometry per task object
     ROS_ASSERT(t_objs_->at(1).getGeometries()->size() == 1);
+    ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot());//make sure the task objects are w.r.t the same root frame
     ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == LINE);
     ROS_ASSERT(t_objs_->at(1).getGeometries()->at(0)->getType() == LINE);
     //make sure that the first line is fixed in the environment for now
-      ROS_ASSERT(t_objs_->at(0).getChain()->getNrOfJoints() == 0);
+    ROS_ASSERT(t_objs_->at(0).getChain()->getNrOfJoints() == 0);
+    ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() > 0);
 }
 //---------------------------------------------------------
 void ParallelLines::computeTask()
 {
-    //   std::cout<<"joints: ";
-    //    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)
-    //        std::cout<<t_objs_.first->getJoints()->at(i).getPosition()<<" ";
+    //consider the first line attached to a static body, the second one to a movable one
+    // get the direction vectors of the two lines
+    Eigen::Vector3d u = (*t_objs_->at(0).getGeometries()->at(0)->getRootData()).tail<3>();
+    Eigen::Vector3d v = (*t_objs_->at(1).getGeometries()->at(0)->getRootData()).tail<3>();
 
-    //Get the task point p(q) expressed in the task root frame
-//    Eigen::Vector3d p = (*(t_objs_->at(0).getGeometries()->at(0)->getRootData()));
+    //std::cout<<"v: "<<v.transpose()<<std::endl;
+    //std::cout<<"u: "<<u.transpose()<<std::endl;
+    //std::cout<<"Jw: "<<std::endl<< t_objs_->at(1).getJacobian()->bottomRows<3>()<<std::endl;
 
-//    //Get the vector from the link frame origin to the task point expressed in the task object root frame
-//    Eigen::Vector3d delta_p = p - t_objs_->at(0).getLinkTransform()->translation();
+    Eigen::Vector3d v_neg = v*(-1);
+    //Compute the task jacobian
+    (*A_) = skewSymmetricMatrix(u) * skewSymmetricMatrix(v_neg) * t_objs_->at(1).getJacobian()->bottomRows<3>();
 
-    //Get the Jacobain w.r.t the task point p(q)
-    boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_->at(1).getJacobian();
+    //Compute the task function:
+    E_->col(0) = u.cross(v);
 
-//    //Compute the task function values and jacobians
-//    Eigen::VectorXd plane(4);
-//    for(unsigned int i=0; i<dim_;i++)
-//    {
-//        plane = (*(t_objs_->at(1).getGeometries()->at(i)->getRootData()));
-//        //task function values
-//        (*E_)(i,0) = plane.head<3>().transpose()*p-plane.tail<1>()(0);
-
-//        A_->row(i) = plane.head<3>().transpose() * jac->topRows<3>();
-//    }
-
-//    //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
-//    //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
-//    //    std::cout<<"p: "<<p.transpose()<<std::endl;
-//    //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
-//    //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
-//    //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
-//    //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
-
-    //compute task function derivatives
     updateTaskFunctionDerivatives();
+
+    //    std::cout<<"E_ :"<<std::endl<<(*E_)<<std::endl;
+    //    std::cout<<"A_ :"<<std::endl<<(*A_)<<std::endl;
+}
+//---------------------------------------------------------
+AngleLines::AngleLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
+{
+    type_ = ANGLE_LINES;
+    dim_ = 1;
+
+    verifyTaskObjects();
+
+    unsigned int n_jnts = t_objs_->at(0).getJacobian()->cols(); //number of controlled joints
+    A_->resize(dim_, n_jnts);
+    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
+    A_->setZero();
+    E_->setZero();
+}
+//---------------------------------------------------------
+void AngleLines::verifyTaskObjects()
+{
+    ROS_ASSERT(t_objs_->size() == 2); //need a Cone and a Line geometry
+    ROS_ASSERT(t_objs_->at(0).getGeometries().get()); //make sure a task geometry exists
+    ROS_ASSERT(t_objs_->at(1).getGeometries().get()); //make sure a task geometry exists
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1); //need only one geometry per task object
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->size() == 1);
+    ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot());//make sure the task objects are w.r.t the same root frame
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == CONE);
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->at(0)->getType() == LINE);
+    //make sure that the cone is fixed in the environment for now
+    ROS_ASSERT(t_objs_->at(0).getChain()->getNrOfJoints() == 0);
+    ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() > 0);
+}
+//---------------------------------------------------------
+void AngleLines::computeTask()
+{
+    //consider the first cone attached to a static body, the line to a movable one
+    Eigen::Vector3d u = (*t_objs_->at(0).getGeometries()->at(0)->getRootData()).segment(3,3); //cone direction
+    Eigen::Vector3d v = (*t_objs_->at(1).getGeometries()->at(0)->getRootData()).tail<3>(); //line direction
+    double alpha = (*t_objs_->at(0).getGeometries()->at(0)->getRootData()).tail<1>()(0);
+
+    //    std::cout<<"v: "<<v.transpose()<<std::endl;
+    //    std::cout<<"u: "<<u.transpose()<<std::endl;
+    //    std::cout<<"alpha: "<<alpha<<std::endl;
+    //    std::cout<<"Jw: "<<std::endl<< t_objs_->at(1).getJacobian()->bottomRows<3>()<<std::endl;
+
+    //Compute the task jacobian
+    (*A_) = u.transpose() * skewSymmetricMatrix(v) * t_objs_->at(1).getJacobian()->bottomRows<3>();
+
+    //Compute the task function:
+    (*E_)(0,0) = cos(alpha) - u.transpose().dot(v);
+
+    updateTaskFunctionDerivatives();
+
+    //    std::cout<<"E_ :"<<std::endl<<(*E_)<<std::endl;
+    //    std::cout<<"A_ :"<<std::endl<<(*A_)<<std::endl;
 }
 //---------------------------------------------------------
 } //end namespace hqp_controllers
