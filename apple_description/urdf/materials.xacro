@@ -37,4 +37,8 @@
     <color rgba="${118/255} ${115/255} ${111/255} 1.0"/>
   </material>
 
+  <material name="Wood">
+    <color rgba="${128/255} ${70/255} ${27/255} 1.0"/>
+  </material>
+
 </robot>

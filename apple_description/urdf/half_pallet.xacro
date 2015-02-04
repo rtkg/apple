@@ -6,9 +6,9 @@
   <!-- Import all Gazebo-customization elements, including Gazebo colors -->
   <xacro:include filename="$(find apple_description)/urdf/apple.gazebo.xacro" />
 
-  <xacro:macro name="citi_truck" params="parent name *origin">
+  <xacro:macro name="half_pallet" params="parent name *origin">
 
-    <!--joint between {parent} and City Truck base -->
+    <!--joint between {parent} and half_pallet -->
     <joint name="${parent}_${name}_joint" type="fixed">
       <insert_block name="origin"/>
       <parent link="${parent}"/>
@@ -17,25 +17,25 @@
 
     <link name="${name}_base">
       <inertial>
-        <origin xyz="-0.11 0.0 .31" rpy="0 0 0"/>
-        <mass value="30"/>
-        <inertia ixx="5"  ixy="0"  ixz="0" iyy="6" iyz="0" izz="2" />
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+        <mass value="5.3"/>
+        <inertia ixx="0.48"  ixy="0"  ixz="0" iyy="0.25" iyz="0" izz="0.63" />
       </inertial>
 
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://apple_description/meshes/citi_truck.stl"/>
+          <mesh filename="package://apple_description/meshes/half_pallet.stl"/>
         </geometry>
-        <material name="Aluminium"/>
+        <material name="Wood"/>
       </visual>
 
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://apple_description/meshes/citi_truck.stl"/>
+          <mesh filename="package://apple_description/meshes/half_pallet.stl"/>
         </geometry>
-        <material name="Aluminium"/>
+        <material name="Wood"/>
       </collision>
     </link>
 
