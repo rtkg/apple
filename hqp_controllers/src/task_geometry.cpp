@@ -75,6 +75,8 @@ boost::shared_ptr<TaskGeometry>  TaskGeometry::makeTaskGeometry(TaskGeometryType
         geom.reset(new JointLimits(link, root, link_data));
     else if(type == CONE)
         geom.reset(new Cone(link, root, link_data));
+    else if(type == CYLINDER)
+        geom.reset(new Cylinder(link, root, link_data));
     else
     {
         ROS_ERROR("Task geometry type %d is invalid.",type);
@@ -924,6 +926,71 @@ void Cone::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     root_data_->head<3>() = (*trans_l_r_) * (*p_);
     root_data_->segment(3,3) = trans_l_r_->linear() * (*v_);
     (*root_data_)(6) = alpha_; //opening angle doesn't change
+}
+//------------------------------------------------------------------------
+Cylinder::Cylinder() : TaskGeometry(), r_(0.0)
+{
+    type_ = CYLINDER;
+    p_.reset(new Eigen::Vector3d);
+    v_.reset(new Eigen::Vector3d);
+}
+//------------------------------------------------------------------------
+Cylinder::Cylinder(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
+{
+    type_ = CYLINDER;
+    setLinkData(link_data);
+}
+//------------------------------------------------------------------------
+void Cylinder::setLinkData(Eigen::VectorXd const& link_data)
+{
+    ROS_ASSERT(link_data.rows() == 7);
+    link_data_.reset(new Eigen::VectorXd(link_data));
+
+    //first 3 entries of link_data are the line's reference point, the second 3 entries the direction, the last one is the radius
+    p_.reset(new Eigen::Vector3d(link_data.head<3>()));
+    v_.reset(new Eigen::Vector3d(link_data.segment(3,3)));
+    v_->normalize(); //normalize the direction vector just to make sure
+    r_ = link_data.tail<1>()(0);
+}
+//------------------------------------------------------------------------
+void Cylinder::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    //transformation which points z in the cylinder direction
+    Eigen::Quaterniond q;
+    q.setFromTwoVectors(Eigen::Vector3d::UnitZ() ,(*v_));
+
+    visualization_msgs::Marker m;
+    m.header.frame_id = link_;
+    m.header.stamp = ros::Time::now();
+    m.type =  visualization_msgs::Marker::CYLINDER;
+    m.action = visualization_msgs::Marker::ADD;
+    m.id = markers.markers.size();
+    m.pose.position.x = (*p_)(0) + (*v_)(0) * 0.5 * LINE_SCALE;
+    m.pose.position.y = (*p_)(1) + (*v_)(0) * 0.5 * LINE_SCALE;
+    m.pose.position.z = (*p_)(2) + (*v_)(0) * 0.5 * LINE_SCALE;
+    m.pose.orientation.x = q.x();
+    m.pose.orientation.y = q.y();
+    m.pose.orientation.z = q.z();
+    m.pose.orientation.w = q.w();
+    m.scale.x = r_;
+    m.scale.y = r_;
+    m.scale.z = LINE_SCALE;
+    m.color.r = 0.0;
+    m.color.g = 1.0;
+    m.color.b = 1.0;
+    m.color.a = 0.8;
+    markers.markers.push_back(m);
+}
+//------------------------------------------------------------------------
+void Cylinder::setLinkTransform(Eigen::Affine3d const& trans_l_r)
+{
+    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
+
+    root_data_.reset(new Eigen::VectorXd(7));
+    //Express the line's reference point in the root frame
+    root_data_->head<3>() = (*trans_l_r_) * (*p_);
+    root_data_->segment(3,3) = trans_l_r_->linear() * (*v_);
+    (*root_data_)(6) = r_; //transform doesn't change the radius
 }
 //------------------------------------------------------------------------
 } //end namespace hqp_controllers

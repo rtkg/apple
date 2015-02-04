@@ -8,9 +8,9 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
-enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7, CONE = 8};
+enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7, CONE = 8, CYLINDER = 9};
 #define POINT_SCALE  0.02
-#define LINE_SCALE   0.15
+#define LINE_SCALE   0.2
 #define PLANE_SCALE  3.5
 #define CONE_SCALE   0.3
 #define LINE_WIDTH   0.005
@@ -195,6 +195,25 @@ protected:
     boost::shared_ptr<Eigen::Affine3d> trans_j_r_0_; ///< initial transformation from the joint frame to the TaskGeometry::root_ frame
     boost::shared_ptr<Eigen::Vector3d> lb_; ///< vector of lower bounds holding q_min, q_mins and q_mini
     boost::shared_ptr<Eigen::Vector3d> ub_; ///< vector of upper bounds holding q_max, q_maxs and q_maxi
+};
+//------------------------------------------------------------------------------------------
+class Cylinder: public TaskGeometry
+{
+public:
+
+    Cylinder();
+    Cylinder(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
+
+    virtual void setLinkData(Eigen::VectorXd const& link_data);
+    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
+    //   virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+
+protected:
+
+    boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the cylinder's start point expressed in TaskGeometry::link_ frame
+    boost::shared_ptr<Eigen::Vector3d> v_; ///< coordinates of the cylinder's unit direction vector expressed in TaskGeometry::link_ frame
+    double r_; ///< cylinder radius
 };
 //------------------------------------------------------------------------------------------
 } //end namespace hqp_controllers

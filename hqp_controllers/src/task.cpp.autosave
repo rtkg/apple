@@ -471,10 +471,6 @@ void ProjectPointCylinder::verifyTaskObjects()
 {
     ROS_ASSERT(t_objs_->size() == 2); //need one point and one set of lines
     ROS_ASSERT(t_objs_->at(0).getGeometries().get() && t_objs_->at(1).getGeometries().get()); //make sure the geometries exist
-
-    std::cout<<"t_obj 0 root: "<<t_objs_->at(0).getRoot()<<std::endl;
-        std::cout<<"t_obj 1 root: "<<t_objs_->at(1).getRoot()<<std::endl;
-
     ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot()); //make sure the geometries associated with the task objects are formed in the same root frame
     //check that the task object geometries are valid - first one has to be a single point, second one a set of lines
     ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1);

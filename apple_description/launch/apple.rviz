@@ -106,6 +106,16 @@ Visualization Manager:
           Show Axes: true
           Show Trail: false
           Value: true
+        load_pallet_base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        transport_pallet_base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         velvet_fingers_left:
           Alpha: 1
           Show Axes: false
@@ -177,22 +187,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.520386
+      Distance: 3.1248
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.815491
-        Y: -1.00449
-        Z: 0.680867
+        X: 0.286077
+        Y: -0.094298
+        Z: 0.714407
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.1802
+      Pitch: 0.2952
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.600355
+      Yaw: 0.240355
     Saved: ~
 Window Geometry:
   Displays:
@@ -210,5 +220,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1141
-  X: 502
-  Y: 25
+  X: 505
+  Y: 47
