@@ -218,8 +218,8 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
             catch(GRBException e)
             {
                 ROS_ERROR("In HQPSolver::solve(...): Gurobi exception with error code %d, and error message %s when trying to extract the solution variables.", e.getErrorCode(), e.getMessage().c_str());
-                model.write("/home/rkg/Desktop/model.lp");
-                model.write("/home/rkg/Desktop/model.sol");
+                //model.write("/home/rkg/Desktop/model.lp");
+                //model.write("/home/rkg/Desktop/model.sol");
                 exit(0);
                 return false;
             }

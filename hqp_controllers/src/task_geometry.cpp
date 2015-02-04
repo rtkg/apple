@@ -972,8 +972,8 @@ void Cylinder::addMarker(visualization_msgs::MarkerArray& markers)
     m.pose.orientation.y = q.y();
     m.pose.orientation.z = q.z();
     m.pose.orientation.w = q.w();
-    m.scale.x = r_;
-    m.scale.y = r_;
+    m.scale.x = 2 * r_;
+    m.scale.y = 2 * r_;
     m.scale.z = LINE_SCALE;
     m.color.r = 0.0;
     m.color.g = 1.0;

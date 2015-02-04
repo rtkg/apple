@@ -38,3 +38,4 @@ joint_limits: #Values for the LBR iiwa 820 joints as given by KUKA
         dq_max: 1.0                       
         lb: [0.0, 0.0873, 0.2]   
         ub: [1.5708, 1.4835, 1.3708]  
+

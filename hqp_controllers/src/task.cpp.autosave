@@ -109,15 +109,19 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, T
     if(type == PROJECT_POINT_PLANE)
         task.reset(new ProjectPointPlane(id, priority, sign, t_objs, t_dynamics));
     else if(type == PROJECT_POINT_CYLINDER)
-           task.reset(new ProjectPointCylinder(id, priority, sign, t_objs, t_dynamics));
+        task.reset(new ProjectPointCylinder(id, priority, sign, t_objs, t_dynamics));
+    else if(type == PROJECT_LINE_LINE)
+        task.reset(new ProjectLineLine(id, priority, sign, t_objs, t_dynamics));
     else if(type == JOINT_SETPOINT)
-           task.reset(new JointSetpoint(id, priority, sign, t_objs, t_dynamics));
-       else if(type == JOINT_VELOCITY_LIMITS)
+        task.reset(new JointSetpoint(id, priority, sign, t_objs, t_dynamics));
+    else if(type == JOINT_VELOCITY_LIMITS)
         task.reset(new JointVelocityLimits(id, priority, sign, t_objs, t_dynamics));
     else if(type == PARALLEL_LINES)
         task.reset(new ParallelLines(id, priority, sign, t_objs, t_dynamics));
     else if(type == ANGLE_LINES)
         task.reset(new AngleLines(id, priority, sign, t_objs, t_dynamics));
+    else if(type == COPLANAR_LINES)
+        task.reset(new CoplanarLines(id, priority, sign, t_objs, t_dynamics));
     else
     {
         ROS_ERROR("Task type %d is invalid.",type);
@@ -442,16 +446,6 @@ void AngleLines::computeTask()
     //    std::cout<<"E_ :"<<std::endl<<(*E_)<<std::endl;
     //    std::cout<<"A_ :"<<std::endl<<(*A_)<<std::endl;
 }
-
-
-
-
-
-
-
-
-
-
 //---------------------------------------------------------
 ProjectPointCylinder::ProjectPointCylinder(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
 {
@@ -496,36 +490,219 @@ void ProjectPointCylinder::computeTask()
     //Get the Jacobain w.r.t the task point p(q)
     boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_->at(0).getJacobian(delta_p);
 
-
+    //Get the cylinder definition
     Eigen::Vector3d c = t_objs_->at(1).getGeometries()->at(0)->getRootData()->head<3>(); //cylinder start point
     Eigen::Vector3d v = t_objs_->at(1).getGeometries()->at(0)->getRootData()->segment(3,3); //cylinder direction vector
     double r =  t_objs_->at(1).getGeometries()->at(0)->getRootData()->tail<1>()(0); //cylinder radius
 
     //find the normal of the projection
-     Eigen::Vector3d n(p - v * v.transpose().dot(p - c));
-     n.normalize();
-std::cout<<"normal: "<<n.transpose()<<std::endl;
+    Eigen::Vector3d n(p - (c + v * v.dot(p - c)));
+    double d = n.norm(); //distance of the projection of p onto the cylinder axis
+    n.normalize();
+
+    //         std::cout<<"c: "<<c.transpose()<<std::endl;
+    //         std::cout<<"v: "<<v.transpose()<<std::endl;
+    //         std::cout<<"p: "<<p.transpose()<<std::endl;
+    //         std::cout<<"normal: "<<n.transpose()<<std::endl;
+    //         std::cout<<"d: "<<d<<std::endl;
+    //         std::cout<<"r: "<<std::endl;
 
     //Compute the task function values and jacobians
-(*E_)(0,0) = n.transpose().dot(p) - r;
- (*A_) = n.transpose() *  jac->topRows<3>();
-
-
-    //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
-    //    std::cout<<"p: "<<p.transpose()<<std::endl;
-    //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
-    //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
-    //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
-    //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
+    (*E_)(0,0) = d - r;
+    (*A_) = n.transpose() *  jac->topRows<3>();
 
     //compute task function derivatives
     updateTaskFunctionDerivatives();
 
-    std::cout<<"p: "<<p.transpose()<<std::endl;
-    std::cout<<"Jac: "<<std::endl<<jac<<std::endl;
-  std::cout<<"E_: "<<std::endl<<(*E_)<<std::endl;
-  std::cout<<"A_: "<<std::endl<<(*A_)<<std::endl;
-exit(0);
+    //  std::cout<<"Jac: "<<std::endl<<(*jac)<<std::endl;
+    //      std::cout<<"E_: "<<std::endl<<(*E_)<<std::endl;
+    //      std::cout<<"A_: "<<std::endl<<(*A_)<<std::endl;
+
+}
+//---------------------------------------------------------
+CoplanarLines::CoplanarLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
+{
+    type_ = COPLANAR_LINES;
+    dim_ = 3;
+
+    verifyTaskObjects();
+
+    unsigned int n_jnts = t_objs_->at(0).getJacobian()->cols(); //number of controlled joints
+    A_->resize(dim_, n_jnts);
+    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
+    A_->setZero();
+    E_->setZero();
+
+    ROS_ASSERT(sign == "=");
+}
+//---------------------------------------------------------
+void CoplanarLines::verifyTaskObjects()
+{
+    ROS_ASSERT(t_objs_->size() == 2); //need two Line geometries
+    ROS_ASSERT(t_objs_->at(0).getGeometries().get()); //make sure a task geometry exists
+    ROS_ASSERT(t_objs_->at(1).getGeometries().get()); //make sure a task geometry exists
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1); //need only one line geometry per task object
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->size() == 1);
+    ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot());//make sure the task objects are w.r.t the same root frame
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == LINE);
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->at(0)->getType() == LINE);
+    //make sure that the first line is fixed in the environment for now
+    ROS_ASSERT(t_objs_->at(0).getChain()->getNrOfJoints() == 0);
+    ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() > 0);
+}
+//---------------------------------------------------------
+void CoplanarLines::computeTask()
+{
+    //consider the first line attached to a static body, the second one to a movable one
+    Eigen::Vector3d u = (*t_objs_->at(0).getGeometries()->at(0)->getRootData()).tail<3>(); // get the direction vectors of the first one
+    Eigen::Vector3d a = (*t_objs_->at(0).getGeometries()->at(0)->getRootData()).head<3>(); // get the start vector of the first line
+
+    Eigen::Vector3d b = (*t_objs_->at(1).getGeometries()->at(0)->getRootData()).head<3>();  // start of second line
+    Eigen::Vector3d c = b + (*t_objs_->at(1).getGeometries()->at(0)->getRootData()).tail<3>();  //  another point on the second line
+
+    Eigen::Vector3d ab = a - b;
+    Eigen::Vector3d ac = a - c;
+
+    if((ab.norm() <= 1e-4) || (ac.norm() <= 1e-4))
+        ROS_WARN("CoplanarLines::computeTask(): ill conditioned task formulation!");
+
+    //ab.normalize(); ac.normalize();
+
+    Eigen::Vector3d delta_b =  b - t_objs_->at(1).getLinkTransform()->translation();
+    Eigen::Vector3d delta_c =  c - t_objs_->at(1).getLinkTransform()->translation();
+
+    boost::shared_ptr<Eigen::MatrixXd> jb = t_objs_->at(1).getJacobian(delta_b);
+    boost::shared_ptr<Eigen::MatrixXd> jc = t_objs_->at(1).getJacobian(delta_c);
+
+    //compute the task jacobian
+    (*A_) = skewSymmetricMatrix((-1*ac).cross(u))*skewSymmetricMatrix(u)*jb->topRows<3>() + skewSymmetricMatrix((-1*ab).cross(u))*skewSymmetricMatrix(u)*jc->topRows<3>();
+
+    //compute the task function
+    E_->col(0) = (u.cross(ab)).cross(u.cross(ac));
+
+    //    std::cout<<"u: "<<u.transpose()<<std::endl;
+    //    std::cout<<"a: "<<a.transpose()<<std::endl;
+    //    std::cout<<"b: "<<b.transpose()<<std::endl;
+    //    std::cout<<"c: "<<c.transpose()<<std::endl;
+    //    std::cout<<"ab: "<<ab.transpose()<<std::endl;
+    //    std::cout<<"ac: "<<ac.transpose()<<std::endl;
+    //    std::cout<<"delta_b: "<<delta_b.transpose()<<std::endl;
+    //    std::cout<<"delta_c: "<<delta_c.transpose()<<std::endl;
+
+    updateTaskFunctionDerivatives();
+
+    //       std::cout<<"E_ :"<<std::endl<<(*E_)<<std::endl;
+    //       std::cout<<"A_ :"<<std::endl<<(*A_)<<std::endl;
+}
+//---------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+ProjectLineLine::ProjectLineLine(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
+{
+    type_ = PROJECT_LINE_LINE;
+    dim_ = 1;
+
+    verifyTaskObjects();
+
+    unsigned int n_jnts = t_objs_->at(1).getJacobian()->cols(); //number of controlled joints
+    A_->resize(dim_, n_jnts);
+    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
+    A_->setZero();
+    E_->setZero();
+
+    ROS_ASSERT(sign == "=");
+}
+//---------------------------------------------------------
+void ProjectLineLine::verifyTaskObjects()
+{
+    ROS_ASSERT(t_objs_->size() == 2); //need to lines
+    ROS_ASSERT(t_objs_->at(0).getGeometries().get() && t_objs_->at(1).getGeometries().get()); //make sure the geometries exist
+    ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot()); //make sure the geometries associated with the task objects are formed in the same root frame
+    //check that the task object geometries are valid
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1);
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == LINE);
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->size() == 1);
+    ROS_ASSERT(t_objs_->at(1).getGeometries()->at(0)->getType() == LINE);
+    ROS_ASSERT(t_objs_->at(0).getChain()->getNrOfJoints() == 0);//Make sure the first line is fixed in the environment for now
+    ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() > 0);
+}
+//---------------------------------------------------------
+void ProjectLineLine::computeTask()
+{
+    //   std::cout<<"joints: ";
+    //    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)
+    //        std::cout<<t_objs_.first->getJoints()->at(i).getPosition()<<" ";
+
+    Eigen::Vector3d p1 = t_objs_->at(0).getGeometries()->at(0)->getRootData()->head<3>(); //start vector of the first line
+    Eigen::Vector3d p2 = t_objs_->at(1).getGeometries()->at(0)->getRootData()->head<3>(); //start vector of the second line
+    Eigen::Vector3d v1 = t_objs_->at(0).getGeometries()->at(0)->getRootData()->tail<3>(); //direction vector of the first line
+    Eigen::Vector3d v2 = t_objs_->at(1).getGeometries()->at(0)->getRootData()->tail<3>(); //direction vector of the second line
+
+    Eigen::Vector3d p; //Jacobian point on the second lien
+    Eigen::Vector3d n;
+    double d;
+    //test for skewness
+    if(v1.cross(v2).norm() < 1e-4)
+    {
+        //lines are parallel
+        n = p2-(p1+(v1*v1.dot(p2-p1)));
+        d = n.norm();
+        n.normalize();
+        p = p2; //can be any point
+    }
+    else
+    {
+        //lines are not parallel
+        n = v1.cross(v2);
+        n.normalize();
+        d = n.dot(p1-p2);
+        if(d < 0.0)
+        {
+            d = (-1)*d;
+            n = (-1)*n;
+        }
+        //find the jacobian point
+        Eigen::MatrixXd C(3,2);
+        C.col(0) = v1; C.col(1) = v2*(-1);
+        // x = C.colPivHouseholderQr().solve(b);
+        Eigen::Vector2d lmbd = C.jacobiSvd(Eigen::ComputeThinU|Eigen::ComputeThinV).solve(p2-d*n-p1);
+
+        p = p2+lmbd(1)*v2;
+    }
+
+    //Get the vector from the link frame origin to the task point expressed in the task object root frame
+    Eigen::Vector3d delta_p = p - t_objs_->at(1).getLinkTransform()->translation();
+
+    //Get the Jacobain w.r.t the task point p(q)
+    boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_->at(1).getJacobian(delta_p);
+
+//    std::cout<<"p1: "<<p1.transpose()<<std::endl;
+//    std::cout<<"v1: "<<v1.transpose()<<std::endl;
+//    std::cout<<"p2: "<<p2.transpose()<<std::endl;
+//    std::cout<<"v2: "<<v2.transpose()<<std::endl;
+//    std::cout<<"n: "<<n.transpose()<<std::endl;
+//    std::cout<<"d: "<<d<<std::endl;
+//    std::cout<<"p: "<<p.transpose()<<std::endl;
+
+    //Compute the task function values and jacobians
+    (*E_)(0.0) = d;
+    (*A_) = (-1) * n.transpose() *  jac->topRows<3>();
+
+    //compute task function derivatives
+    updateTaskFunctionDerivatives();
+
+//    std::cout<<"E_: "<<std::endl<<(*E_)<<std::endl;
+//    std::cout<<"A_: "<<std::endl<<(*A_)<<std::endl;
 }
 //---------------------------------------------------------
 } //end namespace hqp_controllers
