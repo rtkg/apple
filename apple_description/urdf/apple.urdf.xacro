@@ -29,7 +29,7 @@
 
   <!-- half pallet for loading -->
   <xacro:half_pallet name="load_pallet" parent="world">
-    <origin xyz="0.52 -0.84 0.001" rpy="0 0 0" />
+    <origin xyz="0.8 -0.84 0.001" rpy="0 0 0" />
   </xacro:half_pallet> 
 
   <!--lbr -->

@@ -9,7 +9,7 @@
 namespace hqp_controllers
 {
 //-----------------------------------------------------------------------
-HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_RATE), active_(true)
+HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_RATE), active_(false)
 {
     joints_.reset(new std::vector< hardware_interface::JointHandle >);
 }
@@ -124,8 +124,11 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
 
     //============================================== REGISTER CALLBACKS =========================================
+    activate_hqp_control_srv_ = n.advertiseService("activate_hqp_control",&HQPVelocityController::activateHQPControl,this);
     set_task_srv_ = n.advertiseService("set_tasks",&HQPVelocityController::setTasks,this);
     set_task_obj_srv_ = n.advertiseService("set_task_objects",&HQPVelocityController::setTaskObjects,this);
+    remove_task_srv_= n.advertiseService("remove_tasks",&HQPVelocityController::removeTasks,this);
+    remove_task_obj_srv_ = n.advertiseService("remove_task_objects",&HQPVelocityController::removeTaskObjects,this);
     vis_t_obj_srv_ = n.advertiseService("visualize_task_objects",&HQPVelocityController::visualizeTaskObjects,this);
     //============================================== REGISTER CALLBACKS END =========================================
     vis_t_obj_pub_.init(n, "task_objects", 1);
@@ -257,7 +260,6 @@ void HQPVelocityController::starting(const ros::Time& time)
 bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res)
 {
     lock_.lock();
-
     for(unsigned int i = 0; i<req.tasks.size(); i++)
     {
         hqp_controllers_msgs::Task task = req.tasks[i];
@@ -301,7 +303,6 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
 bool HQPVelocityController::setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res)
 {
     lock_.lock();
-
     for(unsigned int i=0; i<req.objs.size();i++)
     {
         std::string root = req.objs[i].root;
@@ -341,8 +342,39 @@ bool HQPVelocityController::setTaskObjects(hqp_controllers_msgs::SetTaskObjects:
     return res.success;
 }
 //-----------------------------------------------------------------------
+bool HQPVelocityController::removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res)
+{
+    lock_.lock();
+    for(unsigned int i=0; i<req.ids.size(); i++)
+        if(!task_manager_.removeTask(req.ids[i]))
+        {
+            lock_.unlock();
+            res.success = false;
+            return false;
+        }
+    lock_.unlock();
+    res.success = true;
+    return true;
+}
+//-----------------------------------------------------------------------
+bool HQPVelocityController::removeTaskObjects(hqp_controllers_msgs::RemoveTaskObjects::Request & req, hqp_controllers_msgs::RemoveTaskObjects::Response &res)
+{
+    lock_.lock();
+    for(unsigned int i=0; i<req.ids.size(); i++)
+        if(!task_manager_.removeTaskObject(req.ids[i]))
+        {
+            lock_.unlock();
+            res.success = false;
+            return false;
+        }
+    lock_.unlock();
+    res.success = true;
+    return true;
+}
+//-----------------------------------------------------------------------
 bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res)
 {
+    res.success = true;
     lock_.lock();
     vis_ids_.resize(req.ids.size());
     for(unsigned int i=0; i<req.ids.size();i++)
@@ -362,6 +394,18 @@ bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::Visualize
 
     lock_.unlock();
     return res.success;
+}
+//-----------------------------------------------------------------------
+bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQPControl::Request & req, hqp_controllers_msgs::ActivateHQPControl::Response &res)
+{
+    lock_.lock();
+    active_ = req.active;
+    lock_.unlock();
+
+    if(req.active == true)
+        ROS_INFO("HQP control activated.");
+    else
+        ROS_INFO("HQP control deactivated.");
 }
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)

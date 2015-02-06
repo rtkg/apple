@@ -43,7 +43,7 @@ void Task::updateTaskFunctionDerivatives()
     ROS_ASSERT(dt > -1e-8);
     if(dt > LIM_DT)
     {
-        ROS_WARN("In task id %d, Task::updateTaskFunctionDerivatives(...): sampling time dt=%f exeeds sampling time limit %f, setting dt=0.0.",id_,dt,LIM_DT);
+        ROS_DEBUG("In task id %d, Task::updateTaskFunctionDerivatives(...): sampling time dt=%f exeeds sampling time limit %f, setting dt=0.0.",id_,dt,LIM_DT);
         dt = 0.0;
     }
     unsigned int t_state_dim = t_dynamics_->getDimension();
@@ -463,7 +463,7 @@ ProjectPointCylinder::ProjectPointCylinder(unsigned int id, unsigned int priorit
 //---------------------------------------------------------
 void ProjectPointCylinder::verifyTaskObjects()
 {
-    ROS_ASSERT(t_objs_->size() == 2); //need one point and one set of lines
+    ROS_ASSERT(t_objs_->size() == 2); //need one point and one cylinder
     ROS_ASSERT(t_objs_->at(0).getGeometries().get() && t_objs_->at(1).getGeometries().get()); //make sure the geometries exist
     ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot()); //make sure the geometries associated with the task objects are formed in the same root frame
     //check that the task object geometries are valid - first one has to be a single point, second one a set of lines
@@ -595,18 +595,6 @@ void CoplanarLines::computeTask()
     //       std::cout<<"A_ :"<<std::endl<<(*A_)<<std::endl;
 }
 //---------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
 ProjectLineLine::ProjectLineLine(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
 {
     type_ = PROJECT_LINE_LINE;
@@ -625,7 +613,7 @@ ProjectLineLine::ProjectLineLine(unsigned int id, unsigned int priority, std::st
 //---------------------------------------------------------
 void ProjectLineLine::verifyTaskObjects()
 {
-    ROS_ASSERT(t_objs_->size() == 2); //need to lines
+    ROS_ASSERT(t_objs_->size() == 2); //need two lines
     ROS_ASSERT(t_objs_->at(0).getGeometries().get() && t_objs_->at(1).getGeometries().get()); //make sure the geometries exist
     ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot()); //make sure the geometries associated with the task objects are formed in the same root frame
     //check that the task object geometries are valid
@@ -659,7 +647,6 @@ void ProjectLineLine::computeTask()
         d = n.norm();
         n.normalize();
         p = p2; //can be any point
-
     }
     else
     {

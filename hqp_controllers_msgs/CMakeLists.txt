@@ -26,6 +26,9 @@ add_service_files(
   SetTasks.srv
   SetTaskObjects.srv
   VisualizeTaskObjects.srv
+  ActivateHQPControl.srv
+  RemoveTasks.srv
+  RemoveTaskObjects.srv
   )
 
 

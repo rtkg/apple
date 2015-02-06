@@ -184,7 +184,7 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
                 if(status == GRB_TIME_LIMIT)
                     ROS_WARN("Stage solving runtime %f sec exceeds the set time limit of %f sec.", runtime, TIME_LIMIT);
                 else
-                    ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d.", it->first , status);
+                    ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d.", s_count, status);
 
                 delete[] lb_x;
                 delete[] ub_x;
@@ -200,6 +200,7 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
 
                 //model.write("/home/rkg/Desktop/model.lp");
                 //model.write("/home/rkg/Desktop/model.sol");
+
                 return false;
             }
 
@@ -220,7 +221,7 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
                 ROS_ERROR("In HQPSolver::solve(...): Gurobi exception with error code %d, and error message %s when trying to extract the solution variables.", e.getErrorCode(), e.getMessage().c_str());
                 //model.write("/home/rkg/Desktop/model.lp");
                 //model.write("/home/rkg/Desktop/model.sol");
-                exit(0);
+
                 return false;
             }
 

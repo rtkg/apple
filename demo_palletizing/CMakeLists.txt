@@ -7,13 +7,16 @@ set(CMAKE_BUILD_TYPE Debug)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  cmake_modules
   hqp_controllers_msgs
+  gazebo_msgs
   roscpp
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package(Boost REQUIRED)
+find_package(Eigen REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -44,6 +47,13 @@ find_package(Boost REQUIRED)
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
+catkin_package(
+     CATKIN_DEPENDS
+     roscpp
+     hqp_controllers_msgs
+     gazebo_msgs
+     INCLUDE_DIRS include ${EIGEN_INCLUDE_DIRS}
+)
 ## Generate messages in the 'msg' folder
 # add_message_files(
 #   FILES
@@ -94,6 +104,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
+include_directories(SYSTEM ${EIGEN_INCLUDE_DIRS})
 include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 
 ## Declare a cpp library

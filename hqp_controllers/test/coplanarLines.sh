@@ -6,6 +6,8 @@ rosservice call /apple/apple_hqp_vel_controller/set_task_objects '{objs: [{root:
 
 rosservice call /apple/apple_hqp_vel_controller/visualize_task_objects '{ids: [8, 9]}'
 
+rosservice call /apple/apple_hqp_vel_controller/activate_hqp_control '{active: true}'
+
 rosservice call /apple/apple_hqp_vel_controller/set_tasks '{tasks: [{type: 7, priority: 2, sign: "=", t_obj_ids: [8, 9], dynamics: {type: 1, data: [-1]}} ]}'
 
 

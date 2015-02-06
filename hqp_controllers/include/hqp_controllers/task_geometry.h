@@ -10,8 +10,8 @@ namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
 enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7, CONE = 8, CYLINDER = 9};
 #define POINT_SCALE  0.02
-#define LINE_SCALE   0.2
-#define PLANE_SCALE  3.5
+#define LINE_SCALE   0.3
+#define PLANE_SCALE  0.8
 #define CONE_SCALE   0.3
 #define LINE_WIDTH   0.005
 //----------------------------------------------------------------------------------------------------
