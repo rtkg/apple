@@ -21,13 +21,13 @@ public:
     void setPriority(unsigned int priority);
     void setSign(std::string const& sign);
     //  void setTaskDynamics(boost::shared_ptr<std::vector<TaskDynamics> > t_dynamics);
-
     boost::shared_ptr<TaskDynamics> getTaskDynamics()const;
     unsigned int getId()const;
     TaskType getType()const;
     unsigned int getDimension()const;
     unsigned int getPriority()const;
     std::string getSign()const;
+
     boost::shared_ptr<Eigen::MatrixXd> getTaskJacobian()const;
     boost::shared_ptr<Eigen::VectorXd> getTaskFunction()const;
     boost::shared_ptr<Eigen::VectorXd> getTaskVelocity()const;
@@ -41,6 +41,9 @@ public:
 
     //**Computes task function, velocity and jacobians. Assumes that the kinematics of the corresponding task objects have been computed prior to the call to this function.*/
     virtual void computeTask()=0;
+
+    //** get the summed squared error of the task - should be implemented here, once the tasks are cleaned up */
+    virtual double getSSE()const=0;
 
     friend std::ostream& operator<<(std::ostream& str, Task const& task);
 
@@ -68,6 +71,7 @@ public:
     ProjectPointPlane(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
     //  virtual void setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs);
     virtual void computeTask();
+        virtual double getSSE()const;
 
 protected:
     ProjectPointPlane(){};
@@ -85,6 +89,7 @@ public:
     JointSetpoint(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
 
     virtual void computeTask();
+    virtual double getSSE()const;
 
 protected:
     JointSetpoint(){};
@@ -101,6 +106,7 @@ public:
     JointVelocityLimits(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
 
     virtual void computeTask();
+    virtual double getSSE()const;
 
 protected:
     JointVelocityLimits(){};
@@ -117,6 +123,7 @@ public:
     ParallelLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
 
     virtual void computeTask();
+    virtual double getSSE()const;
 
 protected:
     ParallelLines(){};
@@ -131,6 +138,7 @@ public:
    AngleLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
 
     virtual void computeTask();
+    virtual double getSSE()const;
 
 protected:
     AngleLines(){};
@@ -145,6 +153,7 @@ public:
     ProjectPointCylinder(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
     //  virtual void setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs);
     virtual void computeTask();
+    virtual double getSSE()const;
 
 protected:
     ProjectPointCylinder(){};
@@ -160,6 +169,7 @@ public:
     CoplanarLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
 
     virtual void computeTask();
+    virtual double getSSE()const;
 
 protected:
     CoplanarLines(){};
@@ -174,6 +184,7 @@ public:
     ProjectLineLine(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
     //  virtual void setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs);
     virtual void computeTask();
+        virtual double getSSE()const;
 
 protected:
     ProjectLineLine(){};

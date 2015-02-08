@@ -165,7 +165,7 @@ void TaskManager::getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses
             status.de.push_back( (*it->second->getTaskVelocity())(i));
         }
 
-        status.sign = it->second->getSign();
+        status.sse = it->second->getSSE();
 
         t_statuses.statuses.push_back(status);
     }

@@ -21,7 +21,6 @@ struct HQPStage
 {
     HQPStage();
     HQPStage(Task const& task);
-
     void appendTask(Task const& task);
 
     boost::shared_ptr<Eigen::VectorXd> de_;

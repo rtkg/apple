@@ -159,6 +159,11 @@ void ProjectPointPlane::verifyTaskObjects()
 
 }
 //---------------------------------------------------------
+double ProjectPointPlane::getSSE()const
+ {
+
+ }
+//---------------------------------------------------------
 //void ProjectPointPlane::setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs)
 //{
 //    t_objs_ = t_objs;
@@ -269,6 +274,11 @@ void JointSetpoint::computeTask()
     //    std::cout<<"JointSetpoint: E_: "<<std::endl<<(*E_)<<std::endl;
 }
 //---------------------------------------------------------
+double JointSetpoint::getSSE()const
+ {
+
+ }
+//---------------------------------------------------------
 JointVelocityLimits::JointVelocityLimits(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
 {
     type_ = JOINT_VELOCITY_LIMITS;
@@ -308,6 +318,20 @@ void JointVelocityLimits::verifyTaskObjects()
     ROS_ASSERT(t_objs_->at(0).getGeometries().get()); //make sure a task geometry exists
     ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == JOINT_LIMITS);
 }
+//---------------------------------------------------------
+double JointVelocityLimits::getSSE()const
+ {
+    Eigen::Vector2d e;
+    e.setZero();
+
+  if((*E_)(0,0) < 0.0)
+      e(0) = (*E_)(0,0);
+  if((*E_)(1,0) < 0.0)
+      e(1) = (*E_)(1,0);
+
+  return pow(e.norm(),2);
+
+ }
 //---------------------------------------------------------
 void JointVelocityLimits::computeTask()
 {
@@ -354,6 +378,11 @@ ParallelLines::ParallelLines(unsigned int id, unsigned int priority, std::string
 
     ROS_ASSERT(sign == "=");
 }
+//---------------------------------------------------------
+double ParallelLines::getSSE()const
+ {
+
+ }
 //---------------------------------------------------------
 void ParallelLines::verifyTaskObjects()
 {
@@ -423,6 +452,11 @@ void AngleLines::verifyTaskObjects()
     ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() > 0);
 }
 //---------------------------------------------------------
+double AngleLines::getSSE()const
+ {
+
+ }
+//---------------------------------------------------------
 void AngleLines::computeTask()
 {
     //consider the first cone attached to a static body, the line to a movable one
@@ -460,6 +494,11 @@ ProjectPointCylinder::ProjectPointCylinder(unsigned int id, unsigned int priorit
     A_->setZero();
     E_->setZero();
 }
+//---------------------------------------------------------
+double ProjectPointCylinder::getSSE()const
+ {
+
+ }
 //---------------------------------------------------------
 void ProjectPointCylinder::verifyTaskObjects()
 {
@@ -551,6 +590,11 @@ void CoplanarLines::verifyTaskObjects()
     ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() > 0);
 }
 //---------------------------------------------------------
+double CoplanarLines::getSSE()const
+ {
+
+ }
+//---------------------------------------------------------
 void CoplanarLines::computeTask()
 {
     //consider the first line attached to a static body, the second one to a movable one
@@ -624,6 +668,11 @@ void ProjectLineLine::verifyTaskObjects()
     ROS_ASSERT(t_objs_->at(0).getChain()->getNrOfJoints() == 0);//Make sure the first line is fixed in the environment for now
     ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() > 0);
 }
+//---------------------------------------------------------
+double ProjectLineLine::getSSE()const
+ {
+
+ }
 //---------------------------------------------------------
 void ProjectLineLine::computeTask()
 {
