@@ -84,9 +84,34 @@ bool TaskManager::addTask(boost::shared_ptr<Task> task)
     return true;
 }
 //----------------------------------------------
-void TaskManager::removeTask(unsigned int id)
+bool TaskManager::removeTaskObject(unsigned int id)
 {
-    ROS_WARN("TaskManager::addTask(...) is not implemented yet!");
+    //check whether an object with that id exists and remove it in case
+    std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(id);
+     if(it == t_objs_->end())
+     {
+         ROS_WARN("TaskManager::removeTaskObject(...): cannot remove task object with id %d because it does not exist.",id);
+         return false;
+     }
+     else
+          t_objs_->erase(it);
+
+   return true;
+}
+//----------------------------------------------
+bool TaskManager::removeTask(unsigned int id)
+{
+    //check whether a task with that id exists and remove it in case
+    std::map<unsigned int,boost::shared_ptr<Task> >::iterator it = tasks_->find(id);
+     if(it == tasks_->end())
+     {
+         ROS_WARN("TaskManager::removeTask(...): cannot remove task with id %d because it does not exist.",id);
+         return false;
+     }
+     else
+          tasks_->erase(it);
+
+   return true;
 }
 //----------------------------------------------
 boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<TaskObject> > > TaskManager::getTaskObjects()const{return t_objs_;}
@@ -112,13 +137,13 @@ bool TaskManager::getDQ(Eigen::VectorXd& dq)const
 bool TaskManager::getTaskObject(unsigned int id, TaskObject& t_obj)const
 {
     std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(id);
-    if(it == t_objs_->end())
-    {
-        ROS_WARN("TaskManager::getTaskObject(...): could not find task object with id %d.",id);
-        return false;
-    }
-    else
-        t_obj = *it->second;
+     if(it == t_objs_->end())
+     {
+         ROS_WARN("TaskManager::getTaskObject(...): could not find task object with id %d.",id);
+         return false;
+     }
+     else
+         t_obj = *it->second;
 
     return true;
 }
@@ -139,6 +164,8 @@ void TaskManager::getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses
             status.e.push_back( (*it->second->getTaskFunction())(i));
             status.de.push_back( (*it->second->getTaskVelocity())(i));
         }
+
+        status.sign = it->second->getSign();
 
         t_statuses.statuses.push_back(status);
     }

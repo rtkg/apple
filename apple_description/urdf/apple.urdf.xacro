@@ -9,6 +9,8 @@
   <xacro:include filename="$(find velvet_fingers_description)/urdf/velvet_fingers.xacro"/>
    <!--Include the CitiTruck-->
   <xacro:include filename="$(find apple_description)/urdf/citi_truck.xacro"/>
+   <!--Include the half pallet-->
+  <xacro:include filename="$(find apple_description)/urdf/half_pallet.xacro"/>
  <!-- Gazebo plugins -->
   <xacro:include filename="$(find apple_description)/gazebo/gazebo.urdf.xacro"/>
 
@@ -17,8 +19,18 @@
 
   <!-- citi truck-->
   <xacro:citi_truck name="citi_truck" parent="world">
-    <origin xyz="0 0 0.2" rpy="0 0 0" />
+    <origin xyz="0 0 0.15" rpy="0 0 0" />
   </xacro:citi_truck> 
+
+  <!-- half pallet on the citi truck-->
+  <xacro:half_pallet name="transport_pallet" parent="citi_truck_base">
+    <origin xyz="0.52 0 -0.109" rpy="0 0 0" />
+  </xacro:half_pallet> 
+
+  <!-- half pallet for loading -->
+  <xacro:half_pallet name="load_pallet" parent="world">
+    <origin xyz="0.8 -0.84 0.001" rpy="0 0 0" />
+  </xacro:half_pallet> 
 
   <!--lbr -->
   <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="citi_truck_base">
@@ -31,3 +43,5 @@
   </xacro:velvet_fingers>
 
 </robot>
+
+

@@ -3,6 +3,7 @@
 # Backup and data files
 eg/eg.*
 *~
+*.autosave
 *.bak
 *.off
 *.x

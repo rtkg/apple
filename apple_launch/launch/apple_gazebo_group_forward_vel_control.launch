@@ -20,13 +20,4 @@
 
 </launch>
 
-<!--
-rostopic pub /apple/apple_group_forward_vel_controller/command std_msgs/Float64MultiArray """ 
-layout: 
-  dim: [{label: 'x', size: 1234, stride: 1},{label: 'y', size: 1234, 
-stride: 1} ] 
-  data_offset: 0 
-data: [-0.1, -0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1] 
-"""
--->
 

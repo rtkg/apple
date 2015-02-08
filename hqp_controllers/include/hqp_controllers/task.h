@@ -10,7 +10,7 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------
-enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2, JOINT_VELOCITY_LIMITS = 3, PARALLEL_LINES = 4};
+enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2, JOINT_VELOCITY_LIMITS = 3, PARALLEL_LINES = 4, ANGLE_LINES = 5, PROJECT_POINT_CYLINDER = 6, COPLANAR_LINES = 7, PROJECT_LINE_LINE = 8};
 //----------------------------------------------------------------
 class Task
 {
@@ -76,7 +76,7 @@ private:
     //**Helper function to make sure that the given task objects are valid in the context of the task */
     void verifyTaskObjects();
 
-    unsigned int jnt_index_; ///< index (in the TaskObject::joints_ vector) of the joint controlled by this task
+   // unsigned int jnt_index_; ///< index (in the TaskObject::joints_ vector) of the joint controlled by this task
 };
 //----------------------------------------------------------------
 class JointSetpoint: public Task
@@ -122,6 +122,64 @@ protected:
     ParallelLines(){};
 
 private:
+    void verifyTaskObjects();
+};
+//----------------------------------------------------------------
+class AngleLines: public Task
+{
+public:
+   AngleLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+
+    virtual void computeTask();
+
+protected:
+    AngleLines(){};
+
+private:
+    void verifyTaskObjects();
+};
+//----------------------------------------------------------------
+class ProjectPointCylinder: public Task
+{
+public:
+    ProjectPointCylinder(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+    //  virtual void setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs);
+    virtual void computeTask();
+
+protected:
+    ProjectPointCylinder(){};
+
+private:
+    //**Helper function to make sure that the given task objects are valid in the context of the task */
+    void verifyTaskObjects();
+};
+//----------------------------------------------------------------
+class CoplanarLines: public Task
+{
+public:
+    CoplanarLines(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+
+    virtual void computeTask();
+
+protected:
+    CoplanarLines(){};
+
+private:
+    void verifyTaskObjects();
+};
+//----------------------------------------------------------------
+class ProjectLineLine: public Task
+{
+public:
+    ProjectLineLine(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+    //  virtual void setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs);
+    virtual void computeTask();
+
+protected:
+    ProjectLineLine(){};
+
+private:
+    //**Helper function to make sure that the given task objects are valid in the context of the task */
     void verifyTaskObjects();
 };
 //----------------------------------------------------------------

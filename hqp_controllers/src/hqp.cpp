@@ -51,7 +51,11 @@ void HQPStage::appendTask(Task const& task)
     for(unsigned int i=0; i<dim; i++)
         signs_->push_back(task.getSign());
 
+    w_->resize(dim_ + dim);
+    w_->setZero();
+
     dim_ = dim_ +dim;
+    solved_ = false;
 }
 //-----------------------------------------
 HQPSolver::HQPSolver()
@@ -97,7 +101,7 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
 
             //append the new senses, jacobian matrix and task velocity vector to the previous ones
             for(unsigned int i = 0; i<s_dim; i++)
-            signs_.push_back(it->second->signs_->at(i));
+                signs_.push_back(it->second->signs_->at(i));
 
             b_.conservativeResize(s_acc_dim + s_dim);
             b_.tail(s_dim) = *(it->second->de_);
@@ -180,7 +184,7 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
                 if(status == GRB_TIME_LIMIT)
                     ROS_WARN("Stage solving runtime %f sec exceeds the set time limit of %f sec.", runtime, TIME_LIMIT);
                 else
-                    ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d.", it->first , status);
+                    ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d.", s_count, status);
 
                 delete[] lb_x;
                 delete[] ub_x;
@@ -194,19 +198,31 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
                 delete[] coeff_x;
                 delete[] coeff_w;
 
-                model.write("/home/rkg/Desktop/model.lp");
-                model.write("/home/rkg/Desktop/model.sol");
+                //model.write("/home/rkg/Desktop/model.lp");
+                //model.write("/home/rkg/Desktop/model.sol");
+
                 return false;
             }
 
-            //Update the solution and put it in the current stage
-            for(unsigned int i=0; i<x_dim; i++)
-                (*it->second->x_)(i) = x[i].get(GRB_DoubleAttr_X);
-
-            for(unsigned int i=0; i<s_dim; i++)
+            try
             {
-                w_(s_acc_dim + i) = w[i].get(GRB_DoubleAttr_X);
-                (*it->second->w_)(i) = w_(s_acc_dim + i);
+                //Update the solution and put it in the current stage
+                for(unsigned int i=0; i<x_dim; i++)
+                    (*it->second->x_)(i) = x[i].get(GRB_DoubleAttr_X);
+
+                for(unsigned int i=0; i<s_dim; i++)
+                {
+                    w_(s_acc_dim + i) = w[i].get(GRB_DoubleAttr_X);
+                    (*it->second->w_)(i) = w_(s_acc_dim + i);
+                }
+            }
+            catch(GRBException e)
+            {
+                ROS_ERROR("In HQPSolver::solve(...): Gurobi exception with error code %d, and error message %s when trying to extract the solution variables.", e.getErrorCode(), e.getMessage().c_str());
+                //model.write("/home/rkg/Desktop/model.lp");
+                //model.write("/home/rkg/Desktop/model.sol");
+
+                return false;
             }
 
             it->second->solved_ = true;
