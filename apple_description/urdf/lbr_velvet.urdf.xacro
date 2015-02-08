@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<robot name="apple" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Import Rviz colors -->
+  <xacro:include filename="$(find apple_description)/urdf/materials.xacro" />
+  <!--Include the KUKA LBR iiwa-->
+  <xacro:include filename="$(find lbr_iiwa_description)/urdf/lbr_iiwa.xacro"/> 
+  <!--Include the Velvet Fingers gripper-->
+  <xacro:include filename="$(find velvet_fingers_description)/urdf/velvet_fingers.xacro"/>
+ <!-- Gazebo plugins -->
+  <xacro:include filename="$(find apple_description)/gazebo/gazebo.urdf.xacro"/>
+
+  <!-- Fix to world just for testing -->
+  <link name="world"/>
+
+  <!--lbr -->
+  <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="world">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </xacro:lbr_iiwa>
+
+  <!--velvet fingers gripper -->
+  <xacro:velvet_fingers name="velvet_fingers" hardware_interface="$(arg prefix)" parent="lbr_iiwa_link_7">
+    <origin xyz="0 0 0.065" rpy="0 ${-PI / 2} 0" />
+  </xacro:velvet_fingers>
+
+</robot>
