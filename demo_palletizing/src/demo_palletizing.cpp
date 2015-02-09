@@ -80,16 +80,6 @@ DemoPalletizing::DemoPalletizing()
 
     }
 
-    //initialize stuff
-    manipulator_joint_map_["lbr_iiwa_joint_1"] = std::pair<std::string, std::string>("lbr_iiwa_link_0", "lbr_iiwa_link_1");
-    manipulator_joint_map_["lbr_iiwa_joint_2"] = std::pair<std::string, std::string>("lbr_iiwa_link_1", "lbr_iiwa_link_2");
-    manipulator_joint_map_["lbr_iiwa_joint_3"] = std::pair<std::string, std::string>("lbr_iiwa_link_2", "lbr_iiwa_link_3");
-    manipulator_joint_map_["lbr_iiwa_joint_4"] = std::pair<std::string, std::string>("lbr_iiwa_link_3", "lbr_iiwa_link_4");
-    manipulator_joint_map_["lbr_iiwa_joint_5"] = std::pair<std::string, std::string>("lbr_iiwa_link_4", "lbr_iiwa_link_5");
-    manipulator_joint_map_["lbr_iiwa_joint_6"] = std::pair<std::string, std::string>("lbr_iiwa_link_5", "lbr_iiwa_link_6");
-    manipulator_joint_map_["lbr_iiwa_joint_7"] = std::pair<std::string, std::string>("lbr_iiwa_link_6", "lbr_iiwa_link_7");
-    manipulator_joint_map_["velvet_fingers_joint_1"] = std::pair<std::string, std::string>("velvet_fingers_palm", "velvet_fingers_right");
-
     //configs have to be within the safety margins of the joint limits
     home_config_ = std::vector<double>(8, 0.1); //7 arm joint + 1 velvet fingers gripper joint
     transfer_config_ = std::vector<double>(8);
@@ -121,6 +111,218 @@ DemoPalletizing::DemoPalletizing()
     grasp_.r1_ = 0.2; grasp_.r2_ = 0.3;              //cylinder radii
     grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_;  //plane normals
     grasp_.d1_ = 0.25; grasp_.d2_= 0.35;              //plane offsets
+
+    //generate the task object templates
+    generateTaskObjectTemplates();
+}
+//-----------------------------------------------------------------
+void DemoPalletizing::generateTaskObjectTemplates()
+{
+    hqp_controllers_msgs::TaskObject t_obj;
+    hqp_controllers_msgs::TaskGeometry t_geom;
+    std::vector<double> data;
+
+    //endeffector point
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.e_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::POINT;
+    data.resize(3);
+    data[0] = grasp_.e_(0); data[1] = grasp_.e_(1); data[2] = grasp_.e_(2);
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["ee_point"] = t_obj;
+
+    //inner grasp cylinder
+    t_obj.geometries.clear();
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.obj_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
+    data.resize(7);
+    data[0] = grasp_.p_(0); data[1] = grasp_.p_(1); data[2] = grasp_.p_(2);
+    data[3] = grasp_.v_(0); data[4] = grasp_.v_(1); data[5] = grasp_.v_(2);
+    data[6] = grasp_.r1_;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["inner_bound_cylinder"] = t_obj;
+
+    //outer grasp cylinder
+    t_obj.geometries.clear();
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.obj_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
+    data.resize(7);
+    data[0] = grasp_.p_(0); data[1] = grasp_.p_(1); data[2] = grasp_.p_(2);
+    data[3] = grasp_.v_(0); data[4] = grasp_.v_(1); data[5] = grasp_.v_(2);
+    data[6] = grasp_.r2_;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["outer_bound_cylinder"] = t_obj;
+
+    //upper grasp plane
+    t_obj.geometries.clear();
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.obj_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    data.resize(4);
+    data[0] = grasp_.n1_(0); data[1] = grasp_.n1_(1); data[2] = grasp_.n1_(2);
+    data[3] = grasp_.d1_;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["upper_bound_plane"] = t_obj;
+
+    //lower grasp plane
+    t_obj.geometries.clear();
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.obj_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    data.resize(4);
+    data[0] = grasp_.n2_(0); data[1] = grasp_.n2_(1); data[2] = grasp_.n2_(2);
+    data[3] = grasp_.d2_;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lower_bound_plane"] = t_obj;
+
+    //vertical gripper axis
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "velvet_fingers_palm";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::LINE;
+    //first 3 entries of link_data are the line's reference point, the second 3 entries the direction
+    data.resize(6);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
+    data[3] = 0.0; data[3] = 0.0; data[5] = 1.0;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["gripper_vertical_axis"] = t_obj;
+
+    //gripper approach axis
+    t_obj.geometries.clear();
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.e_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::LINE;
+    data.resize(6);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
+    data[3] = 1.0; data[4] = 0.0; data[5] = 0.0;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["gripper_approach_axis"] = t_obj;
+
+    //inner constraint cone for the vertical gripper axis
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "world";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::CONE;
+    //first 3 entries of link_data are the cone's reference point, the second 3 entries the direction, the last entry is the opening angle
+    data.resize(7);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
+    data[3] = 0.0; data[4] = 0.0; data[5] = 1.0; //gripper axis should be vertical
+    data[6] = 0.085; //corresponds to an angle of 5 degree
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["upper_bound_cone"] = t_obj;
+
+    //coplanar target line
+    t_obj.geometries.clear();
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.obj_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::LINE;
+    data.resize(6);
+    data[0] = grasp_.p_(0); data[1] = grasp_.p_(1); data[2] = grasp_.p_(2);
+    data[3] = grasp_.v_(0); data[4] = grasp_.v_(1); data[5] = grasp_.v_(2);
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["coplanar_target_line"] = t_obj;
+
+    //placement plane
+    t_obj.geometries.clear();
+    t_obj.root = "transport_pallet_base";
+    t_obj.link = "transport_pallet_base";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    data.resize(4);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
+    data[3] = 0.25;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["placement_bound_plane"] = t_obj;
+
+    //placement cylinder
+    t_obj.geometries.clear();
+    t_obj.root = "transport_pallet_base";
+    t_obj.link = "transport_pallet_base";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
+    data.resize(7);
+    data[0] = 0.0; data[1] = -0.15; data[2] = 0.13;
+    data[3] = 0.0; data[4] = 0.0; data[5] = 1.0;
+    data[6] = 0.05;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["placement_bound_cylinder"] = t_obj;
+
+    //joint position targets
+    t_obj.geometries.clear();
+    t_obj.root = "lbr_iiwa_link_0";
+    t_obj.link = "lbr_iiwa_link_1";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_joint_1_target"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "lbr_iiwa_link_1";
+    t_obj.link = "lbr_iiwa_link_2";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_joint_2_target"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "lbr_iiwa_link_2";
+    t_obj.link = "lbr_iiwa_link_3";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_joint_3_target"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "lbr_iiwa_link_3";
+    t_obj.link = "lbr_iiwa_link_4";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_joint_4_target"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "lbr_iiwa_link_4";
+    t_obj.link = "lbr_iiwa_link_5";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_joint_5_target"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "lbr_iiwa_link_5";
+    t_obj.link = "lbr_iiwa_link_6";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_joint_6_target"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "lbr_iiwa_link_6";
+    t_obj.link = "lbr_iiwa_link_7";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_joint_7_target"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "velvet_fingers_palm";
+    t_obj.link = "velvet_fingers_right";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["velvet_fingers_joint_1_target"] = t_obj;
+
 }
 //-----------------------------------------------------------------
 void DemoPalletizing::activateHQPControl()
@@ -184,6 +386,9 @@ bool DemoPalletizing::resetState()
     tasks_.response.success = false;
     tasks_.request.tasks.clear();
 
+    //clean up the monitored tasks
+    monitored_tasks_.clear();
+
     return true;
 }
 //-----------------------------------------------------------------
@@ -227,97 +432,115 @@ bool DemoPalletizing::sendStateTaskObjects()
     return true;
 }
 //-----------------------------------------------------------------
+bool DemoPalletizing::setObjectTransfer()
+{
+    //TASK OBJECTS
+    hqp_controllers_msgs::TaskObject t_obj;
+    t_obj = task_object_templates_["ee_point"];
+    t_obj.link = "velvet_fingers_palm";
+    t_obj.root = "transport_pallet_base";
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["placement_bound_plane"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["placement_bound_cylinder"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["upper_bound_cone"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["gripper_vertical_axis"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    //send the filled task object message to the controller
+    if(!sendStateTaskObjects())
+        return false;
+
+    //TASKS
+    hqp_controllers_msgs::Task task;
+    //bring endeffector on the placement plane
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_PLANE;
+    task.priority = 2;
+    task.sign = "=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[1]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //bring endeffector point inside the placement cylinder
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_CYLINDER;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[2]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //keep vertical axis of the gripper inside the vertical cone
+    task.type = hqp_controllers_msgs::Task::ANGLE_LINES;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[3]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[4]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //send the filled task message to the controller
+    if(!sendStateTasks())
+        return false;
+
+    //monitor all tasks
+    for(unsigned int i=0; i<tasks_.response.ids.size();i++)
+        monitored_tasks_.push_back(tasks_.response.ids[i]);
+
+    //visualize the task objects
+    if(!visualizeStateTaskObjects())
+        return false;
+
+    return true;
+}
+//-----------------------------------------------------------------
 bool DemoPalletizing::setGraspApproach()
 {
     ROS_ASSERT(grasp_.r1_ <= grasp_.r2_);
 
     //TASK OBJECTS
     hqp_controllers_msgs::TaskObject t_obj;
-    hqp_controllers_msgs::TaskGeometry t_geom;
-    //endeffector point
-    t_obj.root = grasp_.obj_frame_;
-    t_obj.link = grasp_.e_frame_;
-    t_geom.type = hqp_controllers_msgs::TaskGeometry::POINT;
-    std::vector<double> data(3);
-    data[0] = grasp_.e_(0); data[1] = grasp_.e_(1); data[2] = grasp_.e_(2);
-    t_geom.data = data;
-    t_obj.geometries.push_back(t_geom);
+    t_obj = task_object_templates_["ee_point"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //first cylinder
-    t_obj.root = grasp_.obj_frame_;
-    t_obj.link = grasp_.obj_frame_;
-    t_obj.geometries[0].type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
-    //first 3 entries of data are the cylinder axis's reference point, the second 3 entries the direction, the last one is the radius
-    data.resize(7);
-    data[0] = grasp_.p_(0); data[1] = grasp_.p_(1); data[2] = grasp_.p_(2);
-    data[3] = grasp_.v_(0); data[4] = grasp_.v_(1); data[5] = grasp_.v_(2);
-    data[6] = grasp_.r1_;
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["inner_bound_cylinder"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //second cylinder is the same apart of a different radius
-    data[6] = grasp_.r2_;
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["outer_bound_cylinder"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //first plane
-    t_obj.geometries[0].type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    //the normal is given as the first 3 entries of data, the offset as the 4th one
-    data.resize(4);
-    data[0] = grasp_.n1_(0); data[1] = grasp_.n1_(1); data[2] = grasp_.n1_(2);
-    data[3] = grasp_.d1_;
-    t_obj.geometries[0].type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["upper_bound_plane"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //second plane
-    data[0] = grasp_.n2_(0); data[1] = grasp_.n2_(1); data[2] = grasp_.n2_(2);
-    data[3] = grasp_.d2_;
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["lower_bound_plane"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //add a cone to constrain the vertical axis of the gripper
-    t_obj.root = "world";
-    t_obj.link = "world";
-    t_obj.geometries[0].type = hqp_controllers_msgs::TaskGeometry::CONE;
-    //first 3 entries of link_data are the cone's reference point, the second 3 entries the direction, the last entry is the opening angle
-    data.resize(7);
-    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
-    data[3] = 0.0; data[4] = 0.0; data[5] = 1.0; //gripper axis should be vertical
-    data[6] = 0.085; //corresponds to an angle of 5 degree
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["upper_bound_cone"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //add a line describing the vertical axis of the gripper
-    t_obj.root = "world";
-    t_obj.link = grasp_.e_frame_;
-    t_obj.geometries[0].type = hqp_controllers_msgs::TaskGeometry::LINE;
-    //first 3 entries of link_data are the line's reference point, the second 3 entries the direction
-    data.resize(6);
-    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
-    data[3] = 0.0; data[3] = 0.0; data[5] = 1.0;
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["gripper_vertical_axis"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //add a line describing an axis to which the gripper axis should be aligned to
-    t_obj.root = grasp_.obj_frame_;
-    t_obj.link = grasp_.obj_frame_;
-    t_obj.geometries[0].type = hqp_controllers_msgs::TaskGeometry::LINE;
-    data.resize(6);
-    data[0] = grasp_.p_(0); data[1] = grasp_.p_(1); data[2] = grasp_.p_(2);
-    data[3] = grasp_.v_(0); data[4] = grasp_.v_(1); data[5] = grasp_.v_(2);
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["coplanar_target_line"];
     task_objects_.request.objs.push_back(t_obj);
 
-    //add a line representing the gripper's approach axis
-    t_obj.root = grasp_.obj_frame_;
-    t_obj.link = grasp_.e_frame_;
-    t_obj.geometries[0].type = hqp_controllers_msgs::TaskGeometry::LINE;
-    data.resize(6);
-    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
-    data[3] = 1.0; data[4] = 0.0; data[5] = 0.0;
-    t_obj.geometries[0].data = data;
+    t_obj = task_object_templates_["gripper_approach_axis"];
     task_objects_.request.objs.push_back(t_obj);
 
     //send the filled task object message to the controller
@@ -425,28 +648,42 @@ bool DemoPalletizing::setGraspApproach()
 //-----------------------------------------------------------------
 bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
 {
-    ROS_ASSERT(joints.size() == manipulator_joint_map_.size());
+    ROS_ASSERT(joints.size() == 8);//7 joints for the lbr iiwa + 1 velvet fingers joint
 
     //fill in the task_objects_
-    unsigned int jnt_id = 0;
-    std::map<std::string, std::pair<std::string, std::string> >::iterator it;
-    for(it = manipulator_joint_map_.begin(); it!=manipulator_joint_map_.end(); ++it)
-    {
-        hqp_controllers_msgs::TaskObject t_obj;
-        hqp_controllers_msgs::TaskGeometry t_geom;
-        t_obj.root = it->second.first;
-        t_obj.link = it->second.second;
-        t_geom.type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+    hqp_controllers_msgs::TaskObject t_obj;
+    t_obj = task_object_templates_["lbr_iiwa_joint_1_target"];
+    t_obj.geometries[0].data[0] = joints[0];
+    task_objects_.request.objs.push_back(t_obj);
 
-        //Joint position is described by a frame expressed in the link with z pointing in the joint axis and zero angle pointing in x
-        //link_data.tail<6>() is the initial transformation of the joint to the root
-        //the position angle q = data[0]
-        t_geom.data = std::vector<double>(13, 0.0); //too lazy to fill in the geometric data properly now ... will mess up the visualization but well ...
-        t_geom.data[0] = joints[jnt_id];
-        jnt_id++;
-        t_obj.geometries.push_back(t_geom);
-        task_objects_.request.objs.push_back(t_obj);
-    }
+    t_obj = task_object_templates_["lbr_iiwa_joint_2_target"];
+    t_obj.geometries[0].data[0] = joints[1];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_3_target"];
+    t_obj.geometries[0].data[0] = joints[2];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_4_target"];
+    t_obj.geometries[0].data[0] = joints[3];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_5_target"];
+    t_obj.geometries[0].data[0] = joints[4];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_6_target"];
+    t_obj.geometries[0].data[0] = joints[5];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_7_target"];
+    t_obj.geometries[0].data[0] = joints[6];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["velvet_fingers_joint_1_target"];
+    t_obj.geometries[0].data[0] = joints[7];
+    task_objects_.request.objs.push_back(t_obj);
+
     //send the filled task object message to the controller
     if(!sendStateTaskObjects())
         return false;
@@ -476,70 +713,58 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     return true;
 }
 //-----------------------------------------------------------------
-double DemoPalletizing::maximumNorm(std::vector<double>const& e)
-{
-    double e_max=0.0;
-    for(unsigned int i=0; i<e.size();i++)
-        if(fabs(e[i]) > e_max)
-            e_max = fabs(e[i]);
-}
+//double DemoPalletizing::maximumNorm(std::vector<double>const& e)
+//{
+//    double e_max=0.0;
+//    for(unsigned int i=0; i<e.size();i++)
+//        if(fabs(e[i]) > e_max)
+//            e_max = fabs(e[i]);
+//}
 //-----------------------------------------------------------------
 void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr& msg)
 {
     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
 
-    ///FIXXXXMEEEE THE TASK ERROR NEEDS TO BE REWORKED
-
+    //    if(monitored_tasks_.empty())
+    //        return;
 
     //form the maximum norm over all errors
-    std::vector<double> e;
-
-    //     for(unsigned int i=0; i<monitored_tasks_.size(); i++)
-    //     {
-    //         //try to find the monitored task id in the given task status message
-    //         std::vector<hqp_controllers_msgs::TaskStatus>::const_iterator status_it;
-    //         for(status_it = msg->statuses.begin(); status_it!=msg->statuses.end(); ++status_it)
-    //         {
-    //             if(monitored_tasks_[i] == status_it->id)
-    //             {
-    //                 //found the corresponding task in the status message, now check the sign to evaluate the error
-    //                 if(status_it->sign == "=")
-    //                 {
-    //                     for(unsigned int j=0; j<status_it->e.size(); j++)
-    //                         e.push_back(status_it->e[j]);
-
-    //                 }
-    //                 else if(status_it->sign == "<=")
-    //                 {
-    //                     for(unsigned int j=0; j<status_it->e.size(); j++)
-    //                         if(status_it->e[j] < 0.0)
-    //                             e.push_back(status_it->e[j]);
-
-    //                 }
-    //                 else if(status_it->sign == ">=")
-    //                 {
-    //                               for(unsigned int j=0; j<status_it->e.size(); j++)
-    //                     if(status_it->e[j] > 0.0)
-    //                         e.push_back(status_it->e[j]);
-    //                 }
-    //                 else
-    //                     ROS_BREAK();
-
-    //                 break;
-    //             }
-
-    //             if(status_it==msg->statuses.end())
-    //             {
-    //                 ROS_DEBUG("No status feedback for monitored task id %d!", monitored_tasks_[i]);
-    //                 e.push_back(TASK_ERROR_TOL * 2); //just so we don't give a false positive task success
-    //             }
-
-    //         }
-
-    //     }
-
-    if(maximumNorm(e) < TASK_ERROR_TOL)
+    double e = 0.0;
+    for(unsigned int i=0; i<monitored_tasks_.size(); i++)
     {
+        //try to find the monitored task id in the given task status message
+        std::vector<hqp_controllers_msgs::TaskStatus>::const_iterator status_it;
+        for(status_it = msg->statuses.begin(); status_it!=msg->statuses.end(); ++status_it)
+            if(monitored_tasks_[i] == status_it->id)
+            {
+                //std::cout<<"task id: "<<status_it->id<<" sse: "<<status_it->sse<<std::endl;
+                //found the corresponding task in the status message
+                if (status_it->sse > e)
+                    e = status_it->sse;
+
+                break;
+            }
+
+        if(status_it==msg->statuses.end())
+        {
+            ROS_WARN("No status feedback for monitored task id %d!", monitored_tasks_[i]);
+            return; //just so we don't give a false positive task success
+        }
+
+    }
+
+    if(e < TASK_ERROR_TOL)
+    {
+        std::cout<<std::endl<<"STATE CHANGE:"<<std::endl<<"monitored tasks: ";
+        for(unsigned int i=0; i<monitored_tasks_.size(); i++)
+            std::cout<<monitored_tasks_[i]<<" ";
+
+        std::cout<<std::endl<<"task statuses: "<<std::endl;
+        for( std::vector<hqp_controllers_msgs::TaskStatus>::iterator it = msg->statuses.begin(); it!=msg->statuses.end(); ++it)
+            std::cout<<"id: "<<it->id<<" sse: "<<it->sse<<std::endl;
+
+        std::cout<<"e: "<<e<<std::endl<<std::endl;
+
         // ROS_INFO("Task status switch!");
         task_status_changed_ = true;
         task_success_ = true;
@@ -588,7 +813,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator home state tasks executed successfully.");
     }
-    ros::Duration(5.0).sleep();
 
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
@@ -622,7 +846,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator transfer state tasks executed successfully.");
     }
-    ros::Duration(5.0).sleep();
 
     {//MANIPULATOR SENSING CONFIGURATION
         ROS_INFO("Trying to put the manipulator in sensing configuration.");
@@ -656,7 +879,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator sensing state tasks executed successfully.");
     }
-    ros::Duration(5.0).sleep();
 
     {//GRASP APPROACH
         ROS_INFO("Trying grasp approach.");
@@ -690,6 +912,41 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
+
+    {//OBJECT TRANSFER
+        ROS_INFO("Trying object transfer.");
+        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+        task_status_changed_ = false;
+        task_success_ = false;
+        deactivateHQPControl();
+        if(!resetState())
+        {
+            ROS_ERROR("Could not reset the state!");
+            safeShutdown();
+            return false;
+        }
+        if(!setObjectTransfer())
+        {
+            ROS_ERROR("Could not set the object transfer!");
+            safeShutdown();
+            return false;
+        }
+
+        activateHQPControl();
+
+        while(!task_status_changed_)
+            cond_.wait(lock);
+
+        if(!task_success_)
+        {
+            ROS_ERROR("Could not complete the object transfer tasks!");
+            safeShutdown();
+            return false;
+        }
+        ROS_INFO("Object transfer tasks executed successfully.");
+    }
+
+    deactivateHQPControl();
     return true;
 }
 //--------------------------------------------------------------------------

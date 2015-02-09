@@ -454,10 +454,13 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
         if (vis_t_obj_pub_.trylock())
             vis_t_obj_pub_.unlockAndPublish();
 
-        // try to publish the task statuses
-        task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
-        if (t_statuses_pub_.trylock())
-            t_statuses_pub_.unlockAndPublish();
+        // if the controller is active, try to publish the task statuses
+        if(active_)
+        {
+            task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
+            if (t_statuses_pub_.trylock())
+                t_statuses_pub_.unlockAndPublish();
+        }
 
     }
     //======================= END PUBLISH =================

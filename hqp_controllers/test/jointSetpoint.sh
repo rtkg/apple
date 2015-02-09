@@ -4,9 +4,9 @@
 
 rosservice call /apple/apple_hqp_vel_controller/activate_hqp_control true
 
-rosservice call /apple/apple_hqp_vel_controller/set_task_objects '{objs: [{root: "lbr_iiwa_link_6", link: "lbr_iiwa_link_7", geometries: [{type: 6, data: [-0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.081, 0.0, -1.5708, 0.0, -3.1415]}]} ]}'
+rosservice call /apple/apple_hqp_vel_controller/set_task_objects '{objs: [{root: "lbr_iiwa_link_6", link: "lbr_iiwa_link_7", geometries: [{type: 6, data: [0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.081, 0.0, -1.5708, 0.0, -3.1415]}]} ]}'
 
-rosservice call /apple/apple_hqp_vel_controller/visualize_task_objects '{ids: [0]}'
+rosservice call /apple/apple_hqp_vel_controller/visualize_task_objects '{ids: [8]}'
 
 rosservice call /apple/apple_hqp_vel_controller/set_tasks '{tasks: [{type: 2, priority: 1, sign: "=", t_obj_ids: [8], dynamics: {type: 1, data: [-1.0]}} ]}'
 

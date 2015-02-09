@@ -122,7 +122,7 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.type = visualization_msgs::Marker::POINTS;
     marker.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
-    //    marker.lifetime = ros::Duration;
+    marker.lifetime = ros::Duration(0.1);
     geometry_msgs::Point p;
     p.x=(*p_)(0);
     p.y=(*p_)(1);
@@ -177,6 +177,7 @@ void Line::addMarker(visualization_msgs::MarkerArray& markers)
     visualization_msgs::Marker m;
     m.header.frame_id = link_;
     m.header.stamp = ros::Time::now();
+    m.lifetime = ros::Duration(0.1);
     m.type =  visualization_msgs::Marker::ARROW;
     m.action = visualization_msgs::Marker::ADD;
     m.id = markers.markers.size();
@@ -237,6 +238,7 @@ void Plane::addMarker(visualization_msgs::MarkerArray& markers)
     m.header.stamp = ros::Time::now();
     m.type =  visualization_msgs::Marker::ARROW;
     m.action = visualization_msgs::Marker::ADD;
+    m.lifetime = ros::Duration(0.1);
     m.id = markers.markers.size();
     m.pose.position.x = (*n_)(0)*d_;
     m.pose.position.y = (*n_)(1)*d_;
@@ -337,6 +339,7 @@ void Capsule::addMarker(visualization_msgs::MarkerArray& markers)
     m.header.stamp = ros::Time::now();
     m.type =  visualization_msgs::Marker::SPHERE;
     m.action = visualization_msgs::Marker::ADD;
+    m.lifetime = ros::Duration(0.1);
     m.id = markers.markers.size();
     m.pose.position.x = (*p_)(0);
     m.pose.position.y = (*p_)(1);
@@ -417,6 +420,7 @@ void Frame::addMarker(visualization_msgs::MarkerArray& markers)
     e.header.stamp = ros::Time::now();
     e.type = visualization_msgs::Marker::ARROW;
     e.action = visualization_msgs::Marker::ADD;
+    e.lifetime = ros::Duration(0.1);
     e.id = markers.markers.size();
     e.pose.position.x = trans_f_l_->translation()(0);
     e.pose.position.y = trans_f_l_->translation()(1);
@@ -558,6 +562,7 @@ void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
     a.header.stamp = ros::Time::now();
     a.type = visualization_msgs::Marker::ARROW;
     a.action = visualization_msgs::Marker::ADD;
+    a.lifetime = ros::Duration(0.1);
     a.id = markers.markers.size();
     a.pose.position.x = trans_j_r_0_->translation()(0);
     a.pose.position.y = trans_j_r_0_->translation()(1);
@@ -582,6 +587,7 @@ void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
     l.header.stamp = ros::Time::now();
     l.type = visualization_msgs::Marker::LINE_LIST;
     l.action = visualization_msgs::Marker::ADD;
+    l.lifetime = ros::Duration(0.1);
     l.id = markers.markers.size();
     l.pose.position.x = trans_j_r_0_->translation()(0);
     l.pose.position.y = trans_j_r_0_->translation()(1);
@@ -715,6 +721,7 @@ void JointLimits::addMarker(visualization_msgs::MarkerArray& markers)
     a.header.stamp = ros::Time::now();
     a.type = visualization_msgs::Marker::ARROW;
     a.action = visualization_msgs::Marker::ADD;
+    a.lifetime = ros::Duration(0.1);
     a.id = markers.markers.size();
     a.pose.position.x = trans_j_r_0_->translation()(0);
     a.pose.position.y = trans_j_r_0_->translation()(1);
@@ -739,6 +746,7 @@ void JointLimits::addMarker(visualization_msgs::MarkerArray& markers)
     l.header.stamp = ros::Time::now();
     l.type = visualization_msgs::Marker::LINE_LIST;
     l.action = visualization_msgs::Marker::ADD;
+    l.lifetime = ros::Duration(0.1);
     l.id = markers.markers.size();
     l.pose.position.x = trans_j_r_0_->translation()(0);
     l.pose.position.y = trans_j_r_0_->translation()(1);
@@ -813,6 +821,7 @@ void JointLimits::addMarker(visualization_msgs::MarkerArray& markers)
     l.header.stamp = ros::Time::now();
     l.type = visualization_msgs::Marker::LINE_LIST;
     l.action = visualization_msgs::Marker::ADD;
+    l.lifetime = ros::Duration(0.1);
     l.header.frame_id = link_;
     l.id = markers.markers.size();
     l.pose.position.x = trans_j_l_->translation()(0);
@@ -876,6 +885,7 @@ void Cone::addMarker(visualization_msgs::MarkerArray& markers)
     m.header.stamp = ros::Time::now();
     m.header.frame_id = link_;
     m.type =  visualization_msgs::Marker::CYLINDER;
+    m.lifetime = ros::Duration(0.1);
     //    m.action = visualization_msgs::Marker::ADD;
     m.id = markers.markers.size();
     m.pose.position.x = (*p_)(0) + (*v_)(0) * cos(alpha_) * CONE_SCALE;
@@ -964,6 +974,7 @@ void Cylinder::addMarker(visualization_msgs::MarkerArray& markers)
     m.header.stamp = ros::Time::now();
     m.type =  visualization_msgs::Marker::CYLINDER;
     m.action = visualization_msgs::Marker::ADD;
+    m.lifetime = ros::Duration(0.1);
     m.id = markers.markers.size();
     m.pose.position.x = (*p_)(0) + (*v_)(0) * 0.5 * LINE_SCALE;
     m.pose.position.y = (*p_)(1) + (*v_)(1) * 0.5 * LINE_SCALE;

@@ -160,9 +160,27 @@ void ProjectPointPlane::verifyTaskObjects()
 }
 //---------------------------------------------------------
 double ProjectPointPlane::getSSE()const
- {
+{
+    Eigen::VectorXd e(dim_);
+    e.setZero();
 
- }
+    if (sign_ == "=")
+        e = E_->col(0);
+    else if(sign_ == ">=")
+    {
+        for(unsigned int i=0; i<dim_; i++)
+            if((*E_)(i,0) < 0.0)
+                e(i) = (*E_)(i,0);
+    }
+    else if(sign_ == "<=")
+    {
+        for(unsigned int i=0; i<dim_; i++)
+            if((*E_)(i,0) > 0.0)
+                e(i) = (*E_)(i,0);
+    }
+
+    return pow(e.norm(), 2);
+}
 //---------------------------------------------------------
 //void ProjectPointPlane::setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs)
 //{
@@ -244,6 +262,8 @@ JointSetpoint::JointSetpoint(unsigned int id, unsigned int priority, std::string
             jnt_index_ = i;
 
     ROS_ASSERT(jnt_index_ > -1); //make sure the joint was found
+    //allow only equalities for now, although it shouldn't be a problem to include inequalities on this task
+    ROS_ASSERT(sign == "=");
 }
 //---------------------------------------------------------
 void JointSetpoint::verifyTaskObjects()
@@ -270,14 +290,18 @@ void JointSetpoint::computeTask()
     //compute task function derivatives
     updateTaskFunctionDerivatives();
 
+    //    std::cout<<"q: "<<q<<std::endl;
+    //    std::cout<<"q_set: "<<q_set<<std::endl;
     //    std::cout<<"JointSetpoint: A_: "<<std::endl<<(*A_)<<std::endl;
     //    std::cout<<"JointSetpoint: E_: "<<std::endl<<(*E_)<<std::endl;
+
+    //    exit(0);
 }
 //---------------------------------------------------------
 double JointSetpoint::getSSE()const
- {
-
- }
+{
+    return pow((*E_)(0, 0), 2);
+}
 //---------------------------------------------------------
 JointVelocityLimits::JointVelocityLimits(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
 {
@@ -320,18 +344,17 @@ void JointVelocityLimits::verifyTaskObjects()
 }
 //---------------------------------------------------------
 double JointVelocityLimits::getSSE()const
- {
+{
     Eigen::Vector2d e;
     e.setZero();
 
-  if((*E_)(0,0) < 0.0)
-      e(0) = (*E_)(0,0);
-  if((*E_)(1,0) < 0.0)
-      e(1) = (*E_)(1,0);
+    if((*E_)(0,0) < 0.0)
+        e(0) = (*E_)(0,0);
+    if((*E_)(1,0) < 0.0)
+        e(1) = (*E_)(1,0);
 
-  return pow(e.norm(),2);
-
- }
+    return pow(e.norm(),2);
+}
 //---------------------------------------------------------
 void JointVelocityLimits::computeTask()
 {
@@ -380,9 +403,9 @@ ParallelLines::ParallelLines(unsigned int id, unsigned int priority, std::string
 }
 //---------------------------------------------------------
 double ParallelLines::getSSE()const
- {
-
- }
+{
+    return pow(E_->col(0).norm(), 2);
+}
 //---------------------------------------------------------
 void ParallelLines::verifyTaskObjects()
 {
@@ -453,9 +476,24 @@ void AngleLines::verifyTaskObjects()
 }
 //---------------------------------------------------------
 double AngleLines::getSSE()const
- {
+{
+    double e = 0;
 
- }
+    if (sign_ == "=")
+        e = (*E_)(0,0);
+    else if(sign_ == ">=")
+    {
+        if((*E_)(0,0) < 0.0)
+            e = (*E_)(0,0);
+    }
+    else if(sign_ == "<=")
+    {
+        if((*E_)(0,0) > 0.0)
+            e = (*E_)(0,0);
+    }
+
+    return pow(e, 2);
+}
 //---------------------------------------------------------
 void AngleLines::computeTask()
 {
@@ -496,9 +534,24 @@ ProjectPointCylinder::ProjectPointCylinder(unsigned int id, unsigned int priorit
 }
 //---------------------------------------------------------
 double ProjectPointCylinder::getSSE()const
- {
+{
+    double e = 0;
 
- }
+    if (sign_ == "=")
+        e = (*E_)(0,0);
+    else if(sign_ == ">=")
+    {
+        if((*E_)(0,0) < 0.0)
+            e = (*E_)(0,0);
+    }
+    else if(sign_ == "<=")
+    {
+        if((*E_)(0,0) > 0.0)
+            e = (*E_)(0,0);
+    }
+
+    return pow(e, 2);
+}
 //---------------------------------------------------------
 void ProjectPointCylinder::verifyTaskObjects()
 {
@@ -591,9 +644,9 @@ void CoplanarLines::verifyTaskObjects()
 }
 //---------------------------------------------------------
 double CoplanarLines::getSSE()const
- {
-
- }
+{
+  return pow(E_->col(0).norm(), 2);
+}
 //---------------------------------------------------------
 void CoplanarLines::computeTask()
 {
@@ -670,9 +723,9 @@ void ProjectLineLine::verifyTaskObjects()
 }
 //---------------------------------------------------------
 double ProjectLineLine::getSSE()const
- {
-
- }
+{
+    return pow((*E_)(0,0), 2);
+}
 //---------------------------------------------------------
 void ProjectLineLine::computeTask()
 {
@@ -723,13 +776,13 @@ void ProjectLineLine::computeTask()
     //Get the Jacobain w.r.t the task point p(q)
     boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_->at(1).getJacobian(delta_p);
 
-//    std::cout<<"p1: "<<p1.transpose()<<std::endl;
-//    std::cout<<"v1: "<<v1.transpose()<<std::endl;
-//    std::cout<<"p2: "<<p2.transpose()<<std::endl;
-//    std::cout<<"v2: "<<v2.transpose()<<std::endl;
-//    std::cout<<"n: "<<n.transpose()<<std::endl;
-//    std::cout<<"d: "<<d<<std::endl;
-//    std::cout<<"p: "<<p.transpose()<<std::endl;
+    //    std::cout<<"p1: "<<p1.transpose()<<std::endl;
+    //    std::cout<<"v1: "<<v1.transpose()<<std::endl;
+    //    std::cout<<"p2: "<<p2.transpose()<<std::endl;
+    //    std::cout<<"v2: "<<v2.transpose()<<std::endl;
+    //    std::cout<<"n: "<<n.transpose()<<std::endl;
+    //    std::cout<<"d: "<<d<<std::endl;
+    //    std::cout<<"p: "<<p.transpose()<<std::endl;
 
     //Compute the task function values and jacobians
     (*E_)(0.0) = d;
@@ -738,8 +791,8 @@ void ProjectLineLine::computeTask()
     //compute task function derivatives
     updateTaskFunctionDerivatives();
 
-//    std::cout<<"E_: "<<std::endl<<(*E_)<<std::endl;
-//    std::cout<<"A_: "<<std::endl<<(*A_)<<std::endl;
+    //    std::cout<<"E_: "<<std::endl<<(*E_)<<std::endl;
+    //    std::cout<<"A_: "<<std::endl<<(*A_)<<std::endl;
 }
 //---------------------------------------------------------
 } //end namespace hqp_controllers

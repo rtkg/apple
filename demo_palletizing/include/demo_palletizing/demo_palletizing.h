@@ -6,6 +6,7 @@
 #include <boost/thread/condition_variable.hpp>
 #include <vector>
 #include <std_srvs/Empty.h>
+#include <hqp_controllers_msgs/TaskObject.h>
 #include <hqp_controllers_msgs/TaskStatuses.h>
 #include <hqp_controllers_msgs/SetTasks.h>
 #include <hqp_controllers_msgs/SetTaskObjects.h>
@@ -20,17 +21,17 @@ namespace demo_palletizing
 ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
 struct GraspIntervall
 {
- std::string obj_frame_; //object frame
- std::string e_frame_; //endeffector frame
+    std::string obj_frame_; //object frame
+    std::string e_frame_; //endeffector frame
 
- Eigen::Vector3d e_; //endeffector point expressed in e_frame_
+    Eigen::Vector3d e_; //endeffector point expressed in e_frame_
 
- Eigen::Vector3d v_; //cylinder axis
- Eigen::Vector3d p_; //cylinder reference point
- double r1_, r2_; //cylinder radii r2 !> r1
+    Eigen::Vector3d v_; //cylinder axis
+    Eigen::Vector3d p_; //cylinder reference point
+    double r1_, r2_; //cylinder radii r2 !> r1
 
- Eigen::Vector3d n1_, n2_; //plane normals
- double d1_, d2_; //plane offsets
+    Eigen::Vector3d n1_, n2_; //plane normals
+    double d1_, d2_; //plane offsets
 };
 //-----------------------------------------------------------
 class DemoPalletizing
@@ -74,8 +75,8 @@ private:
     hqp_controllers_msgs::SetTasks tasks_;
     //** map holding the ids of those tasks whose completion indicates a state change*/
     std::vector<unsigned int> monitored_tasks_;
-    //**map holding, for each actuated joint of the mainpulator chain, the joint link and the join root link */
-    std::map<std::string, std::pair<std::string, std::string> > manipulator_joint_map_;
+    std::map<std::string, hqp_controllers_msgs::TaskObject> task_object_templates_;
+
 
     //** To be called before entering a new state*/
     bool resetState();
@@ -95,7 +96,10 @@ private:
 
     bool setJointConfiguration(std::vector<double> const& joints);
     bool setGraspApproach();
-double maximumNorm(std::vector<double>const& e);
+    bool setObjectTransfer();
+    //double maximumNorm(std::vector<double>const& e);
+
+    void generateTaskObjectTemplates();
 
     /////////////////
     //  CALLBACKS  //
