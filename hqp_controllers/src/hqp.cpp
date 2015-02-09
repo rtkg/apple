@@ -30,8 +30,8 @@ HQPStage::HQPStage() : dim_(0), solved_(false)
 HQPStage::HQPStage(Task const& task) : solved_(false)
 {
     dim_ = task.getDimension();
-    de_ = task.getTaskVelocity();
-    A_ = task.getTaskJacobian();
+    de_.reset(new Eigen::VectorXd(*task.getTaskVelocity()));
+    A_.reset(new Eigen::MatrixXd(*task.getTaskJacobian()));
     signs_.reset(new std::vector<std::string>(dim_));
     std::fill(signs_->begin(), signs_->end(), task.getSign());
 
@@ -51,7 +51,11 @@ void HQPStage::appendTask(Task const& task)
     for(unsigned int i=0; i<dim; i++)
         signs_->push_back(task.getSign());
 
+    w_->resize(dim_ + dim);
+    w_->setZero();
+
     dim_ = dim_ +dim;
+    solved_ = false;
 }
 //-----------------------------------------
 HQPSolver::HQPSolver()
@@ -68,7 +72,6 @@ void HQPSolver::reset()
 {
     b_.resize(0);
     w_.resize(0);
-    x_.resize(0);
     A_.resize(0,0);
     signs_.clear();
 }
@@ -83,7 +86,6 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
     std::map<unsigned int, boost::shared_ptr<HQPStage> >::const_iterator it = hqp.begin();//
     unsigned int x_dim = it->second->A_->cols();
     A_.resize(Eigen::NoChange, x_dim);
-    x_.resize(x_dim);
 
     try
     {
@@ -97,7 +99,10 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
             unsigned int s_dim = it->second->dim_; //dimension of the current stage
             unsigned int s_acc_dim = b_.rows(); //accumulated dimensions of all the previously solved stages
 
-            //append the new jacobian matrix and task velocity vector to the previous ones
+            //append the new senses, jacobian matrix and task velocity vector to the previous ones
+            for(unsigned int i = 0; i<s_dim; i++)
+                signs_.push_back(it->second->signs_->at(i));
+
             b_.conservativeResize(s_acc_dim + s_dim);
             b_.tail(s_dim) = *(it->second->de_);
             A_.conservativeResize(s_acc_dim + s_dim,Eigen::NoChange);
@@ -125,12 +130,12 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
             //========== CREATE GUROBI EXPRESSIONS ===================
 
             //Fill in the senses array
-            for(unsigned int i=0; i<s_dim; i++)
-                if(it->second->signs_->at(i) == "=")
+            for(unsigned int i=0; i<s_dim + s_acc_dim; i++)
+                if(signs_[i] == "=")
                     senses[i] = GRB_EQUAL;
-                else if (it->second->signs_->at(i) == "<=")
+                else if (signs_[i] == "<=")
                     senses[i] = GRB_LESS_EQUAL;
-                else if (it->second->signs_->at(i) == ">=")
+                else if (signs_[i] == ">=")
                     senses[i] = GRB_GREATER_EQUAL;
                 else
                 {
@@ -179,7 +184,7 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
                 if(status == GRB_TIME_LIMIT)
                     ROS_WARN("Stage solving runtime %f sec exceeds the set time limit of %f sec.", runtime, TIME_LIMIT);
                 else
-                    ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d.", it->first , status);
+                    ROS_ERROR("In HQPSolver::solve(...): No optimal solution found for stage %d. Status is %d.", s_count, status);
 
                 delete[] lb_x;
                 delete[] ub_x;
@@ -199,23 +204,31 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
                 return false;
             }
 
-            //Update the solution and put it in the current stage
-            for(unsigned int i=0; i<x_dim; i++)
+            try
             {
-                x_(i) = x[i].get(GRB_DoubleAttr_X);
-                (*it->second->x_)(i) = x_(i);
-            }
+                //Update the solution and put it in the current stage
+                for(unsigned int i=0; i<x_dim; i++)
+                    (*it->second->x_)(i) = x[i].get(GRB_DoubleAttr_X);
 
-            for(unsigned int i=0; i<s_dim; i++)
+                for(unsigned int i=0; i<s_dim; i++)
+                {
+                    w_(s_acc_dim + i) = w[i].get(GRB_DoubleAttr_X);
+                    (*it->second->w_)(i) = w_(s_acc_dim + i);
+                }
+            }
+            catch(GRBException e)
             {
-                w_(s_acc_dim + i) = w[i].get(GRB_DoubleAttr_X);
-                (*it->second->w_)(i) = w_(s_acc_dim + i);
+                ROS_ERROR("In HQPSolver::solve(...): Gurobi exception with error code %d, and error message %s when trying to extract the solution variables.", e.getErrorCode(), e.getMessage().c_str());
+                //model.write("/home/rkg/Desktop/model.lp");
+                //model.write("/home/rkg/Desktop/model.sol");
+
+                return false;
             }
 
             it->second->solved_ = true;
 
-            model.write("/home/rkg/Desktop/model.lp");
-            model.write("/home/rkg/Desktop/model.sol");
+            //model.write("/home/rkg/Desktop/model.lp");
+            //model.write("/home/rkg/Desktop/model.sol");
             //std::cout<<"SOLVED STAGE: "<<it->first<<std::endl;
             //std::cout<< *it->second<<std::endl;
             //std::cout<<"runtime: "<<runtime<<std::endl;

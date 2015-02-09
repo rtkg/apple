@@ -23,7 +23,8 @@ public:
     bool addTaskObject(boost::shared_ptr<TaskObject> t_obj);
     bool addTask(boost::shared_ptr<Task> task);
 
-    void removeTask(unsigned int id);
+    bool removeTask(unsigned int id);
+    bool removeTaskObject(unsigned int id);
     void computeTaskObjectsKinematics();
     /**Computes the task jacobians and velocities of all tasks ans solves the corresponding HQP. The solution is returned in dq */
     void computeHQP();

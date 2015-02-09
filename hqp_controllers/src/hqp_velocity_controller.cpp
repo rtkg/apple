@@ -9,7 +9,7 @@
 namespace hqp_controllers
 {
 //-----------------------------------------------------------------------
-HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_RATE), active_(true)
+HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_RATE), active_(false)
 {
     joints_.reset(new std::vector< hardware_interface::JointHandle >);
 }
@@ -17,8 +17,8 @@ HQPVelocityController::HQPVelocityController() : publish_rate_(TASK_OBJ_PUBLISH_
 HQPVelocityController::~HQPVelocityController()
 {
     set_task_srv_.shutdown();
-        set_task_obj_srv_.shutdown();
-            vis_t_obj_srv_.shutdown();
+    set_task_obj_srv_.shutdown();
+    vis_t_obj_srv_.shutdown();
 }
 //-----------------------------------------------------------------------
 bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw, ros::NodeHandle &n)
@@ -117,15 +117,132 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
         ROS_WARN("No collsion objects specified!");
     }
 
+    if(jointLimitsParser(n))
+        ROS_INFO("HQPVelocityController::init(...): joint limits tasks created");
+    else
+        ROS_WARN("HQPVelocityController::init(...): no joint limits tasks created!");
+
+
     //============================================== REGISTER CALLBACKS =========================================
+    activate_hqp_control_srv_ = n.advertiseService("activate_hqp_control",&HQPVelocityController::activateHQPControl,this);
     set_task_srv_ = n.advertiseService("set_tasks",&HQPVelocityController::setTasks,this);
     set_task_obj_srv_ = n.advertiseService("set_task_objects",&HQPVelocityController::setTaskObjects,this);
+    remove_task_srv_= n.advertiseService("remove_tasks",&HQPVelocityController::removeTasks,this);
+    remove_task_obj_srv_ = n.advertiseService("remove_task_objects",&HQPVelocityController::removeTaskObjects,this);
     vis_t_obj_srv_ = n.advertiseService("visualize_task_objects",&HQPVelocityController::visualizeTaskObjects,this);
     //============================================== REGISTER CALLBACKS END =========================================
     vis_t_obj_pub_.init(n, "task_objects", 1);
     t_statuses_pub_.init(n, "task_statuses", 1);
 
     return true;
+}
+//-----------------------------------------------------------------------
+bool HQPVelocityController::jointLimitsParser(ros::NodeHandle &n)
+{
+    //Load the joint limits from the parameter server
+    std::string searched_param;
+    XmlRpc::XmlRpcValue joint_limits;
+    if (n.searchParam("joint_limits", searched_param))
+    {
+        n.getParam(searched_param, joint_limits);
+        ROS_ASSERT(joint_limits.getType() == XmlRpc::XmlRpcValue::TypeArray);
+        for (int32_t i = 0; i < joint_limits.size(); ++i)
+        {
+            //read the joint name
+            ROS_ASSERT(joint_limits[i]["joint_name"].getType() == XmlRpc::XmlRpcValue::TypeString);
+            std::string joint_name = (std::string)joint_limits[i]["joint_name"];
+
+            //read the max joint velocity
+            ROS_ASSERT(joint_limits[i]["dq_max"].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+            Eigen::VectorXd dq_max(1);
+            dq_max(0) = (double)joint_limits[i]["dq_max"];
+
+            //read the joint limits
+            ROS_ASSERT(joint_limits[i]["lb"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+            ROS_ASSERT(joint_limits[i]["ub"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+            Eigen::Vector3d lb, ub;
+            for(unsigned int j=0; j<3; j++)
+            {
+                ROS_ASSERT(joint_limits[i]["lb"][j].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+                ROS_ASSERT(joint_limits[i]["ub"][j].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+                lb(j) = joint_limits[i]["lb"][j];
+                ub(j) = joint_limits[i]["ub"][j];
+            }
+
+            const KDL::SegmentMap segments = task_manager_.getKinematicTree()->getSegments();
+            //try to find the root and link bodies of the given joint
+            std::string root, link;
+
+            KDL::SegmentMap::const_iterator it;
+            KDL::Segment segment;
+            for (it = segments.begin(); it!=segments.end(); ++it)
+                if (joint_name == it->second.segment.getJoint().getName())
+                {
+                    segment = it->second.segment;
+                    link = segment.getName();
+                    root = it->second.parent->second.segment.getName();
+                    break;
+                }
+
+            if(root.empty())
+            {
+                ROS_ERROR("HQPVelocityController::jointLimitsParser(...): joint with name %s does not exist in the kinematic tree!",joint_name.c_str());
+                return false;
+            }
+
+            //generate a task object
+            boost::shared_ptr<KDL::Chain> chain(new KDL::Chain);
+            if(!task_manager_.getKinematicTree()->getChain(root,link,(*chain)))
+            {
+                ROS_ERROR("HQPVelocityController::jointLimitsParser(...): could not get kinematic chain from %s to %s.", root.c_str(),link.c_str());
+                return false;
+            }
+
+            boost::shared_ptr<TaskObject> t_obj(new TaskObject(task_manager_.getValidTaskObjectId(), chain,root,joints_));
+
+            //generate the object geometry
+            Eigen::VectorXd link_data(18);
+            //find the frame expressed in the link with z pointing in the joint axis and zero angle pointing in x
+            KDL::Vector a = segment.pose(0.0).Inverse().M * segment.getJoint().JointAxis(); //the joint axis at joint value 0.0 expressed in the link frame
+            Eigen::Quaterniond q;
+            q.setFromTwoVectors(Eigen::Vector3d::UnitZ(), Eigen::Vector3d(a.x(), a.y(), a.z())); //rotate the link z axis into the joint axis by convention
+            Eigen::Matrix3d R_J_L = q.matrix(); //the rotation matrix expressing the joint frame in the link frame
+            link_data.head<3>() = Eigen::Vector3d(0,0,0); //assuming the join origin coincides with the link origin
+            link_data.segment(3,3) = R_J_L.eulerAngles(0, 1, 2);
+
+            // find the initial transformation of the joint to the root at q = 0
+            KDL::Vector e1 = segment.pose(0.0).M.UnitX();  KDL::Vector e2 = segment.pose(0.0).M.UnitY();  KDL::Vector e3 = segment.pose(0.0).M.UnitZ();
+            Eigen::Matrix3d R_L_R;
+            R_L_R.col(0) = Eigen::Vector3d(e1.x(), e1.y(), e1.z());
+            R_L_R.col(1) = Eigen::Vector3d(e2.x(), e2.y(), e2.z());
+            R_L_R.col(2) = Eigen::Vector3d(e3.x(), e3.y(), e3.z());
+
+            link_data.segment(6,3) = Eigen::Vector3d(segment.pose(0.0).p.x(), segment.pose(0.0).p.y(), segment.pose(0.0).p.z());
+            link_data.segment(9,3) = (R_L_R * R_J_L).eulerAngles(0, 1, 2);
+
+            //insert the lower and upper bounds at the end
+            link_data.segment(12,3) = lb;
+            link_data.tail<3>() = ub;
+
+            boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(JOINT_LIMITS, link, root, link_data);
+            t_obj->addGeometry(geom); //add the task geometries to the task object
+            t_obj->computeKinematics();
+            task_manager_.addTaskObject(t_obj);
+
+            //generate a joint limits task
+            boost::shared_ptr<std::vector<TaskObject> > t_objs(new std::vector<TaskObject>);
+            t_objs->push_back(*t_obj);
+            if(!task_manager_.addTask(Task::makeTask(task_manager_.getValidTaskId(), 1, JOINT_VELOCITY_LIMITS, "<=", t_objs, TaskDynamics::makeTaskDynamics(LINEAR_DYNAMICS, dq_max))))
+            {
+                ROS_ERROR("HQPVelocityController::jointLimitsParser(...): could not add joint limits task for joint %s.", joint_name.c_str());
+                return false;
+            }
+
+        }
+        return true;
+    }
+    else
+        return false;
 }
 //-----------------------------------------------------------------------
 void HQPVelocityController::starting(const ros::Time& time)
@@ -143,7 +260,6 @@ void HQPVelocityController::starting(const ros::Time& time)
 bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res)
 {
     lock_.lock();
-
     for(unsigned int i = 0; i<req.tasks.size(); i++)
     {
         hqp_controllers_msgs::Task task = req.tasks[i];
@@ -187,7 +303,6 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
 bool HQPVelocityController::setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res)
 {
     lock_.lock();
-
     for(unsigned int i=0; i<req.objs.size();i++)
     {
         std::string root = req.objs[i].root;
@@ -227,23 +342,70 @@ bool HQPVelocityController::setTaskObjects(hqp_controllers_msgs::SetTaskObjects:
     return res.success;
 }
 //-----------------------------------------------------------------------
+bool HQPVelocityController::removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res)
+{
+    lock_.lock();
+    for(unsigned int i=0; i<req.ids.size(); i++)
+        if(!task_manager_.removeTask(req.ids[i]))
+        {
+            lock_.unlock();
+            res.success = false;
+            return false;
+        }
+    lock_.unlock();
+    res.success = true;
+    return true;
+}
+//-----------------------------------------------------------------------
+bool HQPVelocityController::removeTaskObjects(hqp_controllers_msgs::RemoveTaskObjects::Request & req, hqp_controllers_msgs::RemoveTaskObjects::Response &res)
+{
+    lock_.lock();
+    for(unsigned int i=0; i<req.ids.size(); i++)
+        if(!task_manager_.removeTaskObject(req.ids[i]))
+        {
+            lock_.unlock();
+            res.success = false;
+            return false;
+        }
+    lock_.unlock();
+    res.success = true;
+    return true;
+}
+//-----------------------------------------------------------------------
 bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res)
 {
+    res.success = true;
     lock_.lock();
     vis_ids_.resize(req.ids.size());
     for(unsigned int i=0; i<req.ids.size();i++)
         vis_ids_(i)=req.ids[i];
 
-    // populate the message
-    vis_t_obj_pub_.msg_.markers.clear();
-    if(task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_))
-        res.success=true;
-    else
-        res.success=false;
+    //check wether task objects with the requested ids exist
+    TaskObject t_obj;
+    for(unsigned int i=0; i<vis_ids_.size(); i++)
+        if(!task_manager_.getTaskObject(vis_ids_(i), t_obj))
+        {
+            res.success = false;
+            ROS_ERROR("Task object with id %d does not exist, cannot visualize.", vis_ids_(i));
+            vis_ids_.resize(0);
+        }
+        else
+            res.success = true;
 
     lock_.unlock();
-
     return res.success;
+}
+//-----------------------------------------------------------------------
+bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQPControl::Request & req, hqp_controllers_msgs::ActivateHQPControl::Response &res)
+{
+    lock_.lock();
+    active_ = req.active;
+    lock_.unlock();
+
+    if(req.active == true)
+        ROS_INFO("HQP control activated.");
+    else
+        ROS_INFO("HQP control deactivated.");
 }
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
@@ -285,14 +447,20 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
         last_publish_time_ = last_publish_time_ + ros::Duration(1.0/publish_rate_);
 
         // try to publish the task object geometries
+        // populate the message
+        vis_t_obj_pub_.msg_.markers.clear();
+        task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_);
+
         if (vis_t_obj_pub_.trylock())
             vis_t_obj_pub_.unlockAndPublish();
 
-        // try to publish the task statuses
-        task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
-
-        if (t_statuses_pub_.trylock())
-            t_statuses_pub_.unlockAndPublish();
+        // if the controller is active, try to publish the task statuses
+        if(active_)
+        {
+            task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
+            if (t_statuses_pub_.trylock())
+                t_statuses_pub_.unlockAndPublish();
+        }
 
     }
     //======================= END PUBLISH =================

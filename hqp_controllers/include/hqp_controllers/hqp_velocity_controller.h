@@ -19,6 +19,9 @@
 #include <hqp_controllers_msgs/SetTaskObjects.h>
 #include <hqp_controllers_msgs/TaskStatuses.h>
 #include <hqp_controllers_msgs/VisualizeTaskObjects.h>
+#include <hqp_controllers_msgs/ActivateHQPControl.h>
+#include <hqp_controllers_msgs/RemoveTasks.h>
+#include <hqp_controllers_msgs/RemoveTaskObjects.h>
 
 namespace hqp_controllers
 {
@@ -49,7 +52,10 @@ public:
 private:
 
     ros::ServiceServer set_task_srv_;
+    ros::ServiceServer remove_task_srv_;
     ros::ServiceServer set_task_obj_srv_;
+    ros::ServiceServer remove_task_obj_srv_;
+    ros::ServiceServer activate_hqp_control_srv_;
     ros::ServiceServer vis_t_obj_srv_;
     TaskManager task_manager_;
     boost::mutex lock_;
@@ -61,12 +67,19 @@ private:
     Eigen::VectorXi vis_ids_; ///< only task object geometries with ids in vis_ids_ will be published
     bool active_;
 
+    //**Helper function to read joint limits from the parameter server and generate the corresponding tasks.*/
+    bool jointLimitsParser(ros::NodeHandle &n);
+
     ///////////////
     // CALLBACKS //
     ///////////////
 
+
+    bool activateHQPControl(hqp_controllers_msgs::ActivateHQPControl::Request & req, hqp_controllers_msgs::ActivateHQPControl::Response &res);
     bool setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res);
+    bool removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res);
     bool setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res);
+    bool removeTaskObjects(hqp_controllers_msgs::RemoveTaskObjects::Request & req, hqp_controllers_msgs::RemoveTaskObjects::Response &res);
     bool visualizeTaskObjects(hqp_controllers_msgs::VisualizeTaskObjects::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res);
 };
 
