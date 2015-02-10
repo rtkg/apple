@@ -122,6 +122,8 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, T
         task.reset(new AngleLines(id, priority, sign, t_objs, t_dynamics));
     else if(type == COPLANAR_LINES)
         task.reset(new CoplanarLines(id, priority, sign, t_objs, t_dynamics));
+    else if(type == PROJECT_SPHERE_PLANE)
+        task.reset(new ProjectSpherePlane(id, priority, sign, t_objs, t_dynamics));
     else
     {
         ROS_ERROR("Task type %d is invalid.",type);
@@ -645,7 +647,7 @@ void CoplanarLines::verifyTaskObjects()
 //---------------------------------------------------------
 double CoplanarLines::getSSE()const
 {
-  return pow(E_->col(0).norm(), 2);
+    return pow(E_->col(0).norm(), 2);
 }
 //---------------------------------------------------------
 void CoplanarLines::computeTask()
@@ -793,6 +795,92 @@ void ProjectLineLine::computeTask()
 
     //    std::cout<<"E_: "<<std::endl<<(*E_)<<std::endl;
     //    std::cout<<"A_: "<<std::endl<<(*A_)<<std::endl;
+}
+//---------------------------------------------------------
+ProjectSpherePlane::ProjectSpherePlane(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
+{
+    type_ = PROJECT_SPHERE_PLANE;
+    dim_ = t_objs_->at(1).getGeometries()->size();
+
+    verifyTaskObjects();
+
+    unsigned int n_jnts = t_objs_->at(1).getJacobian()->cols(); //number of controlled joints
+    A_->resize(dim_, n_jnts);
+    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
+    A_->setZero();
+    E_->setZero();
+
+    ROS_ASSERT(sign_ == ">=");
+}
+//---------------------------------------------------------
+void ProjectSpherePlane::verifyTaskObjects()
+{
+    ROS_ASSERT(t_objs_->size() == 2); //need one sphere and one set of planes
+    ROS_ASSERT(t_objs_->at(0).getGeometries().get() && t_objs_->at(1).getGeometries().get()); //make sure the geometries exist
+    ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot()); //make sure the geometries associated with the task objects are formed in the same root frame
+    //check that the task object geometries are valid - first one has to be a single point, second one a set of planes
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1);
+    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == SPHERE);
+    ROS_ASSERT(dim_ > 0);
+    ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() == 0);//Make sure the planes are fixed in the environment for now
+    for (unsigned int i=0; i<dim_;i++)
+        ROS_ASSERT(t_objs_->at(1).getGeometries()->at(i)->getType() == PLANE);
+
+}
+//---------------------------------------------------------
+double ProjectSpherePlane::getSSE()const
+{
+    Eigen::VectorXd e(dim_);
+    e.setZero();
+
+    for(unsigned int i=0; i<dim_; i++)
+        if((*E_)(i,0) < 0.0)
+            e(i) = (*E_)(i,0);
+
+    return pow(e.norm(), 2);
+}
+//---------------------------------------------------------
+void ProjectSpherePlane::computeTask()
+{
+    //   std::cout<<"joints: ";
+    //    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)
+    //        std::cout<<t_objs_.first->getJoints()->at(i).getPosition()<<" ";
+
+    //Get the task point p(q) expressed in the task root frame
+    Eigen::Vector3d p = t_objs_->at(0).getGeometries()->at(0)->getRootData()->head<3>();
+
+    //Get the sphere radius
+    double r = t_objs_->at(0).getGeometries()->at(0)->getRootData()->tail<1>()(0);
+
+    //Get the vector from the link frame origin to the task point expressed in the task object root frame
+    Eigen::Vector3d delta_p = p - t_objs_->at(0).getLinkTransform()->translation();
+
+    //Get the Jacobain w.r.t the task point p(q)
+    boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_->at(0).getJacobian(delta_p);
+
+    //Compute the task function values and jacobians
+    Eigen::VectorXd plane(4);
+    for(unsigned int i=0; i<dim_;i++)
+    {
+        plane = (*(t_objs_->at(1).getGeometries()->at(i)->getRootData()));
+        //task function values
+        (*E_)(i,0) = plane.head<3>().transpose()*p-(plane.tail<1>()(0)+r);
+
+        A_->row(i) = plane.head<3>().transpose() * jac->topRows<3>();
+    }
+
+    //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
+    //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
+    //    std::cout<<"p: "<<p.transpose()<<std::endl;
+    //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
+    //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
+    //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
+    //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
+
+    //compute task function derivatives
+    updateTaskFunctionDerivatives();
+
+    //    std::cout<<GRB_DoubleParam_Cutoff<<std::endl;
 }
 //---------------------------------------------------------
 } //end namespace hqp_controllers

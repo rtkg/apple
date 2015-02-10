@@ -7,6 +7,7 @@ uint16 JOINT_POSITION = 6
 uint16 JOINT_LIMITS = 7
 uint16 CONE = 8
 uint16 CYLINDER = 9
+uint16 SPHERE = 10
 
 uint16 type
 float64[] data 
