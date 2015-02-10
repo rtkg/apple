@@ -77,6 +77,8 @@ boost::shared_ptr<TaskGeometry>  TaskGeometry::makeTaskGeometry(TaskGeometryType
         geom.reset(new Cone(link, root, link_data));
     else if(type == CYLINDER)
         geom.reset(new Cylinder(link, root, link_data));
+    else if(type == SPHERE)
+        geom.reset(new Sphere(link, root, link_data));
     else
     {
         ROS_ERROR("Task geometry type %d is invalid.",type);
@@ -1002,6 +1004,67 @@ void Cylinder::setLinkTransform(Eigen::Affine3d const& trans_l_r)
     root_data_->head<3>() = (*trans_l_r_) * (*p_);
     root_data_->segment(3,3) = trans_l_r_->linear() * (*v_);
     (*root_data_)(6) = r_; //transform doesn't change the radius
+}
+//------------------------------------------------------------------------
+Sphere::Sphere() : TaskGeometry(), r_(0.0)
+{
+    type_ = SPHERE;
+    p_.reset(new Eigen::Vector3d);
+}
+//------------------------------------------------------------------------
+Sphere::Sphere(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
+{
+    type_ = SPHERE;
+    setLinkData(link_data);
+}
+//------------------------------------------------------------------------
+void Sphere::setLinkData(Eigen::VectorXd const& link_data)
+{
+    ROS_ASSERT(link_data.rows() == 4);
+    link_data_.reset(new Eigen::VectorXd(link_data));
+
+    p_.reset(new Eigen::Vector3d(link_data.head<3>()));
+    r_ = link_data.tail<1>()(0);
+
+    ROS_ASSERT(r_ > 0.0);
+}
+//------------------------------------------------------------------------
+void Sphere::setLinkTransform(Eigen::Affine3d const& trans_l_r)
+{
+    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
+
+    //Express the Sphere in the root frame
+    root_data_.reset(new Eigen::VectorXd(4));
+    root_data_->head<3>() = (*trans_l_r_) * (*p_);
+    (*root_data_)(3) = r_; ///< radius doesn't change under transformation
+}
+//------------------------------------------------------------------------
+void Sphere::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    visualization_msgs::Marker m;
+
+    m.header.frame_id = link_;
+    m.header.stamp = ros::Time::now();
+    m.type = visualization_msgs::Marker::SPHERE;
+    m.action = visualization_msgs::Marker::ADD;
+    m.id = markers.markers.size();
+    m.lifetime = ros::Duration(0.1);
+    m.pose.position.x = (*p_)(0);
+    m.pose.position.y = (*p_)(1);
+    m.pose.position.z = (*p_)(2);
+    m.pose.orientation.x = 0.0;
+    m.pose.orientation.y = 0.0;
+    m.pose.orientation.z = 0.0;
+    m.pose.orientation.w = 1.0;
+    m.scale.x = 2 * r_;
+    m.scale.y = 2 * r_;
+    m.scale.z = 2 * r_;
+    m.color.r = 1.0;
+    m.color.g = 0.0;
+    m.color.b = 0.0;
+    m.color.a = 1.0;
+
+    markers.markers.push_back(m);
 }
 //------------------------------------------------------------------------
 } //end namespace hqp_controllers

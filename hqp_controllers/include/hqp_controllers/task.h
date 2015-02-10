@@ -10,7 +10,7 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------
-enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2, JOINT_VELOCITY_LIMITS = 3, PARALLEL_LINES = 4, ANGLE_LINES = 5, PROJECT_POINT_CYLINDER = 6, COPLANAR_LINES = 7, PROJECT_LINE_LINE = 8};
+enum TaskType {UNDEFINED_TASK = 0, PROJECT_POINT_PLANE = 1, JOINT_SETPOINT = 2, JOINT_VELOCITY_LIMITS = 3, PARALLEL_LINES = 4, ANGLE_LINES = 5, PROJECT_POINT_CYLINDER = 6, COPLANAR_LINES = 7, PROJECT_LINE_LINE = 8, PROJECT_SPHERE_PLANE = 9};
 //----------------------------------------------------------------
 class Task
 {
@@ -192,6 +192,24 @@ protected:
 private:
     //**Helper function to make sure that the given task objects are valid in the context of the task */
     void verifyTaskObjects();
+};
+//----------------------------------------------------------------
+class ProjectSpherePlane: public Task
+{
+public:
+    ProjectSpherePlane(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+    //  virtual void setTaskObjects(std::pair<boost::shared_ptr<TaskObject>, boost::shared_ptr<TaskObject> > t_objs);
+    virtual void computeTask();
+        virtual double getSSE()const;
+
+protected:
+    ProjectSpherePlane(){};
+
+private:
+    //**Helper function to make sure that the given task objects are valid in the context of the task */
+    void verifyTaskObjects();
+
+   // unsigned int jnt_index_; ///< index (in the TaskObject::joints_ vector) of the joint controlled by this task
 };
 //----------------------------------------------------------------
 } //end namespace hqp_controllers

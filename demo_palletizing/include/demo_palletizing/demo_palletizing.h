@@ -15,7 +15,7 @@
 namespace demo_palletizing
 {
 //-----------------------------------------------------------
-#define TASK_ERROR_TOL      1e-3
+#define TASK_ERROR_TOL      5*1e-3
 #define TASK_DYNAMICS_GAIN -0.6
 //-----------------------------------------------------------
 ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
@@ -85,7 +85,7 @@ private:
     //** sends the filled SetTaskObjects to the controller*/
     bool sendStateTaskObjects();
     //** visualizes the task_objects_*/
-    bool visualizeStateTaskObjects();
+    bool visualizeStateTaskObjects(std::vector<unsigned int> const& ids);
 
     //** deactivates the HQP control scheme - the controller will output zero velocity*/
     void deactivateHQPControl();
@@ -96,6 +96,7 @@ private:
 
     bool setJointConfiguration(std::vector<double> const& joints);
     bool setGraspApproach();
+    bool setObjectExtract();
     bool setObjectTransfer();
     //double maximumNorm(std::vector<double>const& e);
 
