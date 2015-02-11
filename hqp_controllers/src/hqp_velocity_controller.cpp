@@ -406,6 +406,8 @@ bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQP
         ROS_INFO("HQP control activated.");
     else
         ROS_INFO("HQP control deactivated.");
+
+    return true;
 }
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)

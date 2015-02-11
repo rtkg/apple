@@ -8,7 +8,7 @@ rosservice call /apple/apple_hqp_vel_controller/set_task_objects '{objs: [{root:
 
 rosservice call /apple/apple_hqp_vel_controller/visualize_task_objects '{ids: [8]}'
 
-rosservice call /apple/apple_hqp_vel_controller/set_tasks '{tasks: [{type: 2, priority: 1, sign: "=", t_obj_ids: [8], dynamics: {type: 1, data: [-1.0]}} ]}'
+rosservice call /apple/apple_hqp_vel_controller/set_tasks '{tasks: [{type: 2, priority: 1, sign: "=", t_obj_ids: [8], dynamics: {type: 1, data: [-0.5]}} ]}'
 
 
 
