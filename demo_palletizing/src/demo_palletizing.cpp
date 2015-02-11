@@ -1452,6 +1452,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     }
 
     deactivateHQPControl();
+    resetState();
     ROS_INFO("DEMO FINISHED.");
     return true;
 }
