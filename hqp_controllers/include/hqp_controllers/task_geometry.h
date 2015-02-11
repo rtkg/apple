@@ -8,7 +8,7 @@
 
 namespace hqp_controllers {
 //----------------------------------------------------------------------------------------------------
-enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7, CONE = 8, CYLINDER = 9};
+enum TaskGeometryType {BASIC_GEOMETRY = 0, POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, JOINT_POSITION = 6, JOINT_LIMITS = 7, CONE = 8, CYLINDER = 9, SPHERE = 10};
 #define POINT_SCALE  0.02
 #define LINE_SCALE   0.3
 #define PLANE_SCALE  0.8
@@ -67,6 +67,24 @@ public:
 protected:
 
     boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the point in the TaskGeometry::link_ frame
+};
+//------------------------------------------------------------------------------------------
+class Sphere: public TaskGeometry
+{
+public:
+
+    Sphere();
+    Sphere(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
+
+    virtual void setLinkData(Eigen::VectorXd const& link_data);
+    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
+    // virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+
+protected:
+
+    boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the sphere's center point in the TaskGeometry::link_ frame
+    double r_; ///<sphere radius
 };
 //------------------------------------------------------------------------------------------
 class Line: public TaskGeometry

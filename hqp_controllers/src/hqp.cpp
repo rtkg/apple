@@ -227,8 +227,11 @@ bool HQPSolver::solve(std::map<unsigned int, boost::shared_ptr<HQPStage> > &hqp)
 
             it->second->solved_ = true;
 
-            //model.write("/home/rkg/Desktop/model.lp");
-            //model.write("/home/rkg/Desktop/model.sol");
+//            if(s_count == hqp.size())
+//            {
+//                model.write("/home/rkg/Desktop/model.lp");
+//                model.write("/home/rkg/Desktop/model.sol");
+//            }
             //std::cout<<"SOLVED STAGE: "<<it->first<<std::endl;
             //std::cout<< *it->second<<std::endl;
             //std::cout<<"runtime: "<<runtime<<std::endl;

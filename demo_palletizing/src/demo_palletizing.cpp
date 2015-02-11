@@ -3,6 +3,7 @@
 #include <math.h>
 #include <limits>
 
+#include <hqp_controllers_msgs/TaskGeometry.h>
 #include <hqp_controllers_msgs/RemoveTasks.h>
 #include <hqp_controllers_msgs/RemoveTaskObjects.h>
 #include <hqp_controllers_msgs/ActivateHQPControl.h>
@@ -216,7 +217,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     data.resize(7);
     data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
     data[3] = 0.0; data[4] = 0.0; data[5] = 1.0; //gripper axis should be vertical
-    data[6] = 0.085; //corresponds to an angle of 5 degree
+    data[6] = 0.035; //corresponds to an angle of 2 degree
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["upper_bound_cone"] = t_obj;
@@ -233,6 +234,18 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["coplanar_target_line"] = t_obj;
 
+    //extract plane
+    t_obj.geometries.clear();
+    t_obj.root = grasp_.obj_frame_;
+    t_obj.link = grasp_.obj_frame_;
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    data.resize(4);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
+    data[3] = 0.55;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["extract_bound_plane"] = t_obj;
+
     //placement plane
     t_obj.geometries.clear();
     t_obj.root = "transport_pallet_base";
@@ -240,7 +253,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.25;
+    data[3] = 0.3;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["placement_bound_plane"] = t_obj;
@@ -323,6 +336,73 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["velvet_fingers_joint_1_target"] = t_obj;
 
+    //collision planes
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "world";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    data.resize(4);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
+    data[3] = 0.2;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["collision_planes"] = t_obj;
+
+    //collision spheres
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "lbr_iiwa_link_3";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    data.resize(4);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
+    data[3] = 0.075;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_link_3_sphere"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "lbr_iiwa_link_4";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    data.resize(4);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
+    data[3] = 0.12;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_link_4_sphere"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "lbr_iiwa_link_5";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    data.resize(4);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
+    data[3] = 0.075;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_link_5_sphere"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "lbr_iiwa_link_6";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    data.resize(4);
+    data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
+    data[3] = 0.1;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["lbr_iiwa_link_6_sphere"] = t_obj;
+
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "velvet_fingers_palm";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    data.resize(4);
+    data[0] = 0.04; data[1] = 0.0; data[2] = 0.025;
+    data[3] = 0.11;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["velvet_fingers_palm_sphere"] = t_obj;
 }
 //-----------------------------------------------------------------
 void DemoPalletizing::activateHQPControl()
@@ -392,12 +472,12 @@ bool DemoPalletizing::resetState()
     return true;
 }
 //-----------------------------------------------------------------
-bool DemoPalletizing::visualizeStateTaskObjects()
+bool DemoPalletizing::visualizeStateTaskObjects(std::vector<unsigned int> const& ids)
 {
     //send a visualization message to show the task objects in Rviz
     hqp_controllers_msgs::VisualizeTaskObjects vis_srv;
-    for(unsigned int i=0; i<task_objects_.response.ids.size();i++)
-        vis_srv.request.ids.push_back(task_objects_.response.ids[i]);
+    for(unsigned int i=0; i<ids.size();i++)
+        vis_srv.request.ids.push_back(ids[i]);
 
     visualize_task_objects_clt_.call(vis_srv);
     if(!vis_srv.response.success)
@@ -453,6 +533,24 @@ bool DemoPalletizing::setObjectTransfer()
     t_obj = task_object_templates_["gripper_vertical_axis"];
     task_objects_.request.objs.push_back(t_obj);
 
+    t_obj = task_object_templates_["collision_planes"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_3_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_4_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_5_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_6_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
     //send the filled task object message to the controller
     if(!sendStateTaskObjects())
         return false;
@@ -495,6 +593,63 @@ bool DemoPalletizing::setObjectTransfer()
     task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
     tasks_.request.tasks.push_back(task);
 
+    //fill in the avoidance tasks
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[6]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[7]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[10]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+
     //send the filled task message to the controller
     if(!sendStateTasks())
         return false;
@@ -504,7 +659,166 @@ bool DemoPalletizing::setObjectTransfer()
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
     //visualize the task objects
-    if(!visualizeStateTaskObjects())
+    std::vector<unsigned int> ids;
+    for(unsigned int i=0; i<task_objects_.response.ids.size(); i++)
+        ids.push_back(task_objects_.response.ids[i]);
+
+    if(!visualizeStateTaskObjects(ids))
+        return false;
+
+    return true;
+}
+//-----------------------------------------------------------------
+bool DemoPalletizing::setObjectExtract()
+{
+    //TASK OBJECTS
+    hqp_controllers_msgs::TaskObject t_obj;
+    t_obj = task_object_templates_["ee_point"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["extract_bound_plane"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["outer_bound_cylinder"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["upper_bound_cone"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["gripper_vertical_axis"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["collision_planes"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_3_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_4_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_5_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_6_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+
+    //send the filled task object message to the controller
+    if(!sendStateTaskObjects())
+        return false;
+
+    //TASKS
+    hqp_controllers_msgs::Task task;
+    //bring endeffector on the extract plane
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_PLANE;
+    task.priority = 2;
+    task.sign = "=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[1]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //keep endeffector point inside the second cylinder
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_CYLINDER;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[2]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //keep vertical axis of the gripper inside the vertical cone
+    task.type = hqp_controllers_msgs::Task::ANGLE_LINES;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[3]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[4]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //fill in the avoidance tasks
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[6]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[7]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[10]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //send the filled task message to the controller
+    if(!sendStateTasks())
+        return false;
+
+    //monitor all tasks
+    for(unsigned int i=0; i<tasks_.response.ids.size();i++)
+        monitored_tasks_.push_back(tasks_.response.ids[i]);
+
+    //visualize the task objects
+    std::vector<unsigned int> ids;
+    for(unsigned int i=0; i<task_objects_.response.ids.size(); i++)
+        ids.push_back(task_objects_.response.ids[i]);
+
+    if(!visualizeStateTaskObjects(ids))
         return false;
 
     return true;
@@ -541,6 +855,24 @@ bool DemoPalletizing::setGraspApproach()
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["gripper_approach_axis"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["collision_planes"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_3_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_4_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_5_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_6_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
     task_objects_.request.objs.push_back(t_obj);
 
     //send the filled task object message to the controller
@@ -631,6 +963,62 @@ bool DemoPalletizing::setGraspApproach()
     task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
     tasks_.request.tasks.push_back(task);
 
+    //fill in the avoidance tasks
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[10]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[11]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[12]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[13]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[14]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
     //send the filled task message to the controller
     if(!sendStateTasks())
         return false;
@@ -639,8 +1027,12 @@ bool DemoPalletizing::setGraspApproach()
     for(unsigned int i=0; i<tasks_.response.ids.size();i++)
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
-    //visualize the task objects
-    if(!visualizeStateTaskObjects())
+    //visualize all task objects
+    std::vector<unsigned int> ids;
+    for (unsigned int i=0; i<task_objects_.response.ids.size(); i++)
+        ids.push_back(task_objects_.response.ids[i]);
+
+    if(!visualizeStateTaskObjects(ids))
         return false;
 
     return true;
@@ -684,22 +1076,99 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_obj.geometries[0].data[0] = joints[7];
     task_objects_.request.objs.push_back(t_obj);
 
+    t_obj = task_object_templates_["collision_planes"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_3_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_4_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_5_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_6_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
     //send the filled task object message to the controller
     if(!sendStateTaskObjects())
         return false;
 
-    //fill in the tasks_
+    hqp_controllers_msgs::Task task;
+    //fill in the joint setpoint tasks
     for(unsigned int i=0; i<joints.size(); i++)
     {
-        hqp_controllers_msgs::Task task;
         task.type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
         task.priority = 2;
         task.sign = "=";
+        task.t_obj_ids.clear();
         task.t_obj_ids.push_back(task_objects_.response.ids[i]);
+        task.dynamics.data.clear();
         task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
         task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
         tasks_.request.tasks.push_back(task);
     }
+
+    //fill in the avoidance tasks
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[10]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[11]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[12]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[13]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
     //send the filled task message to the controller
     if(!sendStateTasks())
         return false;
@@ -708,18 +1177,20 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     for(unsigned int i=0; i<joints.size(); i++)
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
-    //could start visualization here, but its messed up for the joints anyway ...
+    //could start joint target visualization here, but its messed up for the joints anyway ...
+    //visualize the collision objects
+    std::vector<unsigned int> ids;
+    ids.push_back(task_objects_.response.ids[8]);
+    ids.push_back(task_objects_.response.ids[9]);
+    ids.push_back(task_objects_.response.ids[10]);
+    ids.push_back(task_objects_.response.ids[11]);
+    ids.push_back(task_objects_.response.ids[12]);
+    ids.push_back(task_objects_.response.ids[13]);
+    if(!visualizeStateTaskObjects(ids))
+        return false;
 
     return true;
 }
-//-----------------------------------------------------------------
-//double DemoPalletizing::maximumNorm(std::vector<double>const& e)
-//{
-//    double e_max=0.0;
-//    for(unsigned int i=0; i<e.size();i++)
-//        if(fabs(e[i]) > e_max)
-//            e_max = fabs(e[i]);
-//}
 //-----------------------------------------------------------------
 void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr& msg)
 {
@@ -781,6 +1252,7 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr
 //-----------------------------------------------------------------
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
+
     {//MANIPULATOR HOME CONFIGURATION
         ROS_INFO("Trying to home the manipulator.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -913,6 +1385,39 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
 
+//    {//OBJECT EXTRACT
+//        ROS_INFO("Trying object extract.");
+//        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+//        task_status_changed_ = false;
+//        task_success_ = false;
+//        deactivateHQPControl();
+//        if(!resetState())
+//        {
+//            ROS_ERROR("Could not reset the state!");
+//            safeShutdown();
+//            return false;
+//        }
+//        if(!setObjectExtract())
+//        {
+//            ROS_ERROR("Could not set the object extract!");
+//            safeShutdown();
+//            return false;
+//        }
+
+//        activateHQPControl();
+
+//        while(!task_status_changed_)
+//            cond_.wait(lock);
+
+//        if(!task_success_)
+//        {
+//            ROS_ERROR("Could not complete the object extract tasks!");
+//            safeShutdown();
+//            return false;
+//        }
+//        ROS_INFO("Object extract tasks executed successfully.");
+//    }
+
     {//OBJECT TRANSFER
         ROS_INFO("Trying object transfer.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -947,6 +1452,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     }
 
     deactivateHQPControl();
+    ROS_INFO("DEMO FINISHED.");
     return true;
 }
 //--------------------------------------------------------------------------
