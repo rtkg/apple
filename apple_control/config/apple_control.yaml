@@ -6,6 +6,7 @@
   # Group Velocity Controllers ---------------------------------------
   apple_group_forward_vel_controller:
     type: velocity_controllers/JointGroupVelocityController
+#    type: velocity_controllers/JointVelocityController
     joints:
       - lbr_iiwa_joint_1
       - lbr_iiwa_joint_2

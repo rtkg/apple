@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- these arguments you can pass this launch file-->
+  <!--arg name="hardware_interface" default="VelocityJointInterface"/>
+  <arg name="controllers" default="joint_state_controller
+				   lbr_iiwa_joint_1_forward_vel_controller
+				   lbr_iiwa_joint_2_forward_vel_controller
+				   lbr_iiwa_joint_3_forward_vel_controller
+				   lbr_iiwa_joint_4_forward_vel_controller
+				   lbr_iiwa_joint_5_forward_vel_controller
+				   lbr_iiwa_joint_6_forward_vel_controller
+				   lbr_iiwa_joint_7_forward_vel_controller"/-->
+ <!--load predifined task descriptions (joint limit avoidance, self-collision avoidance ...) definitions for the HQP controller -->
+
+  <rosparam file="$(find apple_launch)/hqp_tasks/joint_limits.yaml" command="load" ns="/apple"/>
+  <include file="$(find lbr_fri)/launch/fri_launch.launch" />
+  <include file="$(find apple_control)/launch/apple_control.launch">
+    <arg name="hardware_interface" value="VelocityJointInterface" />
+    <arg name="controllers" value="joint_state_controller
+                                  apple_hqp_vel_controller" /> 
+  </include>
+  
+
+</launch>
