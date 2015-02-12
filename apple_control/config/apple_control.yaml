@@ -28,7 +28,7 @@
       - lbr_iiwa_joint_5
       - lbr_iiwa_joint_6
       - lbr_iiwa_joint_7
-      - velvet_fingers_joint_1
+#      - velvet_fingers_joint_1
 
 
 

@@ -131,6 +131,7 @@ void TaskObject::computeKinematics()
 {
     //read the chain joint positions from the controlled joints
     unsigned int n_jnts = joint_map_->rows();
+
     KDL::JntArray q(n_jnts);
     for(unsigned int i=0; i<n_jnts; i++)
         q.data(i) = joints_->at((*joint_map_)(i)).getPosition();
