@@ -90,25 +90,33 @@ DemoPalletizing::DemoPalletizing()
 
     home_config_ = std::vector<double>(n_jnts, 0.1); //7 arm joint + 1 velvet fingers gripper joint
     transfer_config_ = std::vector<double>(n_jnts);
-    transfer_config_[0] = 1.58;
-    transfer_config_[1] = 1.9;
-    transfer_config_[2] = -1.54;
-    transfer_config_[3] = 1.9;
-    transfer_config_[4] = 0.35;
-    transfer_config_[5] = 1.8;
+    transfer_config_[0] = 0;
+    transfer_config_[1] = -1.57;
+    transfer_config_[2] = 2.42;
+    transfer_config_[3] = -1.0;
+    transfer_config_[4] = 0;
+    transfer_config_[5] = 0.52;
     transfer_config_[6] = 0.0;
 #ifdef HQP_GRIPPER_JOINT
     transfer_config_[7] = 0.1;
 #endif
 
     sensing_config_ = std::vector<double>(n_jnts);
-    sensing_config_[0] = 1.8;
-    sensing_config_[1] = -1.63;
-    sensing_config_[2] = -0.3;
-    sensing_config_[3] = -1.33;
-    sensing_config_[4] = -0.36;
-    sensing_config_[5] = 0.93;
-    sensing_config_[6] = -1.60;
+    // sensing_config_[0] = 1.48;
+    // sensing_config_[1] = -1.2;
+    // sensing_config_[2] = 0.19;
+    // sensing_config_[3] = -1.92;
+    // sensing_config_[4] = -1.45;
+    // sensing_config_[5] = 0.79;
+    // sensing_config_[6] = 0;
+
+    sensing_config_[0] = 1.27;
+    sensing_config_[1] = -1.9;
+    sensing_config_[2] = -0.52;
+    sensing_config_[3] = -1.9;
+    sensing_config_[4] = -0.46;
+    sensing_config_[5] = 0.79;
+    sensing_config_[6] = -1.48;
 #ifdef HQP_GRIPPER_JOINT
     sensing_config_[7] = 0.1;
 #endif
@@ -540,6 +548,7 @@ bool DemoPalletizing::setObjectTransfer()
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["upper_bound_cone"];
+    t_obj.geometries[0].data[6] = 1e-3; //reduce the tilting angle of the vertical axis
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["gripper_vertical_axis"];
@@ -1271,38 +1280,38 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
 
-    {//MANIPULATOR HOME CONFIGURATION
-        ROS_INFO("Trying to home the manipulator.");
-        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-        task_status_changed_ = false;
-        task_success_ = false;
-        deactivateHQPControl(); //better safe than sorry ...
-        if(!resetState())
-        {
-            ROS_ERROR("Could not reset the state!");
-            safeShutdown();
-            return false;
-        }
-        if(!setJointConfiguration(home_config_))
-        {
-            ROS_ERROR("Could not set manipulator home state!");
-            safeShutdown();
-            return false;
-        }
+    // {//MANIPULATOR HOME CONFIGURATION
+    //     ROS_INFO("Trying to home the manipulator.");
+    //     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+    //     task_status_changed_ = false;
+    //     task_success_ = false;
+    //     deactivateHQPControl(); //better safe than sorry ...
+    //     if(!resetState())
+    //     {
+    //         ROS_ERROR("Could not reset the state!");
+    //         safeShutdown();
+    //         return false;
+    //     }
+    //     if(!setJointConfiguration(home_config_))
+    //     {
+    //         ROS_ERROR("Could not set manipulator home state!");
+    //         safeShutdown();
+    //         return false;
+    //     }
 
-        activateHQPControl();
+    //     activateHQPControl();
 
-        while(!task_status_changed_)
-            cond_.wait(lock);
+    //     while(!task_status_changed_)
+    //         cond_.wait(lock);
 
-        if(!task_success_)
-        {
-            ROS_ERROR("Could not complete the manipulator home state tasks!");
-            safeShutdown();
-            return false;
-        }
-        ROS_INFO("Manipulator home state tasks executed successfully.");
-    }
+    //     if(!task_success_)
+    //     {
+    //         ROS_ERROR("Could not complete the manipulator home state tasks!");
+    //         safeShutdown();
+    //         return false;
+    //     }
+    //     ROS_INFO("Manipulator home state tasks executed successfully.");
+    // }
 
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
@@ -1403,38 +1412,38 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
 
-    //    {//OBJECT EXTRACT
-    //        ROS_INFO("Trying object extract.");
-    //        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-    //        task_status_changed_ = false;
-    //        task_success_ = false;
-    //        deactivateHQPControl();
-    //        if(!resetState())
-    //        {
-    //            ROS_ERROR("Could not reset the state!");
-    //            safeShutdown();
-    //            return false;
-    //        }
-    //        if(!setObjectExtract())
-    //        {
-    //            ROS_ERROR("Could not set the object extract!");
-    //            safeShutdown();
-    //            return false;
-    //        }
+       // {//OBJECT EXTRACT
+       //     ROS_INFO("Trying object extract.");
+       //     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+       //     task_status_changed_ = false;
+       //     task_success_ = false;
+       //     deactivateHQPControl();
+       //     if(!resetState())
+       //     {
+       //         ROS_ERROR("Could not reset the state!");
+       //         safeShutdown();
+       //         return false;
+       //     }
+       //     if(!setObjectExtract())
+       //     {
+       //         ROS_ERROR("Could not set the object extract!");
+       //         safeShutdown();
+       //         return false;
+       //     }
 
-    //        activateHQPControl();
+       //     activateHQPControl();
 
-    //        while(!task_status_changed_)
-    //            cond_.wait(lock);
+       //     while(!task_status_changed_)
+       //         cond_.wait(lock);
 
-    //        if(!task_success_)
-    //        {
-    //            ROS_ERROR("Could not complete the object extract tasks!");
-    //            safeShutdown();
-    //            return false;
-    //        }
-    //        ROS_INFO("Object extract tasks executed successfully.");
-    //    }
+       //     if(!task_success_)
+       //     {
+       //         ROS_ERROR("Could not complete the object extract tasks!");
+       //         safeShutdown();
+       //         return false;
+       //     }
+       //     ROS_INFO("Object extract tasks executed successfully.");
+       // }
 
     {//OBJECT TRANSFER
         ROS_INFO("Trying object transfer.");
@@ -1467,6 +1476,39 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             return false;
         }
         ROS_INFO("Object transfer tasks executed successfully.");
+    }
+
+    {//MANIPULATOR TRANSFER CONFIGURATION
+        ROS_INFO("Trying to put the manipulator in transfer configuration.");
+        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+        task_status_changed_ = false;
+        task_success_ = false;
+        deactivateHQPControl();
+        if(!resetState())
+        {
+            ROS_ERROR("Could not reset the state!");
+            safeShutdown();
+            return false;
+        }
+        if(!setJointConfiguration(transfer_config_))
+        {
+            ROS_ERROR("Could not set manipulator transfer state!");
+            safeShutdown();
+            return false;
+        }
+
+        activateHQPControl();
+
+        while(!task_status_changed_)
+            cond_.wait(lock);
+
+        if(!task_success_)
+        {
+            ROS_ERROR("Could not complete the manipulator transfer state tasks!");
+            safeShutdown();
+            return false;
+        }
+        ROS_INFO("Manipulator transfer state tasks executed successfully.");
     }
 
     deactivateHQPControl();
