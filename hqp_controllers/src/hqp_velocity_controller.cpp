@@ -125,6 +125,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
     //============================================== REGISTER CALLBACKS =========================================
     activate_hqp_control_srv_ = n.advertiseService("activate_hqp_control",&HQPVelocityController::activateHQPControl,this);
+    reset_hqp_control_srv_ = n.advertiseService("reset_hqp_control",&HQPVelocityController::resetHQPControl,this);
     set_task_srv_ = n.advertiseService("set_tasks",&HQPVelocityController::setTasks,this);
     set_task_obj_srv_ = n.advertiseService("set_task_objects",&HQPVelocityController::setTaskObjects,this);
     remove_task_srv_= n.advertiseService("remove_tasks",&HQPVelocityController::removeTasks,this);
@@ -260,6 +261,14 @@ void HQPVelocityController::starting(const ros::Time& time)
 bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res)
 {
     lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot set tasks!");
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
+
     for(unsigned int i = 0; i<req.tasks.size(); i++)
     {
         hqp_controllers_msgs::Task task = req.tasks[i];
@@ -303,6 +312,14 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
 bool HQPVelocityController::setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res)
 {
     lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot set task objects!");
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
+
     for(unsigned int i=0; i<req.objs.size();i++)
     {
         std::string root = req.objs[i].root;
@@ -345,6 +362,14 @@ bool HQPVelocityController::setTaskObjects(hqp_controllers_msgs::SetTaskObjects:
 bool HQPVelocityController::removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res)
 {
     lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot remove tasks!");
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
+
     for(unsigned int i=0; i<req.ids.size(); i++)
         if(!task_manager_.removeTask(req.ids[i]))
         {
@@ -360,6 +385,14 @@ bool HQPVelocityController::removeTasks(hqp_controllers_msgs::RemoveTasks::Reque
 bool HQPVelocityController::removeTaskObjects(hqp_controllers_msgs::RemoveTaskObjects::Request & req, hqp_controllers_msgs::RemoveTaskObjects::Response &res)
 {
     lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot remove task objects!");
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
+
     for(unsigned int i=0; i<req.ids.size(); i++)
         if(!task_manager_.removeTaskObject(req.ids[i]))
         {
@@ -396,6 +429,24 @@ bool HQPVelocityController::visualizeTaskObjects(hqp_controllers_msgs::Visualize
     return res.success;
 }
 //-----------------------------------------------------------------------
+bool HQPVelocityController::resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res)
+{
+    lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot reset!");
+        lock_.unlock();
+        return false;
+    }
+
+    vis_ids_.resize(0);
+    task_manager_.reset();
+    lock_.unlock();
+
+    ROS_INFO("Reset HQP control.");
+    return true;
+}
+//-----------------------------------------------------------------------
 bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQPControl::Request & req, hqp_controllers_msgs::ActivateHQPControl::Response &res)
 {
     lock_.lock();
@@ -412,10 +463,11 @@ bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQP
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
 {
-    task_manager_.computeTaskObjectsKinematics(); //compute jacobians and poses of the task objects
-
     if(active_)
     {
+        //compute jacobians and poses of the task objects
+        task_manager_.computeTaskObjectsKinematics();
+
         //compute the HQP controls
         task_manager_.computeHQP();
         //set the computed task velocities if the computation was succesful, otherwise set them to zero

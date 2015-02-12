@@ -23,6 +23,7 @@ public:
     bool addTaskObject(boost::shared_ptr<TaskObject> t_obj);
     bool addTask(boost::shared_ptr<Task> task);
 
+    void reset();
     bool removeTask(unsigned int id);
     bool removeTaskObject(unsigned int id);
     void computeTaskObjectsKinematics();
