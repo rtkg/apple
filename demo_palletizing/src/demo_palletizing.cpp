@@ -363,7 +363,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.2;
+    data[3] = 0.16;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["collision_planes"] = t_obj;
@@ -1070,6 +1070,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     //fill in the task_objects_
     hqp_controllers_msgs::TaskObject t_obj;
     t_obj = task_object_templates_["collision_planes"];
+    t_obj.geometries[0].data[3] = 0.3;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_link_3_sphere"];
