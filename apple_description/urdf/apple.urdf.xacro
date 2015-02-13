@@ -19,17 +19,17 @@
 
   <!-- citi truck-->
   <xacro:citi_truck name="citi_truck" parent="world">
-    <origin xyz="0 0 0.15" rpy="0 0 0" />
+    <origin xyz="0 0 0.09" rpy="0 0 0" />
   </xacro:citi_truck> 
 
   <!-- half pallet on the citi truck-->
   <xacro:half_pallet name="transport_pallet" parent="citi_truck_base">
-    <origin xyz="0.6 0 -0.109" rpy="0 0 0" />
+    <origin xyz="0.6 0 -0.0899" rpy="0 0 0" />
   </xacro:half_pallet> 
 
   <!-- half pallet for loading -->
   <xacro:half_pallet name="load_pallet" parent="world">
-    <origin xyz="0.8 -0.84 0.001" rpy="0 0 0" />
+    <origin xyz="1.1 -0.9 0.001" rpy="0 0 0" />
   </xacro:half_pallet> 
 
   <!--lbr -->

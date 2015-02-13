@@ -14,6 +14,7 @@
 #include <boost/thread/mutex.hpp>
 #include <realtime_tools/realtime_publisher.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <std_srvs/Empty.h>
 #include <hqp_controllers/task_manager.h>
 #include <hqp_controllers_msgs/SetTasks.h>
 #include <hqp_controllers_msgs/SetTaskObjects.h>
@@ -56,6 +57,7 @@ private:
     ros::ServiceServer set_task_obj_srv_;
     ros::ServiceServer remove_task_obj_srv_;
     ros::ServiceServer activate_hqp_control_srv_;
+    ros::ServiceServer reset_hqp_control_srv_;
     ros::ServiceServer vis_t_obj_srv_;
     TaskManager task_manager_;
     boost::mutex lock_;
@@ -76,6 +78,7 @@ private:
 
 
     bool activateHQPControl(hqp_controllers_msgs::ActivateHQPControl::Request & req, hqp_controllers_msgs::ActivateHQPControl::Response &res);
+    bool resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res);
     bool setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res);
     bool removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res);
     bool setTaskObjects(hqp_controllers_msgs::SetTaskObjects::Request & req, hqp_controllers_msgs::SetTaskObjects::Response &res);

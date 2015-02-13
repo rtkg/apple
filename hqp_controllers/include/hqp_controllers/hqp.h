@@ -13,7 +13,7 @@ namespace hqp_controllers {
 #define PRESOLVE         -1
 #define OPTIMALITY_TOL   1e-6
 #define SCALE_FLAG       1
-#define TIME_LIMIT       1e-3
+#define TIME_LIMIT       0.02
 #define OUTPUT_FLAG      0
 #define DUAL_REDUCTIONS  1
 //--------------------------------------------------------------
