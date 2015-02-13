@@ -29,6 +29,7 @@ add_service_files(
   ActivateHQPControl.srv
   RemoveTasks.srv
   RemoveTaskObjects.srv
+  FindCanTask.srv
   )
 
 
