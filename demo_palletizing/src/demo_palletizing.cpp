@@ -12,7 +12,7 @@
 namespace demo_palletizing
 {
 //-----------------------------------------------------------------
-DemoPalletizing::DemoPalletizing()
+DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
 {
 
     //handle to home
@@ -282,7 +282,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_obj.link = "transport_pallet_base";
     t_geom.type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
     data.resize(7);
-    data[0] = 0.0; data[1] = -0.15; data[2] = 0.13;
+    data[0] = 0.1; /*0.15*/ data[1] = -0.15; /*-0.2*/ data[2] = 0.13;
     data[3] = 0.0; data[4] = 0.0; data[5] = 1.0;
     data[6] = 0.05;
     t_geom.data = data;
@@ -572,6 +572,34 @@ bool DemoPalletizing::setObjectTransfer()
     t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
     task_objects_.request.objs.push_back(t_obj);
 
+    t_obj = task_object_templates_["lbr_iiwa_joint_1_target"];
+    t_obj.geometries[0].data[0] = 0.38;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_2_target"];
+    t_obj.geometries[0].data[0] = 0.56;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_3_target"];
+    t_obj.geometries[0].data[0] = 0.98;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_4_target"];
+    t_obj.geometries[0].data[0] = -1.37;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_5_target"];
+    t_obj.geometries[0].data[0] = -0.34;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_6_target"];
+    t_obj.geometries[0].data[0] = 0.95;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_7_target"];
+    t_obj.geometries[0].data[0] = -1.89;
+    task_objects_.request.objs.push_back(t_obj);
+
     //send the filled task object message to the controller
     if(!sendStateTaskObjects())
         return false;
@@ -670,18 +698,32 @@ bool DemoPalletizing::setObjectTransfer()
     task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
     tasks_.request.tasks.push_back(task);
 
+    //fill in the joint setpoint tasks
+    for(unsigned int i=11; i<18; i++)
+    {
+        task.type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
+        task.priority = 3;
+        task.sign = "=";
+        task.t_obj_ids.clear();
+        task.t_obj_ids.push_back(task_objects_.response.ids[i]);
+        std::cout<<"using object nr: "<<i<<std::endl;
+        task.dynamics.data.clear();
+        task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+        task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+        tasks_.request.tasks.push_back(task);
+    }
 
     //send the filled task message to the controller
     if(!sendStateTasks())
         return false;
 
-    //monitor all tasks
-    for(unsigned int i=0; i<tasks_.response.ids.size();i++)
+    //don't monitor the joint position reference tasks
+    for(unsigned int i=0; i<8; i++)
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
     //visualize the task objects
     std::vector<unsigned int> ids;
-    for(unsigned int i=0; i<task_objects_.response.ids.size(); i++)
+    for(unsigned int i=0; i<11; i++)
         ids.push_back(task_objects_.response.ids[i]);
 
     if(!visualizeStateTaskObjects(ids))
@@ -747,6 +789,166 @@ bool DemoPalletizing::setObjectExtract()
     tasks_.request.tasks.push_back(task);
 
     //keep endeffector point inside the second cylinder
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_CYLINDER;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[2]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //keep vertical axis of the gripper inside the vertical cone
+    task.type = hqp_controllers_msgs::Task::ANGLE_LINES;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[3]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[4]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //fill in the avoidance tasks
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[6]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[7]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[10]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //send the filled task message to the controller
+    if(!sendStateTasks())
+        return false;
+
+    //monitor all tasks
+    for(unsigned int i=0; i<tasks_.response.ids.size();i++)
+        monitored_tasks_.push_back(tasks_.response.ids[i]);
+
+    //visualize the task objects
+    std::vector<unsigned int> ids;
+    for(unsigned int i=0; i<task_objects_.response.ids.size(); i++)
+        ids.push_back(task_objects_.response.ids[i]);
+
+    if(!visualizeStateTaskObjects(ids))
+        return false;
+
+    return true;
+}
+//---------------------------------------------------------------------
+bool DemoPalletizing::setGripperExtract()
+{
+    //TASK OBJECTS
+    hqp_controllers_msgs::TaskObject t_obj;
+    t_obj = task_object_templates_["ee_point"];
+    t_obj.link = "velvet_fingers_palm";
+    t_obj.root = "transport_pallet_base";
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["extract_bound_plane"];
+    t_obj.link = "transport_pallet_base";
+    t_obj.root = "transport_pallet_base";
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["placement_bound_cylinder"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["upper_bound_cone"];
+    t_obj.geometries[0].data[6] = 1e-3; //reduce the tilting angle of the vertical axis
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["gripper_vertical_axis"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["collision_planes"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_3_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_4_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_5_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_6_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+
+    //send the filled task object message to the controller
+    if(!sendStateTaskObjects())
+        return false;
+
+    //TASKS
+    hqp_controllers_msgs::Task task;
+    //bring endeffector on the extract plane
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_PLANE;
+    task.priority = 2;
+    task.sign = "=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[1]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //keep endeffector point inside the placement cylinder
     task.type = hqp_controllers_msgs::Task::PROJECT_POINT_CYLINDER;
     task.priority = 2;
     task.sign = "<=";
@@ -1224,8 +1426,11 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr
 {
     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
 
-    //    if(monitored_tasks_.empty())
-    //        return;
+    //    std::cout<<"monitor tasks: ";
+    //      for(unsigned int i=0; i<monitored_tasks_.size(); i++)
+    //          std::cout<<monitored_tasks_[i]<<" ";
+
+    //      std::cout<<std::endl;
 
     //form the maximum norm over all errors
     double e = 0.0;
@@ -1252,7 +1457,7 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr
 
     }
 
-    if(e < TASK_ERROR_TOL)
+    if(e <= task_error_tol_)
     {
         std::cout<<std::endl<<"STATE CHANGE:"<<std::endl<<"monitored tasks: ";
         for(unsigned int i=0; i<monitored_tasks_.size(); i++)
@@ -1281,38 +1486,38 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
 
-    // {//MANIPULATOR HOME CONFIGURATION
-    //     ROS_INFO("Trying to home the manipulator.");
-    //     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-    //     task_status_changed_ = false;
-    //     task_success_ = false;
-    //     deactivateHQPControl(); //better safe than sorry ...
-    //     if(!resetState())
-    //     {
-    //         ROS_ERROR("Could not reset the state!");
-    //         safeShutdown();
-    //         return false;
-    //     }
-    //     if(!setJointConfiguration(home_config_))
-    //     {
-    //         ROS_ERROR("Could not set manipulator home state!");
-    //         safeShutdown();
-    //         return false;
-    //     }
+    //         {//MANIPULATOR HOME CONFIGURATION
+    //             ROS_INFO("Trying to home the manipulator.");
+    //             boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+    //             task_status_changed_ = false;
+    //             task_success_ = false;
+    //             deactivateHQPControl(); //better safe than sorry ...
+    //             if(!resetState())
+    //             {
+    //                 ROS_ERROR("Could not reset the state!");
+    //                 safeShutdown();
+    //                 return false;
+    //             }
+    //             if(!setJointConfiguration(home_config_))
+    //             {
+    //                 ROS_ERROR("Could not set manipulator home state!");
+    //                 safeShutdown();
+    //                 return false;
+    //             }
+    //             task_error_tol_ = 1e-2;
+    //             activateHQPControl();
 
-    //     activateHQPControl();
+    //             while(!task_status_changed_)
+    //                 cond_.wait(lock);
 
-    //     while(!task_status_changed_)
-    //         cond_.wait(lock);
-
-    //     if(!task_success_)
-    //     {
-    //         ROS_ERROR("Could not complete the manipulator home state tasks!");
-    //         safeShutdown();
-    //         return false;
-    //     }
-    //     ROS_INFO("Manipulator home state tasks executed successfully.");
-    // }
+    //             if(!task_success_)
+    //             {
+    //                 ROS_ERROR("Could not complete the manipulator home state tasks!");
+    //                 safeShutdown();
+    //                 return false;
+    //             }
+    //             ROS_INFO("Manipulator home state tasks executed successfully.");
+    //         }
 
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
@@ -1332,7 +1537,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-
+        task_error_tol_ = 1e-2;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1365,7 +1570,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-
+        task_error_tol_ = 1e-2;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1398,7 +1603,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-
+        task_error_tol_ = 5*1e-3;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1413,38 +1618,38 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
 
-       // {//OBJECT EXTRACT
-       //     ROS_INFO("Trying object extract.");
-       //     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-       //     task_status_changed_ = false;
-       //     task_success_ = false;
-       //     deactivateHQPControl();
-       //     if(!resetState())
-       //     {
-       //         ROS_ERROR("Could not reset the state!");
-       //         safeShutdown();
-       //         return false;
-       //     }
-       //     if(!setObjectExtract())
-       //     {
-       //         ROS_ERROR("Could not set the object extract!");
-       //         safeShutdown();
-       //         return false;
-       //     }
+    {//OBJECT EXTRACT
+        ROS_INFO("Trying object extract.");
+        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+        task_status_changed_ = false;
+        task_success_ = false;
+        deactivateHQPControl();
+        if(!resetState())
+        {
+            ROS_ERROR("Could not reset the state!");
+            safeShutdown();
+            return false;
+        }
+        if(!setObjectExtract())
+        {
+            ROS_ERROR("Could not set the object extract!");
+            safeShutdown();
+            return false;
+        }
+        task_error_tol_ = 1e-2;
+        activateHQPControl();
 
-       //     activateHQPControl();
+        while(!task_status_changed_)
+            cond_.wait(lock);
 
-       //     while(!task_status_changed_)
-       //         cond_.wait(lock);
-
-       //     if(!task_success_)
-       //     {
-       //         ROS_ERROR("Could not complete the object extract tasks!");
-       //         safeShutdown();
-       //         return false;
-       //     }
-       //     ROS_INFO("Object extract tasks executed successfully.");
-       // }
+        if(!task_success_)
+        {
+            ROS_ERROR("Could not complete the object extract tasks!");
+            safeShutdown();
+            return false;
+        }
+        ROS_INFO("Object extract tasks executed successfully.");
+    }
 
     {//OBJECT TRANSFER
         ROS_INFO("Trying object transfer.");
@@ -1464,7 +1669,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-
+        task_error_tol_ = 1e-3;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1477,6 +1682,40 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             return false;
         }
         ROS_INFO("Object transfer tasks executed successfully.");
+    }
+
+    {//GRIPPER EXTRACT
+        ROS_INFO("Trying gripper extract.");
+        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+        task_status_changed_ = false;
+        task_success_ = false;
+        deactivateHQPControl();
+        if(!resetState())
+        {
+            ROS_ERROR("Could not reset the state!");
+            safeShutdown();
+            return false;
+        }
+
+        if(!setGripperExtract())
+        {
+            ROS_ERROR("Could not set the gripper extract!");
+            safeShutdown();
+            return false;
+        }
+        task_error_tol_ = 1e-2;
+        activateHQPControl();
+
+        while(!task_status_changed_)
+            cond_.wait(lock);
+
+        if(!task_success_)
+        {
+            ROS_ERROR("Could not complete the gripper extract tasks!");
+            safeShutdown();
+            return false;
+        }
+        ROS_INFO("Gripper extract tasks executed successfully.");
     }
 
     {//MANIPULATOR TRANSFER CONFIGURATION
@@ -1497,7 +1736,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-
+        task_error_tol_ = 1e-2;
         activateHQPControl();
 
         while(!task_status_changed_)

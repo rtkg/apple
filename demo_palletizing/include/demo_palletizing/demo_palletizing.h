@@ -17,7 +17,6 @@ namespace demo_palletizing
 //-----------------------------------------------------------
 //#define HQP_GRIPPER_JOINT 1
 
-#define TASK_ERROR_TOL        5*1e-3
 #define TASK_DYNAMICS_GAIN    -0.6
 //-----------------------------------------------------------
 ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
@@ -48,7 +47,7 @@ private:
     ros::NodeHandle n_;
     boost::mutex manipulator_tasks_m_;
     boost::condition_variable cond_;
-
+    double task_error_tol_;
     bool task_status_changed_;
     bool task_success_;
 
@@ -100,6 +99,7 @@ private:
     bool setGraspApproach();
     bool setObjectExtract();
     bool setObjectTransfer();
+    bool setGripperExtract();
     //double maximumNorm(std::vector<double>const& e);
 
     void generateTaskObjectTemplates();
