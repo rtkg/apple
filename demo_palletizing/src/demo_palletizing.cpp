@@ -127,7 +127,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     grasp_.e_.setZero();                     //endeffector point expressed in the endeffector frame
     grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 1.0; //cylinder normal
     grasp_.p_(0) = 0.0; grasp_.p_(1) = 0.0; grasp_.p_(2) = 0.13; //reference point on the cylinder axis
-    grasp_.r1_ = 0.2; grasp_.r2_ = 0.3;              //cylinder radii
+    grasp_.r1_ = 0.1; grasp_.r2_ = 0.2;              //cylinder radii
     grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_;  //plane normals
     grasp_.d1_ = 0.25; grasp_.d2_= 0.35;              //plane offsets
 
@@ -573,31 +573,31 @@ bool DemoPalletizing::setObjectTransfer()
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_joint_1_target"];
-    t_obj.geometries[0].data[0] = 0.38;
+    t_obj.geometries[0].data[0] = 0.57;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_joint_2_target"];
-    t_obj.geometries[0].data[0] = 0.56;
+    t_obj.geometries[0].data[0] = 0.54;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_joint_3_target"];
-    t_obj.geometries[0].data[0] = 0.98;
+    t_obj.geometries[0].data[0] = 0.64;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_joint_4_target"];
-    t_obj.geometries[0].data[0] = -1.37;
+    t_obj.geometries[0].data[0] = -1.56;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_joint_5_target"];
-    t_obj.geometries[0].data[0] = -0.34;
+    t_obj.geometries[0].data[0] = -0.26;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_joint_6_target"];
-    t_obj.geometries[0].data[0] = 0.95;
+    t_obj.geometries[0].data[0] = 0.99;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["lbr_iiwa_joint_7_target"];
-    t_obj.geometries[0].data[0] = -1.89;
+    t_obj.geometries[0].data[0] = -1.91;
     task_objects_.request.objs.push_back(t_obj);
 
     //send the filled task object message to the controller
@@ -723,7 +723,7 @@ bool DemoPalletizing::setObjectTransfer()
 
     //visualize the task objects
     std::vector<unsigned int> ids;
-    for(unsigned int i=0; i<11; i++)
+    for(unsigned int i=1; i<5; i++)
         ids.push_back(task_objects_.response.ids[i]);
 
     if(!visualizeStateTaskObjects(ids))
@@ -878,7 +878,7 @@ bool DemoPalletizing::setObjectExtract()
 
     //visualize the task objects
     std::vector<unsigned int> ids;
-    for(unsigned int i=0; i<task_objects_.response.ids.size(); i++)
+    for(unsigned int i=1; i<5; i++)
         ids.push_back(task_objects_.response.ids[i]);
 
     if(!visualizeStateTaskObjects(ids))
@@ -1250,9 +1250,9 @@ bool DemoPalletizing::setGraspApproach()
     for(unsigned int i=0; i<tasks_.response.ids.size();i++)
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
-    //visualize all task objects
+    //visualize task objects
     std::vector<unsigned int> ids;
-    for (unsigned int i=0; i<task_objects_.response.ids.size(); i++)
+    for (unsigned int i=2; i<9; i++)
         ids.push_back(task_objects_.response.ids[i]);
 
     if(!visualizeStateTaskObjects(ids))
@@ -1409,15 +1409,15 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
 
     //could start joint target visualization here, but its messed up for the joints anyway ...
     //visualize the collision objects
-    std::vector<unsigned int> ids;
-    ids.push_back(task_objects_.response.ids[0]);
-    ids.push_back(task_objects_.response.ids[1]);
-    ids.push_back(task_objects_.response.ids[2]);
-    ids.push_back(task_objects_.response.ids[3]);
-    ids.push_back(task_objects_.response.ids[4]);
-    ids.push_back(task_objects_.response.ids[5]);
-    if(!visualizeStateTaskObjects(ids))
-        return false;
+//    std::vector<unsigned int> ids;
+//    ids.push_back(task_objects_.response.ids[0]);
+//    ids.push_back(task_objects_.response.ids[1]);
+//    ids.push_back(task_objects_.response.ids[2]);
+//    ids.push_back(task_objects_.response.ids[3]);
+//    ids.push_back(task_objects_.response.ids[4]);
+//    ids.push_back(task_objects_.response.ids[5]);
+//    if(!visualizeStateTaskObjects(ids))
+//        return false;
 
     return true;
 }
@@ -1519,38 +1519,38 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     //             ROS_INFO("Manipulator home state tasks executed successfully.");
     //         }
 
-    {//MANIPULATOR TRANSFER CONFIGURATION
-        ROS_INFO("Trying to put the manipulator in transfer configuration.");
-        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-        task_status_changed_ = false;
-        task_success_ = false;
-        deactivateHQPControl();
-        if(!resetState())
-        {
-            ROS_ERROR("Could not reset the state!");
-            safeShutdown();
-            return false;
-        }
-        if(!setJointConfiguration(transfer_config_))
-        {
-            ROS_ERROR("Could not set manipulator transfer state!");
-            safeShutdown();
-            return false;
-        }
-        task_error_tol_ = 1e-2;
-        activateHQPControl();
+//    {//MANIPULATOR TRANSFER CONFIGURATION
+//        ROS_INFO("Trying to put the manipulator in transfer configuration.");
+//        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+//        task_status_changed_ = false;
+//        task_success_ = false;
+//        deactivateHQPControl();
+//        if(!resetState())
+//        {
+//            ROS_ERROR("Could not reset the state!");
+//            safeShutdown();
+//            return false;
+//        }
+//        if(!setJointConfiguration(transfer_config_))
+//        {
+//            ROS_ERROR("Could not set manipulator transfer state!");
+//            safeShutdown();
+//            return false;
+//        }
+//        task_error_tol_ = 1e-2;
+//        activateHQPControl();
 
-        while(!task_status_changed_)
-            cond_.wait(lock);
+//        while(!task_status_changed_)
+//            cond_.wait(lock);
 
-        if(!task_success_)
-        {
-            ROS_ERROR("Could not complete the manipulator transfer state tasks!");
-            safeShutdown();
-            return false;
-        }
-        ROS_INFO("Manipulator transfer state tasks executed successfully.");
-    }
+//        if(!task_success_)
+//        {
+//            ROS_ERROR("Could not complete the manipulator transfer state tasks!");
+//            safeShutdown();
+//            return false;
+//        }
+//        ROS_INFO("Manipulator transfer state tasks executed successfully.");
+//    }
 
     {//MANIPULATOR SENSING CONFIGURATION
         ROS_INFO("Trying to put the manipulator in sensing configuration.");
@@ -1603,7 +1603,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-        task_error_tol_ = 5*1e-3;
+        task_error_tol_ = 1e-3;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1684,72 +1684,72 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         ROS_INFO("Object transfer tasks executed successfully.");
     }
 
-    {//GRIPPER EXTRACT
-        ROS_INFO("Trying gripper extract.");
-        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-        task_status_changed_ = false;
-        task_success_ = false;
-        deactivateHQPControl();
-        if(!resetState())
-        {
-            ROS_ERROR("Could not reset the state!");
-            safeShutdown();
-            return false;
-        }
+//    {//GRIPPER EXTRACT
+//        ROS_INFO("Trying gripper extract.");
+//        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+//        task_status_changed_ = false;
+//        task_success_ = false;
+//        deactivateHQPControl();
+//        if(!resetState())
+//        {
+//            ROS_ERROR("Could not reset the state!");
+//            safeShutdown();
+//            return false;
+//        }
 
-        if(!setGripperExtract())
-        {
-            ROS_ERROR("Could not set the gripper extract!");
-            safeShutdown();
-            return false;
-        }
-        task_error_tol_ = 1e-2;
-        activateHQPControl();
+//        if(!setGripperExtract())
+//        {
+//            ROS_ERROR("Could not set the gripper extract!");
+//            safeShutdown();
+//            return false;
+//        }
+//        task_error_tol_ = 1e-2;
+//        activateHQPControl();
 
-        while(!task_status_changed_)
-            cond_.wait(lock);
+//        while(!task_status_changed_)
+//            cond_.wait(lock);
 
-        if(!task_success_)
-        {
-            ROS_ERROR("Could not complete the gripper extract tasks!");
-            safeShutdown();
-            return false;
-        }
-        ROS_INFO("Gripper extract tasks executed successfully.");
-    }
+//        if(!task_success_)
+//        {
+//            ROS_ERROR("Could not complete the gripper extract tasks!");
+//            safeShutdown();
+//            return false;
+//        }
+//        ROS_INFO("Gripper extract tasks executed successfully.");
+//    }
 
-    {//MANIPULATOR TRANSFER CONFIGURATION
-        ROS_INFO("Trying to put the manipulator in transfer configuration.");
-        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-        task_status_changed_ = false;
-        task_success_ = false;
-        deactivateHQPControl();
-        if(!resetState())
-        {
-            ROS_ERROR("Could not reset the state!");
-            safeShutdown();
-            return false;
-        }
-        if(!setJointConfiguration(transfer_config_))
-        {
-            ROS_ERROR("Could not set manipulator transfer state!");
-            safeShutdown();
-            return false;
-        }
-        task_error_tol_ = 1e-2;
-        activateHQPControl();
+//    {//MANIPULATOR TRANSFER CONFIGURATION
+//        ROS_INFO("Trying to put the manipulator in transfer configuration.");
+//        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+//        task_status_changed_ = false;
+//        task_success_ = false;
+//        deactivateHQPControl();
+//        if(!resetState())
+//        {
+//            ROS_ERROR("Could not reset the state!");
+//            safeShutdown();
+//            return false;
+//        }
+//        if(!setJointConfiguration(transfer_config_))
+//        {
+//            ROS_ERROR("Could not set manipulator transfer state!");
+//            safeShutdown();
+//            return false;
+//        }
+//        task_error_tol_ = 1e-2;
+//        activateHQPControl();
 
-        while(!task_status_changed_)
-            cond_.wait(lock);
+//        while(!task_status_changed_)
+//            cond_.wait(lock);
 
-        if(!task_success_)
-        {
-            ROS_ERROR("Could not complete the manipulator transfer state tasks!");
-            safeShutdown();
-            return false;
-        }
-        ROS_INFO("Manipulator transfer state tasks executed successfully.");
-    }
+//        if(!task_success_)
+//        {
+//            ROS_ERROR("Could not complete the manipulator transfer state tasks!");
+//            safeShutdown();
+//            return false;
+//        }
+//        ROS_INFO("Manipulator transfer state tasks executed successfully.");
+//    }
 
     deactivateHQPControl();
     resetState();
