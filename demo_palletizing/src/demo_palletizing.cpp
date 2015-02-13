@@ -49,7 +49,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     remove_task_objects_clt_.waitForExistence();
     activate_hqp_control_clt_.waitForExistence();
     visualize_task_objects_clt_.waitForExistence();
-    //get_grasp_intervall_clt_.waitForExistence();
+    get_grasp_interval_clt_.waitForExistence();
 
     //if gazebo is used, set the simulated gravity to zero in order to prevent gazebo's joint drifting glitch
     if(with_gazebo)
@@ -112,7 +112,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     // sensing_config_[4] = -1.45;
     // sensing_config_[5] = 0.79;
     // sensing_config_[6] = 0;
-
+/*
     sensing_config_[0] = 1.27;
     sensing_config_[1] = -1.9;
     sensing_config_[2] = -0.52;
@@ -120,6 +120,14 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     sensing_config_[4] = -0.46;
     sensing_config_[5] = 0.79;
     sensing_config_[6] = -1.48;
+    */
+    sensing_config_[0] = 73*M_PI/180;
+    sensing_config_[1] = -106*M_PI/180;
+    sensing_config_[2] = -21*M_PI/180;
+    sensing_config_[3] = -108*M_PI/180;
+    sensing_config_[4] = -7*M_PI/180;
+    sensing_config_[5] = 52*M_PI/180;
+    sensing_config_[6] = -85*M_PI/180;
 #ifdef HQP_GRIPPER_JOINT
     sensing_config_[7] = 0.1;
 #endif
@@ -128,11 +136,11 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     grasp_.obj_frame_ = "world";  //object frame
     grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
     grasp_.e_.setZero();                     //endeffector point expressed in the endeffector frame
-    grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 1.0; //cylinder normal
-    grasp_.p_(0) = 1.0; grasp_.p_(1) = -0.9; grasp_.p_(2) = 0.13; //reference point on the cylinder axis
-    grasp_.r1_ = 0.2; grasp_.r2_ = 0.3;              //cylinder radii
+    grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 0.0; //cylinder normal
+    grasp_.p_(0) = 0.0; grasp_.p_(1) = -0.0; grasp_.p_(2) = 0.00; //reference point on the cylinder axis
+    grasp_.r1_ = 0.0; grasp_.r2_ = 0.0;              //cylinder radii
     grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_;  //plane normals
-    grasp_.d1_ = 0.25; grasp_.d2_= 0.35;              //plane offsets
+    grasp_.d1_ = 0.0; grasp_.d2_= 0.0;              //plane offsets
 
     //generate the task object templates
     generateTaskObjectTemplates();
@@ -1522,6 +1530,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     //                 ROS_INFO("Manipulator home state tasks executed successfully.");
     //             }
 
+#if 0
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -1554,7 +1563,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator transfer state tasks executed successfully.");
     }
-
+#endif
     {//MANIPULATOR SENSING CONFIGURATION
         ROS_INFO("Trying to put the manipulator in sensing configuration.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -1602,41 +1611,42 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
 
 //        //get the grasp intervall
-//        hqp_controllers_msgs::FindCanTask grasp;
-//        if(!get_grasp_intervall_clt_.call(grasp))
-//        {
-//            ROS_ERROR("Could not obtain the grasp intervall!");
-//            safeShutdown();
-//            return false;
-//        }
+        hqp_controllers_msgs::FindCanTask grasp;
+        if(!get_grasp_interval_clt_.call(grasp))
+        {
+            ROS_ERROR("Could not obtain the grasp intervall!");
+            safeShutdown();
+            return false;
+        }
 
-//        //set the grasp
-//        ROS_ASSERT(grasp.response.CanTask.size()==4);
-//        std::vector<double> data;
-//        //bottom plane
-//        data=grasp.response.CanTask[0].data;
-//        ROS_ASSERT(data.size()==4);
-//        grasp_.n1_(0) = data[0]; grasp_.n1_(1) = data[1]; grasp_.n1_(2) = data[2];
-//        grasp_.d1_ = data[3];
+        //set the grasp
+        ROS_ASSERT(grasp.response.CanTask.size()==4);
+        std::vector<double> data;
+        //bottom plane
+        data=grasp.response.CanTask[0].data;
+        ROS_ASSERT(data.size()==4);
+        grasp_.n1_(0) = data[0]; grasp_.n1_(1) = data[1]; grasp_.n1_(2) = data[2];
+        grasp_.d1_ = data[3];
 
-//        //top plane
-//        data=grasp.response.CanTask[1].data;
-//        ROS_ASSERT(data.size()==4);
-//        grasp_.n2_(0) = data[0]; grasp_.n2_(1) = data[1]; grasp_.n2_(2) = data[2];
-//        grasp_.d2_ = data[3];
+        //top plane
+        data=grasp.response.CanTask[1].data;
+        ROS_ASSERT(data.size()==4);
+        grasp_.n2_(0) = data[0]; grasp_.n2_(1) = data[1]; grasp_.n2_(2) = data[2];
+        grasp_.d2_ = data[3];
 
-//        //inner constraint cylinder
-//        data=grasp.response.CanTask[2].data;
-//        ROS_ASSERT(data.size()==7);
-//        grasp_.p_(0) = data[0]; grasp_.p_(1) = data[1]; grasp_.p_(2) = data[2];
-//        grasp_.p_(0) = data[3]; grasp_.p_(1) = data[4]; grasp_.p_(2) = data[5];
-//        grasp_.r1_ = data[6];
+        //inner constraint cylinder
+        data=grasp.response.CanTask[2].data;
+        ROS_ASSERT(data.size()==7);
+        grasp_.p_(0) = data[0]; grasp_.p_(1) = data[1]; grasp_.p_(2) = data[2];
+        grasp_.v_(0) = data[3]; grasp_.v_(1) = data[4]; grasp_.v_(2) = data[5];
+        grasp_.r1_ = data[6];
 
-//        //outer constraint cylinder (assumed to be the same apart from the radius)
-//        data=grasp.response.CanTask[2].data;
-//        ROS_ASSERT(data.size()==7);
-//        grasp_.r2_ = data[6];
+        //outer constraint cylinder (assumed to be the same apart from the radius)
+        data=grasp.response.CanTask[3].data;
+        ROS_ASSERT(data.size()==7);
+        grasp_.r2_ = data[6];
 
+	std::cerr<<"got grasps "<<grasp_.n1_.transpose()<<" "<<grasp_.p_.transpose()<<std::endl;
         if(!setGraspApproach())
         {
             ROS_ERROR("Could not set the grasp approach!");
@@ -1655,9 +1665,9 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
+	
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
-
 
     {//OBJECT EXTRACT
         ROS_INFO("Trying object extract.");
