@@ -132,7 +132,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     sensing_config_[7] = 0.1;
 #endif
 
-    Grasp intervall specification
+    //Grasp intervall specification
     grasp_.obj_frame_ = "world";  //object frame
     grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
     grasp_.e_.setZero();                     //endeffector point expressed in the endeffector frame
@@ -141,7 +141,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     grasp_.r1_ = 0.0; grasp_.r2_ = 0.0;              //cylinder radii
     grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_;  //plane normals
     grasp_.d1_ = 0.0; grasp_.d2_= 0.0;   
-    plane offsets
+    //plane offsets
 
     // grasp_.obj_frame_ = "world"; //object frame
     // grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
@@ -1702,6 +1702,19 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
 	  std::cerr<<t_obj.geometries[0].data[i]<<" ";
 
 	std::cerr<<std::endl;
+
+   //coplanar target line
+    t_obj.geometries.clear();
+    t_obj.root = "world";
+    t_obj.link = "world";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::LINE;
+    	data=grasp.response.CanTask[3].data;
+    std::vector<double>::iterator it = data.end();
+    it--;
+    data.erase(it);
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["coplanar_target_line"] = t_obj;
 
         if(!setGraspApproach())
 	  {
