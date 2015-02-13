@@ -133,24 +133,25 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
 #endif
 
     //Grasp intervall specification
-    grasp_.obj_frame_ = "world";  //object frame
-    grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
-    grasp_.e_.setZero();                     //endeffector point expressed in the endeffector frame
-    grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 0.0; //cylinder normal
-    grasp_.p_(0) = 0.0; grasp_.p_(1) = -0.0; grasp_.p_(2) = 0.00; //reference point on the cylinder axis
-    grasp_.r1_ = 0.0; grasp_.r2_ = 0.0;              //cylinder radii
-    grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_;  //plane normals
-    grasp_.d1_ = 0.0; grasp_.d2_= 0.0;   
+    // grasp_.obj_frame_ = "world";  //object frame
+    // grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
+    // grasp_.e_.setZero();                     //endeffector point expressed in the endeffector frame
+    // grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 0.0; //cylinder normal
+    // grasp_.p_(0) = 0.0; grasp_.p_(1) = -0.0; grasp_.p_(2) = 0.00; //reference point on the cylinder axis
+    // grasp_.r1_ = 0.0; grasp_.r2_ = 0.0;              //cylinder radii
+    // grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_;  //plane normals
+    // grasp_.d1_ = 0.0; grasp_.d2_= 0.0; 
+    
     //plane offsets
 
-    // grasp_.obj_frame_ = "world"; //object frame
-    // grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
-    // grasp_.e_.setZero(); //endeffector point expressed in the endeffector frame
-    // grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 1.0; //cylinder normal
-    // grasp_.p_(0) = 1.0; grasp_.p_(1) = -0.9; grasp_.p_(2) = 0.13; //reference point on the cylinder axis
-    // grasp_.r1_ = 0.2; grasp_.r2_ = 0.3; //cylinder radii
-    // grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_; //plane normals
-    // grasp_.d1_ = 0.25; grasp_.d2_= 0.35; //plane offsets
+    grasp_.obj_frame_ = "world"; //object frame
+    grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
+    grasp_.e_.setZero(); //endeffector point expressed in the endeffector frame
+    grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 1.0; //cylinder normal
+    grasp_.p_(0) = 1.0; grasp_.p_(1) = -0.9; grasp_.p_(2) = 0.13; //reference point on the cylinder axis
+    grasp_.r1_ = 0.2; grasp_.r2_ = 0.3; //cylinder radii
+    grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_; //plane normals
+    grasp_.d1_ = 0.25; grasp_.d2_= 0.35; //plane offsets
 
     //generate the task object templates
     generateTaskObjectTemplates();
@@ -171,6 +172,16 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["ee_point"] = t_obj;
+
+    //gripper collision point
+    t_obj.root = "world";
+    t_obj.link = "velvet_fingers_palm";
+    t_geom.type = hqp_controllers_msgs::TaskGeometry::POINT;
+    data.resize(3);
+    data[0] = 0.25; data[1] = 0; data[2] = -0.07;
+    t_geom.data = data;
+    t_obj.geometries.push_back(t_geom);
+    task_object_templates_["gripper_collision_point"] = t_obj;
 
     //inner grasp cylinder
     t_obj.geometries.clear();
@@ -1119,6 +1130,9 @@ bool DemoPalletizing::setGraspApproach()
     t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
     task_objects_.request.objs.push_back(t_obj);
 
+    t_obj = task_object_templates_["gripper_collision_point"];
+    task_objects_.request.objs.push_back(t_obj);
+
     //send the filled task object message to the controller
     if(!sendStateTaskObjects())
         return false;
@@ -1260,6 +1274,18 @@ bool DemoPalletizing::setGraspApproach()
     task.t_obj_ids.push_back(task_objects_.response.ids[9]);
     task.dynamics.data.clear();
     task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //keep gripper collision point above the collision plane
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[15]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
     task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
     tasks_.request.tasks.push_back(task);
 
