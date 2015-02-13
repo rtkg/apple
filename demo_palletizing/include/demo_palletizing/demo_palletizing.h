@@ -20,7 +20,7 @@ namespace demo_palletizing
 #define TASK_DYNAMICS_GAIN    -0.6
 //-----------------------------------------------------------
 ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
-struct GraspIntervall
+struct GraspInterval
 {
     std::string obj_frame_; //object frame
     std::string e_frame_; //endeffector frame
@@ -52,10 +52,11 @@ private:
     bool task_success_;
 
     //**Grasp definition - this should be modified to grasp different objects */
-    GraspIntervall grasp_;
+    GraspInterval grasp_;
 
     ros::Subscriber task_status_sub_;
     ros::ServiceClient set_tasks_clt_;
+    ros::ServiceClient get_grasp_interval_clt_;
     ros::ServiceClient activate_hqp_control_clt_;
     ros::ServiceClient set_task_objects_clt_;
     ros::ServiceClient visualize_task_objects_clt_;

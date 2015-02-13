@@ -8,6 +8,7 @@
 #include <hqp_controllers_msgs/RemoveTaskObjects.h>
 #include <hqp_controllers_msgs/ActivateHQPControl.h>
 #include <hqp_controllers_msgs/VisualizeTaskObjects.h>
+#include <hqp_controllers_msgs/FindCanTask.h>
 
 namespace demo_palletizing
 {
@@ -40,6 +41,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     activate_hqp_control_clt_ = n_.serviceClient<hqp_controllers_msgs::ActivateHQPControl>("activate_hqp_control");
     visualize_task_objects_clt_ = n_.serviceClient<hqp_controllers_msgs::VisualizeTaskObjects>("visualize_task_objects");
     set_gazebo_physics_clt_ = n_.serviceClient<gazebo_msgs::SetPhysicsProperties>("set_physics_properties");
+    get_grasp_interval_clt_ = n_.serviceClient<hqp_controllers_msgs::FindCanTask>("get_grasp_interval");
 
     set_tasks_clt_.waitForExistence();
     set_task_objects_clt_.waitForExistence();
@@ -47,6 +49,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     remove_task_objects_clt_.waitForExistence();
     activate_hqp_control_clt_.waitForExistence();
     visualize_task_objects_clt_.waitForExistence();
+    //get_grasp_intervall_clt_.waitForExistence();
 
     //if gazebo is used, set the simulated gravity to zero in order to prevent gazebo's joint drifting glitch
     if(with_gazebo)
@@ -122,11 +125,11 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
 #endif
 
     //Grasp intervall specification
-    grasp_.obj_frame_ = "load_pallet_base";  //object frame
+    grasp_.obj_frame_ = "world";  //object frame
     grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
     grasp_.e_.setZero();                     //endeffector point expressed in the endeffector frame
     grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 1.0; //cylinder normal
-    grasp_.p_(0) = 0.0; grasp_.p_(1) = 0.0; grasp_.p_(2) = 0.13; //reference point on the cylinder axis
+    grasp_.p_(0) = 1.0; grasp_.p_(1) = -0.9; grasp_.p_(2) = 0.13; //reference point on the cylinder axis
     grasp_.r1_ = 0.2; grasp_.r2_ = 0.3;              //cylinder radii
     grasp_.n1_ = grasp_.v_; grasp_.n2_ = grasp_.v_;  //plane normals
     grasp_.d1_ = 0.25; grasp_.d2_= 0.35;              //plane offsets
@@ -266,23 +269,23 @@ void DemoPalletizing::generateTaskObjectTemplates()
 
     //placement plane
     t_obj.geometries.clear();
-    t_obj.root = "transport_pallet_base";
-    t_obj.link = "transport_pallet_base";
+    t_obj.root = "world";
+    t_obj.link = "world";
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.3;
+    data[3] = 0.4;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["placement_bound_plane"] = t_obj;
 
     //placement cylinder
     t_obj.geometries.clear();
-    t_obj.root = "transport_pallet_base";
-    t_obj.link = "transport_pallet_base";
+    t_obj.root = "world";
+    t_obj.link = "world";
     t_geom.type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
     data.resize(7);
-    data[0] = 0.1; /*0.15*/ data[1] = -0.15; /*-0.2*/ data[2] = 0.13;
+    data[0] = 0.75; /*0.15*/ data[1] = -0.2; /*-0.2*/ data[2] = 0.13;
     data[3] = 0.0; data[4] = 0.0; data[5] = 1.0;
     data[6] = 0.05;
     t_geom.data = data;
@@ -538,7 +541,7 @@ bool DemoPalletizing::setObjectTransfer()
     hqp_controllers_msgs::TaskObject t_obj;
     t_obj = task_object_templates_["ee_point"];
     t_obj.link = "velvet_fingers_palm";
-    t_obj.root = "transport_pallet_base";
+    t_obj.root = "world";
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["placement_bound_plane"];
@@ -893,12 +896,12 @@ bool DemoPalletizing::setGripperExtract()
     hqp_controllers_msgs::TaskObject t_obj;
     t_obj = task_object_templates_["ee_point"];
     t_obj.link = "velvet_fingers_palm";
-    t_obj.root = "transport_pallet_base";
+    t_obj.root = "world";
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["extract_bound_plane"];
-    t_obj.link = "transport_pallet_base";
-    t_obj.root = "transport_pallet_base";
+    t_obj.link = "world";
+    t_obj.root = "world";
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["placement_bound_cylinder"];
@@ -1486,38 +1489,38 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusesPtr
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
 
-    //         {//MANIPULATOR HOME CONFIGURATION
-    //             ROS_INFO("Trying to home the manipulator.");
-    //             boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-    //             task_status_changed_ = false;
-    //             task_success_ = false;
-    //             deactivateHQPControl(); //better safe than sorry ...
-    //             if(!resetState())
-    //             {
-    //                 ROS_ERROR("Could not reset the state!");
-    //                 safeShutdown();
-    //                 return false;
-    //             }
-    //             if(!setJointConfiguration(home_config_))
-    //             {
-    //                 ROS_ERROR("Could not set manipulator home state!");
-    //                 safeShutdown();
-    //                 return false;
-    //             }
-    //             task_error_tol_ = 1e-2;
-    //             activateHQPControl();
+    //             {//MANIPULATOR HOME CONFIGURATION
+    //                 ROS_INFO("Trying to home the manipulator.");
+    //                 boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+    //                 task_status_changed_ = false;
+    //                 task_success_ = false;
+    //                 deactivateHQPControl(); //better safe than sorry ...
+    //                 if(!resetState())
+    //                 {
+    //                     ROS_ERROR("Could not reset the state!");
+    //                     safeShutdown();
+    //                     return false;
+    //                 }
+    //                 if(!setJointConfiguration(home_config_))
+    //                 {
+    //                     ROS_ERROR("Could not set manipulator home state!");
+    //                     safeShutdown();
+    //                     return false;
+    //                 }
+    //                 task_error_tol_ = 1e-2;
+    //                 activateHQPControl();
 
-    //             while(!task_status_changed_)
-    //                 cond_.wait(lock);
+    //                 while(!task_status_changed_)
+    //                     cond_.wait(lock);
 
-    //             if(!task_success_)
-    //             {
-    //                 ROS_ERROR("Could not complete the manipulator home state tasks!");
-    //                 safeShutdown();
-    //                 return false;
+    //                 if(!task_success_)
+    //                 {
+    //                     ROS_ERROR("Could not complete the manipulator home state tasks!");
+    //                     safeShutdown();
+    //                     return false;
+    //                 }
+    //                 ROS_INFO("Manipulator home state tasks executed successfully.");
     //             }
-    //             ROS_INFO("Manipulator home state tasks executed successfully.");
-    //         }
 
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
@@ -1597,6 +1600,43 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
+
+//        //get the grasp intervall
+//        hqp_controllers_msgs::FindCanTask grasp;
+//        if(!get_grasp_intervall_clt_.call(grasp))
+//        {
+//            ROS_ERROR("Could not obtain the grasp intervall!");
+//            safeShutdown();
+//            return false;
+//        }
+
+//        //set the grasp
+//        ROS_ASSERT(grasp.response.CanTask.size()==4);
+//        std::vector<double> data;
+//        //bottom plane
+//        data=grasp.response.CanTask[0].data;
+//        ROS_ASSERT(data.size()==4);
+//        grasp_.n1_(0) = data[0]; grasp_.n1_(1) = data[1]; grasp_.n1_(2) = data[2];
+//        grasp_.d1_ = data[3];
+
+//        //top plane
+//        data=grasp.response.CanTask[1].data;
+//        ROS_ASSERT(data.size()==4);
+//        grasp_.n2_(0) = data[0]; grasp_.n2_(1) = data[1]; grasp_.n2_(2) = data[2];
+//        grasp_.d2_ = data[3];
+
+//        //inner constraint cylinder
+//        data=grasp.response.CanTask[2].data;
+//        ROS_ASSERT(data.size()==7);
+//        grasp_.p_(0) = data[0]; grasp_.p_(1) = data[1]; grasp_.p_(2) = data[2];
+//        grasp_.p_(0) = data[3]; grasp_.p_(1) = data[4]; grasp_.p_(2) = data[5];
+//        grasp_.r1_ = data[6];
+
+//        //outer constraint cylinder (assumed to be the same apart from the radius)
+//        data=grasp.response.CanTask[2].data;
+//        ROS_ASSERT(data.size()==7);
+//        grasp_.r2_ = data[6];
+
         if(!setGraspApproach())
         {
             ROS_ERROR("Could not set the grasp approach!");
@@ -1617,6 +1657,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
+
 
     {//OBJECT EXTRACT
         ROS_INFO("Trying object extract.");
