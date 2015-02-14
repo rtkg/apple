@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   hqp_controllers_msgs
   gazebo_msgs
   roscpp
+  velvet_interface_node
 )
 
 ## System dependencies are found with CMake's conventions
@@ -52,6 +53,7 @@ catkin_package(
      roscpp
      hqp_controllers_msgs
      gazebo_msgs
+     velvet_interface_node
      INCLUDE_DIRS include ${EIGEN_INCLUDE_DIRS}
 )
 ## Generate messages in the 'msg' folder

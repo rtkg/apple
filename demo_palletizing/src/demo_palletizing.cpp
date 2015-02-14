@@ -42,6 +42,8 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     visualize_task_objects_clt_ = n_.serviceClient<hqp_controllers_msgs::VisualizeTaskObjects>("visualize_task_objects");
     set_gazebo_physics_clt_ = n_.serviceClient<gazebo_msgs::SetPhysicsProperties>("set_physics_properties");
     get_grasp_interval_clt_ = n_.serviceClient<hqp_controllers_msgs::FindCanTask>("get_grasp_interval");
+    velvet_pos_clt_ = n_.serviceClient<velvet_interface_node::VelvetToPos>("velvet_pos");
+    velvet_grasp_clt_ = n_.serviceClient<velvet_interface_node::SmartGrasp>("velvet_grasp");
 
     set_tasks_clt_.waitForExistence();
     set_task_objects_clt_.waitForExistence();
@@ -49,6 +51,8 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     remove_task_objects_clt_.waitForExistence();
     activate_hqp_control_clt_.waitForExistence();
     visualize_task_objects_clt_.waitForExistence();
+    velvet_pos_clt_.waitForExistence();  
+    velvet_grasp_clt_.waitForExistence();
     // get_grasp_interval_clt_.waitForExistence();
 
     //if gazebo is used, set the simulated gravity to zero in order to prevent gazebo's joint drifting glitch
@@ -174,6 +178,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     task_object_templates_["ee_point"] = t_obj;
 
     //gripper collision point
+    t_obj.geometries.clear();
     t_obj.root = "world";
     t_obj.link = "velvet_fingers_palm";
     t_geom.type = hqp_controllers_msgs::TaskGeometry::POINT;
@@ -267,7 +272,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     data.resize(7);
     data[0] = 0.0; data[1] = 0.0; data[2] = 0.0;
     data[3] = 0.0; data[4] = 0.0; data[5] = 1.0; //gripper axis should be vertical
-    data[6] = 0.035; //corresponds to an angle of 2 degree
+    data[6] = 1e-4; //corresponds to an angle of 2 degree
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["upper_bound_cone"] = t_obj;
@@ -303,7 +308,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.4;
+    data[3] = 0.28;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["placement_bound_plane"] = t_obj;
@@ -395,7 +400,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.16;
+    data[3] = 0.17;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["collision_planes"] = t_obj;
@@ -563,7 +568,7 @@ bool DemoPalletizing::sendStateTaskObjects()
     }
     return true;
 }
-//-----------------------------------------------------------------
+ //-----------------------------------------------------------------
 bool DemoPalletizing::setObjectTransfer()
 {
     //TASK OBJECTS
@@ -574,13 +579,215 @@ bool DemoPalletizing::setObjectTransfer()
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["placement_bound_plane"];
+    t_obj.geometries[0].data[3] = 0.5;
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["placement_bound_cylinder"];
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["upper_bound_cone"];
-    t_obj.geometries[0].data[6] = 1e-3; //reduce the tilting angle of the vertical axis
+    t_obj.geometries[0].data[6] = 1e-4; //reduce the tilting angle of the vertical axis
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["gripper_vertical_axis"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["collision_planes"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_3_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_4_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_5_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_link_6_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["velvet_fingers_palm_sphere"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_1_target"];
+    t_obj.geometries[0].data[0] = 0.38;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_2_target"];
+    t_obj.geometries[0].data[0] = 0.56;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_3_target"];
+    t_obj.geometries[0].data[0] = 0.98;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_4_target"];
+    t_obj.geometries[0].data[0] = -1.37;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_5_target"];
+    t_obj.geometries[0].data[0] = -0.34;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_6_target"];
+    t_obj.geometries[0].data[0] = 0.95;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["lbr_iiwa_joint_7_target"];
+    t_obj.geometries[0].data[0] = -1.89;
+    task_objects_.request.objs.push_back(t_obj);
+
+    //send the filled task object message to the controller
+    if(!sendStateTaskObjects())
+        return false;
+
+    //TASKS
+    hqp_controllers_msgs::Task task;
+    //bring endeffector on the placement plane
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_PLANE;
+    task.priority = 2;
+    task.sign = "=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[1]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //bring endeffector point inside the placement cylinder
+    task.type = hqp_controllers_msgs::Task::PROJECT_POINT_CYLINDER;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[0]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[2]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //keep vertical axis of the gripper inside the vertical cone
+    task.type = hqp_controllers_msgs::Task::ANGLE_LINES;
+    task.priority = 2;
+    task.sign = "<=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[3]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[4]);
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.clear();
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //fill in the avoidance tasks
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[6]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[7]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[8]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[9]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    task.type = hqp_controllers_msgs::Task::PROJECT_SPHERE_PLANE;
+    task.priority = 1;
+    task.sign = ">=";
+    task.t_obj_ids.clear();
+    task.t_obj_ids.push_back(task_objects_.response.ids[10]);
+    task.t_obj_ids.push_back(task_objects_.response.ids[5]);
+    task.dynamics.data.clear();
+    task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    tasks_.request.tasks.push_back(task);
+
+    //fill in the joint setpoint tasks
+    for(unsigned int i=11; i<18; i++)
+    {
+        task.type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
+        task.priority = 3;
+        task.sign = "=";
+        task.t_obj_ids.clear();
+        task.t_obj_ids.push_back(task_objects_.response.ids[i]);
+        std::cout<<"using object nr: "<<i<<std::endl;
+        task.dynamics.data.clear();
+        task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+        task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+        tasks_.request.tasks.push_back(task);
+    }
+
+    //send the filled task message to the controller
+    if(!sendStateTasks())
+        return false;
+
+    //don't monitor the joint position reference tasks
+    for(unsigned int i=0; i<8; i++)
+        monitored_tasks_.push_back(tasks_.response.ids[i]);
+
+    //visualize the task objects
+    std::vector<unsigned int> ids;
+    for(unsigned int i=0; i<11; i++)
+        ids.push_back(task_objects_.response.ids[i]);
+
+    if(!visualizeStateTaskObjects(ids))
+        return false;
+
+    return true;
+}
+ //-----------------------------------------------------------------
+bool DemoPalletizing::setObjectPlace()
+{
+    //TASK OBJECTS
+    hqp_controllers_msgs::TaskObject t_obj;
+    t_obj = task_object_templates_["ee_point"];
+    t_obj.link = "velvet_fingers_palm";
+    t_obj.root = "world";
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["placement_bound_plane"];
+    t_obj.geometries[0].data[3] = 0.28;
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["placement_bound_cylinder"];
+    task_objects_.request.objs.push_back(t_obj);
+
+    t_obj = task_object_templates_["upper_bound_cone"];
+    t_obj.geometries[0].data[6] = 1e-4; //reduce the tilting angle of the vertical axis
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["gripper_vertical_axis"];
@@ -937,7 +1144,7 @@ bool DemoPalletizing::setGripperExtract()
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["upper_bound_cone"];
-    t_obj.geometries[0].data[6] = 1e-3; //reduce the tilting angle of the vertical axis
+    t_obj.geometries[0].data[6] = 1e-4; //reduce the tilting angle of the vertical axis
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["gripper_vertical_axis"];
@@ -1566,6 +1773,16 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     //                 ROS_INFO("Manipulator home state tasks executed successfully.");
     //             }
 
+    //VELVET INITIAL POSE
+
+    velvet_interface_node::VelvetToPos poscall;
+    poscall.request.angle = 0.4;
+
+    if(!velvet_pos_clt_.call(poscall)) {
+	ROS_ERROR("could not call velvet to pos");
+	ROS_BREAK();
+    }
+
 #if 0
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
@@ -1748,7 +1965,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
 	  }
-        task_error_tol_ = 5*1e-3;
+        task_error_tol_ = 1e-3;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1763,39 +1980,52 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
 	
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
+    //VELVET GRASP
+    velvet_interface_node::SmartGrasp graspcall;
+    graspcall.request.current_threshold_contact = 15;
+    graspcall.request.current_threshold_final = 35;
+    graspcall.request.max_belt_travel_mm = 100;
+    graspcall.request.phalange_delta_rad = 0.02;
+    graspcall.request.gripper_closed_thresh = 1.5;
+    graspcall.request.check_phalanges = true;
 
-    {//OBJECT EXTRACT
-      ROS_INFO("Trying object extract.");
-      boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-      task_status_changed_ = false;
-      task_success_ = false;
-      deactivateHQPControl();
-      if(!resetState())
-        {
-	  ROS_ERROR("Could not reset the state!");
-	  safeShutdown();
-	  return false;
-        }
-      if(!setObjectExtract())
-        {
-	  ROS_ERROR("Could not set the object extract!");
-	  safeShutdown();
-	  return false;
-        }
-      task_error_tol_ = 1e-2;
-      activateHQPControl();
-
-      while(!task_status_changed_)
-	cond_.wait(lock);
-
-      if(!task_success_)
-        {
-	  ROS_ERROR("Could not complete the object extract tasks!");
-	  safeShutdown();
-	  return false;
-        }
-      ROS_INFO("Object extract tasks executed successfully.");
+    if(!velvet_grasp_clt_.call(graspcall)) {
+	ROS_ERROR("could not call grasping");
+	ROS_BREAK();
     }
+
+    // {//OBJECT EXTRACT
+    //   ROS_INFO("Trying object extract.");
+    //   boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+    //   task_status_changed_ = false;
+    //   task_success_ = false;
+    //   deactivateHQPControl();
+    //   if(!resetState())
+    //     {
+    // 	  ROS_ERROR("Could not reset the state!");
+    // 	  safeShutdown();
+    // 	  return false;
+    //     }
+    //   if(!setObjectExtract())
+    //     {
+    // 	  ROS_ERROR("Could not set the object extract!");
+    // 	  safeShutdown();
+    // 	  return false;
+    //     }
+    //   task_error_tol_ = 1e-2;
+    //   activateHQPControl();
+
+    //   while(!task_status_changed_)
+    // 	cond_.wait(lock);
+
+    //   if(!task_success_)
+    //     {
+    // 	  ROS_ERROR("Could not complete the object extract tasks!");
+    // 	  safeShutdown();
+    // 	  return false;
+    //     }
+    //   ROS_INFO("Object extract tasks executed successfully.");
+    // }
 
     {//OBJECT TRANSFER
       ROS_INFO("Trying object transfer.");
@@ -1828,6 +2058,47 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             return false;
         }
         ROS_INFO("Object transfer tasks executed successfully.");
+    }
+    
+   {//OBJECT PLACE
+      ROS_INFO("Trying object place.");
+      boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+      task_status_changed_ = false;
+      task_success_ = false;
+      deactivateHQPControl();
+        if(!resetState())
+        {
+            ROS_ERROR("Could not reset the state!");
+            safeShutdown();
+            return false;
+        }
+        if(!setObjectPlace())
+        {
+            ROS_ERROR("Could not set the object place!");
+            safeShutdown();
+            return false;
+        }
+        task_error_tol_ = 1e-3;
+        activateHQPControl();
+
+        while(!task_status_changed_)
+            cond_.wait(lock);
+
+        if(!task_success_)
+        {
+            ROS_ERROR("Could not complete the object place tasks!");
+            safeShutdown();
+            return false;
+        }
+        ROS_INFO("Object place tasks executed successfully.");
+    }
+    
+    velvet_interface_node::VelvetToPos poscall2;
+    poscall2.request.angle = 0.4;
+
+    if(!velvet_pos_clt_.call(poscall2)) {
+	ROS_ERROR("could not call velvet to pos");
+	ROS_BREAK();
     }
 
     {//GRIPPER EXTRACT

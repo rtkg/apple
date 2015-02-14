@@ -11,6 +11,8 @@
 #include <hqp_controllers_msgs/SetTasks.h>
 #include <hqp_controllers_msgs/SetTaskObjects.h>
 #include <Eigen/Core>
+#include <velvet_interface_node/SmartGrasp.h>
+#include <velvet_interface_node/VelvetToPos.h>
 
 namespace demo_palletizing
 {
@@ -63,6 +65,8 @@ private:
     ros::ServiceClient remove_task_clt_;
     ros::ServiceClient remove_task_objects_clt_;
     ros::ServiceClient set_gazebo_physics_clt_;
+    ros::ServiceClient velvet_pos_clt_;
+    ros::ServiceClient velvet_grasp_clt_;
     ros::ServiceServer start_demo_srv_;
 
     //** Manipulator joint configuration from which the demo can be started safely */
@@ -101,6 +105,7 @@ private:
     bool setObjectExtract();
     bool setObjectTransfer();
     bool setGripperExtract();
+    bool setObjectPlace();
     //double maximumNorm(std::vector<double>const& e);
 
     void generateTaskObjectTemplates();

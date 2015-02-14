@@ -28,7 +28,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -149,19 +149,66 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        camera_depth_frame:
+          Value: true
+        camera_depth_optical_frame:
+          Value: true
+        citi_truck_base:
+          Value: true
+        lbr_iiwa_link_0:
+          Value: true
+        lbr_iiwa_link_1:
+          Value: true
+        lbr_iiwa_link_2:
+          Value: true
+        lbr_iiwa_link_3:
+          Value: true
+        lbr_iiwa_link_4:
+          Value: true
+        lbr_iiwa_link_5:
+          Value: true
+        lbr_iiwa_link_6:
+          Value: true
+        lbr_iiwa_link_7:
+          Value: true
+        load_pallet_base:
+          Value: true
+        transport_pallet_base:
+          Value: true
+        velvet_fingers_palm:
+          Value: true
+        world:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: false
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        world:
+          citi_truck_base:
+            lbr_iiwa_link_0:
+              lbr_iiwa_link_1:
+                lbr_iiwa_link_2:
+                  lbr_iiwa_link_3:
+                    lbr_iiwa_link_4:
+                      lbr_iiwa_link_5:
+                        lbr_iiwa_link_6:
+                          lbr_iiwa_link_7:
+                            velvet_fingers_palm:
+                              camera_depth_frame:
+                                camera_depth_optical_frame:
+                                  {}
+            transport_pallet_base:
+              {}
+          load_pallet_base:
+            {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -244,7 +291,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.09561
+      Distance: 1.89789
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -256,10 +303,10 @@ Visualization Manager:
         Z: 0.557648
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -0.0997978
+      Pitch: -0.234798
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.20853
+      Yaw: 3.60853
     Saved: ~
 Window Geometry:
   Displays:
