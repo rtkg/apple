@@ -29,33 +29,39 @@ HQPStage::HQPStage() : dim_(0), solved_(false)
 //-----------------------------------------
 HQPStage::HQPStage(Task const& task) : solved_(false)
 {
-    dim_ = task.getDimension();
-    de_.reset(new Eigen::VectorXd(*task.getTaskVelocity()));
-    A_.reset(new Eigen::MatrixXd(*task.getTaskJacobian()));
-    signs_.reset(new std::vector<std::string>(dim_));
-    std::fill(signs_->begin(), signs_->end(), task.getSign());
 
-    x_.reset(new Eigen::VectorXd(A_->cols()));
-    x_->setZero();
-    w_.reset(new Eigen::VectorXd(dim_));
-    w_->setZero();
+    std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
+
+
+//    dim_ = task.getDimension();
+//    de_.reset(new Eigen::VectorXd(*task.getTaskVelocity()));
+//    A_.reset(new Eigen::MatrixXd(*task.getTaskJacobian()));
+//    signs_.reset(new std::vector<std::string>(dim_));
+//    std::fill(signs_->begin(), signs_->end(), task.getSign());
+
+//    x_.reset(new Eigen::VectorXd(A_->cols()));
+//    x_->setZero();
+//    w_.reset(new Eigen::VectorXd(dim_));
+//    w_->setZero();
 }
 //-----------------------------------------
 void HQPStage::appendTask(Task const& task)
 {
-    unsigned int dim = task.getDimension();
-    de_->conservativeResize(dim_ + dim);
-    A_->conservativeResize(dim + dim_, Eigen::NoChange);
-    de_->tail(dim) = (*task.getTaskVelocity());
-    A_->bottomRows(dim) = (*task.getTaskJacobian());
-    for(unsigned int i=0; i<dim; i++)
-        signs_->push_back(task.getSign());
+        std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
 
-    w_->resize(dim_ + dim);
-    w_->setZero();
+//    unsigned int dim = task.getDimension();
+//    de_->conservativeResize(dim_ + dim);
+//    A_->conservativeResize(dim + dim_, Eigen::NoChange);
+//    de_->tail(dim) = (*task.getTaskVelocity());
+//    A_->bottomRows(dim) = (*task.getTaskJacobian());
+//    for(unsigned int i=0; i<dim; i++)
+//        signs_->push_back(task.getSign());
 
-    dim_ = dim_ +dim;
-    solved_ = false;
+//    w_->resize(dim_ + dim);
+//    w_->setZero();
+
+//    dim_ = dim_ +dim;
+//    solved_ = false;
 }
 //-----------------------------------------
 HQPSolver::HQPSolver()

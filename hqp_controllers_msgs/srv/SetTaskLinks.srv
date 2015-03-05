@@ -1,0 +1,5 @@
+TaskLink[] objs
+---
+uint16[] ids #The ids which are assigned to the given task links
+bool success
+

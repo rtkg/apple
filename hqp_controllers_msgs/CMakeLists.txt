@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   Task.msg
-  TaskObject.msg
+  TaskLink.msg
   TaskGeometry.msg
   TaskDynamics.msg
   TaskStatus.msg
@@ -24,11 +24,11 @@ add_message_files(
 add_service_files(
   FILES
   SetTasks.srv
-  SetTaskObjects.srv
-  VisualizeTaskObjects.srv
+  SetTaskLinks.srv
+  VisualizeTaskGeometries.srv
   ActivateHQPControl.srv
   RemoveTasks.srv
-  RemoveTaskObjects.srv
+  RemoveTaskLinks.srv
   FindCanTask.srv
   )
 

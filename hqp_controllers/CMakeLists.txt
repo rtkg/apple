@@ -62,17 +62,15 @@ add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
                             include/hqp_controllers/task_manager.h
                             src/hqp.cpp
                             include/hqp_controllers/hqp.h
-                            src/task_object.cpp
-                            include/hqp_controllers/task_object.h
+                            src/task_link.cpp
+                            include/hqp_controllers/task_link.h
                             src/task_geometry.cpp
                             include/hqp_controllers/task_geometry.h
                             include/hqp_controllers/conversions.h
                             include/hqp_controllers/utilities.h)
 
-add_executable(hqp_velocity_controller_test test/test.cpp)
-
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${orocos_kdl_LIBRARIES} ${GUROBI_LIBS})
-target_link_libraries(hqp_velocity_controller_test ${catkin_LIBRARIES})
+
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(hqp_velocity_controller_node hqp_velocity_controller_generate_messages_cpp)
