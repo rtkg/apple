@@ -22,50 +22,28 @@ namespace hqp_controllers {
 //    str<<std::endl;
 //}
 ////------------------------------------------------------
-TaskGeometry::TaskGeometry() : link_("")
+TaskGeometry::TaskGeometry() : link_frame_(""), task_frame_(""){}
+//------------------------------------------------------
+TaskGeometry::TaskGeometry(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : link_frame_(link_frame), task_frame_(task_frame), link_data_(link_data){}
+//------------------------------------------------------
+std::string TaskGeometry::getLinkFrame() const {return link_frame_;}
+//------------------------------------------------------
+std::string TaskGeometry::getTaskFrame() const {return task_frame_;}
+//------------------------------------------------------
+Eigen::VectorXd TaskGeometry::getLinkData() const {return link_data_;}
+//------------------------------------------------------
+Eigen::VectorXd TaskGeometry::getTaskData() const {return task_data_;}
+//------------------------------------------------------
+boost::shared_ptr<TaskGeometry> TaskGeometry::makeTaskGeometry(TaskGeometryType type, std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data)
 {
-    std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
-//    link_data_.reset(new Eigen::VectorXd);
-//    root_data_.reset(new Eigen::VectorXd);
-//    trans_l_r_.reset(new Eigen::Affine3d);
-//    trans_l_r_->setIdentity();
-}
-////------------------------------------------------------
-//TaskGeometry::TaskGeometry(std::string const& link, std::string const& root) : link_(link), root_(root)
-//{
-//    type_ = BASIC_GEOMETRY;
-//    link_data_.reset(new Eigen::VectorXd);
-//    root_data_.reset(new Eigen::VectorXd);
-//    trans_l_r_.reset(new Eigen::Affine3d);
-//    trans_l_r_->setIdentity();
-//}
-////------------------------------------------------------
-//void TaskGeometry::setLink(std::string const& link){link_ = link;}
-////------------------------------------------------------
-//void TaskGeometry::setRoot(std::string const& root){root_ = root;}
-////------------------------------------------------------
-//std::string TaskGeometry::getLink() const {return link_;}
-////------------------------------------------------------
-//std::string TaskGeometry::getRoot() const {return root_;}
-////------------------------------------------------------
-//TaskGeometryType TaskGeometry::getType() const {return type_;}
-////------------------------------------------------------
-//boost::shared_ptr<Eigen::VectorXd> TaskGeometry::getLinkData() const {return link_data_;}
-////------------------------------------------------------
-//boost::shared_ptr<Eigen::VectorXd> TaskGeometry::getRootData() const {return root_data_;}
-////------------------------------------------------------
-//boost::shared_ptr<Eigen::Affine3d> TaskGeometry::getLinkTransform() const {return trans_l_r_;}
-////------------------------------------------------------
-//boost::shared_ptr<TaskGeometry>  TaskGeometry::makeTaskGeometry(TaskGeometryType type, std::string const& link, std::string const& root, Eigen::VectorXd const& link_data)
-//{
-//    boost::shared_ptr<TaskGeometry> geom;
+    boost::shared_ptr<TaskGeometry> geom;
 
-//    if(type == POINT)
-//        geom.reset(new Point(link, root, link_data));
+    if(type == POINT)
+        geom.reset(new Point(link_frame, task_frame, link_data));
 //    else if(type == LINE)
 //        geom.reset(new Line(link, root, link_data));
-//    else if(type == PLANE)
-//        geom.reset(new Plane(link, root, link_data));
+    else if(type == PLANE)
+        geom.reset(new Plane(link_frame, task_frame, link_data));
 //    else if(type == FRAME)
 //        geom.reset(new Frame(link, root, link_data));
 //    else if(type == CAPSULE)
@@ -80,42 +58,26 @@ TaskGeometry::TaskGeometry() : link_("")
 //        geom.reset(new Cylinder(link, root, link_data));
 //    else if(type == SPHERE)
 //        geom.reset(new Sphere(link, root, link_data));
-//    else
-//    {
-//        ROS_ERROR("Task geometry type %d is invalid.",type);
-//        ROS_BREAK();
-//    }
-//    return geom;
-//}
-////------------------------------------------------------------------------
-//Point::Point() : TaskGeometry()
-//{
-//    type_ = POINT;
-//    p_.reset(new Eigen::Vector3d);
-//}
-////------------------------------------------------------------------------
-//Point::Point(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
-//{
-//    type_ = POINT;
-//    setLinkData(link_data);
-//}
-////------------------------------------------------------------------------
-//void Point::setLinkData(Eigen::VectorXd const& link_data)
-//{
-//    ROS_ASSERT(link_data.rows() == 3);
-//    link_data_.reset(new Eigen::VectorXd(link_data));
-
-//    p_.reset(new Eigen::Vector3d(link_data)); //the internal representation of a point is just the Point::link_data_
-//}
-////------------------------------------------------------------------------
-//void Point::setLinkTransform(Eigen::Affine3d const& trans_l_r)
-//{
-//    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
-
-//    //Express the point in the root frame
-//    root_data_.reset(new Eigen::VectorXd( (*trans_l_r_) * (*p_) ));
-//}
-////------------------------------------------------------------------------
+    else
+    {
+        ROS_ERROR("Task geometry type %d is invalid.",type);
+        ROS_BREAK();
+    }
+    return geom;
+}
+//------------------------------------------------------------------------
+Point::Point() : TaskGeometry(){}
+//------------------------------------------------------------------------
+Point::Point(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : TaskGeometry(link_frame, task_frame, link_data)
+{
+    ROS_ASSERT(link_data_.rows() == 3); //point is described by x/y/z coordinates
+}
+//------------------------------------------------------------------------
+void Point::transformTaskData(Eigen::Affine3d const& T_l_t)
+{
+   task_data_ = T_l_t * link_data_.head<3>();
+}
+//------------------------------------------------------------------------
 //void Point::addMarker(visualization_msgs::MarkerArray& markers)
 //{
 //    visualization_msgs::Marker marker;
@@ -210,24 +172,24 @@ TaskGeometry::TaskGeometry() : link_("")
 //    root_data_->head<3>() = (*trans_l_r_) * (*p_);
 //    root_data_->tail<3>() = trans_l_r_->linear() * (*v_);
 //}
-////------------------------------------------------------------------------
-////void Line::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
-////{
-////    ROS_WARN("Line::computeWitnessPoints(...) not implemented yet!");
-////}
-////------------------------------------------------------------------------
-//Plane::Plane() : TaskGeometry(), d_(0.0)
+//------------------------------------------------------------------------
+//void Line::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
 //{
-//    type_ = PLANE;
-//    n_.reset(new Eigen::Vector3d);
+//    ROS_WARN("Line::computeWitnessPoints(...) not implemented yet!");
 //}
-////------------------------------------------------------------------------
-//Plane::Plane(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
-//{
-//    type_ = PLANE;
-//    setLinkData(link_data);
-//}
-////------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------
+Plane::Plane() : TaskGeometry() {}
+//------------------------------------------------------------------------
+Plane::Plane(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data)
+{
+ ROS_ASSERT(link_data_.rows() == 4); //plane is described by unit normal n and offset d
+
+ //normalize on the plane normal just to be sure ...
+ link_data_ = link_data_/link_data_.head<3>().norm();
+}
+//------------------------------------------------------------------------
 //void Plane::addMarker(visualization_msgs::MarkerArray& markers)
 //{
 //    //transformation which points x in the plane normal direction
@@ -276,35 +238,14 @@ TaskGeometry::TaskGeometry() : link_("")
 //    m.color.a = 0.4;
 //    markers.markers.push_back(m);
 //}
-////------------------------------------------------------------------------
-//void Plane::setLinkData(Eigen::VectorXd const& link_data)
-//{
-//    ROS_ASSERT(link_data.rows() == 4);
-
-//    n_.reset(new Eigen::Vector3d(link_data.head<3>())); //the normal is given as the first 3 entries of link_data
-//    d_=link_data.tail<1>()(0);
-
-//    //normalize just to be sure;
-//    d_ = d_/n_->norm(); n_->normalize();
-
-//    link_data_.reset(new Eigen::VectorXd(4));
-//    link_data_->head<3>()=(*n_);
-//    link_data_->tail<1>()(0)=d_;
-//}
-////------------------------------------------------------------------------
-//void Plane::setLinkTransform(Eigen::Affine3d const& trans_l_r)
-//{
-//    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
-
-//    //Express the plane in the root frame:nR = rot_l_r*nL; dR=rot_l_r*nL*trans_l_r*(nL*dl)
-//    root_data_.reset(new Eigen::VectorXd(4));
-//    root_data_->head<3>() = trans_l_r_->linear() * (*n_);
-//    root_data_->tail<1>() = root_data_->head<3>().transpose() * ((*trans_l_r_) * ((*n_) * d_));
-
-//    //    Eigen::Hyperplane<double,3> h((*n_),d_); //the plane in the link frame
-//    //    h.transform( *trans_l_r_); //transform the plane to the root frame
-//}
-////------------------------------------------------------------------------
+//------------------------------------------------------------------------
+void Plane::transformTaskData(Eigen::Affine3d const& T_l_t)
+{
+    //Express the plane in the task frame: nt = R_l_t * nl; dt=R_l_r*nl*trans_l_r*(nl*dl)
+    task_data_.head<3>() = T_l_t.linear() * link_data_.head<3>();
+    task_data_.tail<1>() = task_data_.head<3>().transpose() * (T_l_t * (link_data_.head<3>() * link_data_.tail<1>()));
+}
+//------------------------------------------------------------------------
 ////void Plane::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
 ////{
 ////    ROS_WARN("Plane::computeWitnessPoints(...) not implemented yet!");

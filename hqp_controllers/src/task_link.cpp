@@ -24,62 +24,47 @@ std::ostream& operator<<(std::ostream& str, TaskLink const& obj)
 //    str<<std::endl;
 }
 //----------------------------------------------------
-TaskLink::TaskLink() : link_("")
-{
-       std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
-
-//    trans_l_r_.reset(new Eigen::Affine3d);
-//    jacobian_.reset(new Eigen::MatrixXd);
-//    chain_jacobian_.reset(new KDL::Jacobian);
-//    chain_.reset(new KDL::Chain);
-//    geometries_.reset(new std::vector<boost::shared_ptr<TaskGeometry> >);
-//    joints_.reset(new std::vector<hardware_interface::JointHandle>);
-//    joint_map_.reset(new Eigen::VectorXi);
-}
-//----------------------------------------------------
 TaskLink::TaskLink(KDL::Chain const& chain, std::vector< hardware_interface::JointHandle > const& joints) : chain_(chain), joints_(joints)
 {
 
-        std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
+    fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(chain_));
+    j_solver_.reset(new KDL::ChainJntToJacSolver(chain_));
 
-//    trans_l_r_.reset(new Eigen::Affine3d);
-//    geometries_.reset(new std::vector<boost::shared_ptr<TaskGeometry> >);
-//    fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(*chain_));
-//    j_solver_.reset(new KDL::ChainJntToJacSolver(*chain_));
+ computeJointMap();
 
-//    updateJointMap();
+    jac_.resize(6,joints_.size());
+   jac_.setZero();
+   chain_jac_.resize(joints_.size());
 
-//    jacobian_.reset(new Eigen::MatrixXd(6,joints_->size()));
-//    jacobian_->setZero();
-//    chain_jacobian_.reset(new KDL::Jacobian(joint_map_->rows()));
-
-//    if(chain_->getNrOfSegments() == 0)
-//        link_ = root_;
-//    else
-//        link_ = chain_->segments.back().getName();
+    if(chain_.getNrOfSegments() == 0)
+    {
+     ROS_ERROR_STREAM("Error in TaskLink constructor: chain has zero segments!");
+     ROS_BREAK();
+    }
+    else
+        link_frame_ = chain_.segments.back().getName();
 }
 //----------------------------------------------------
-void TaskLink::updateJointMap()
+void TaskLink::computeJointMap()
 {
-         std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
 
-//    unsigned int n_jnts = joints_->size();
-//    unsigned int n_chain_jnts = chain_->getNrOfJoints();
-//    unsigned int n_chain_sgmnts = chain_->getNrOfSegments(); //if there are locked joints, the segment nr != the joint nr
-//    joint_map_.reset(new Eigen::VectorXi(n_chain_jnts));
+    unsigned int n_jnts = joints_.size();
+    unsigned int n_chain_jnts = chain_.getNrOfJoints();
+    unsigned int n_chain_sgmnts = chain_.getNrOfSegments(); //if there are locked joints, the segment nr != the joint nr
+    joint_map_.resize(n_chain_jnts);
 
-//    unsigned int k=0; //index of the unlocked joints
-//    for(unsigned int i=0; i<n_chain_sgmnts; i++)//iterate over all chain segments
-//    {
-//        for (unsigned int j=0; j<n_jnts; j++)//iterate over all controlled joints
-//        {
-//            if(chain_->getSegment(i).getJoint().getName() == joints_->at(j).getName())
-//            {
-//                (*joint_map_)(k)=j;//associate the unlocked chain joints with the corresponding controlled joints
-//                k++;
-//            }
-//        }
-//    }
+    unsigned int k=0; //index of the unlocked joints
+    for(unsigned int i=0; i<n_chain_sgmnts; i++)//iterate over all chain segments
+    {
+        for (unsigned int j=0; j<n_jnts; j++)//iterate over all controlled joints
+        {
+            if(chain_.getSegment(i).getJoint().getName() == joints_.at(j).getName())
+            {
+                joint_map_(k)=j;//associate the unlocked chain joints with the corresponding controlled joints
+                k++;
+            }
+        }
+    }
 
     // ============= DEBUG PRINT =============================
     //    std::cout<<"CHAIN JOINTS"<<std::endl;
@@ -95,28 +80,6 @@ void TaskLink::updateJointMap()
     //    std::cout<<std::endl<<"JOINT MAP"<<std::endl<<(*joint_map_).transpose()<<std::endl;
     // ============= DEBUG PRINT END =============================
 }
-//----------------------------------------------------
-//void TaskLink::setChain(boost::shared_ptr<KDL::Chain> chain, std::string root)
-//{
-//    chain_ = chain;
-//    root_ = root;
-//    updateJointMap();
-
-//    fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(*chain_));
-//    j_solver_.reset(new KDL::ChainJntToJacSolver(*chain_));
-
-//    chain_jacobian_->resize(joint_map_->rows());
-//    link_ = chain_->segments.back().getName();
-//}
-//----------------------------------------------------
-//void TaskLink::setJoints(boost::shared_ptr<std::vector< hardware_interface::JointHandle > > joints)
-//{
-//    joints_ = joints;
-//    updateJointMap();
-
-//    jacobian_->resize(6,joints_->size());
-//    jacobian_->setZero();
-//}
 //----------------------------------------------------
 //std::string TaskLink::getLink() const{return link_;}
 //----------------------------------------------------
@@ -174,7 +137,7 @@ void TaskLink::computeKinematics()
 //----------------------------------------------------
 //boost::shared_ptr<Eigen::Affine3d> TaskLink::getLinkTransform() const {return trans_l_r_;}
 //----------------------------------------------------
-//boost::shared_ptr<Eigen::MatrixXd> TaskLink::getJacobian() const {return jacobian_;}
+Eigen::MatrixXd TaskLink::getJacobian() const {return jac_;}
 //----------------------------------------------------
 //boost::shared_ptr<Eigen::MatrixXd> TaskLink::getJacobian(Eigen::Vector3d& base_AB) const
 //{
@@ -202,6 +165,6 @@ void TaskLink::computeKinematics()
 //    geometries_->push_back(geometry);
 //}
 //----------------------------------------------------
-//boost::shared_ptr<std::vector<boost::shared_ptr<TaskGeometry> > > TaskLink::getGeometries() const {return geometries_;}
+std::vector<boost::shared_ptr<TaskGeometry> > TaskLink::getGeometries() const {return geometries_;}
 //----------------------------------------------------
 } //end namespace hqp_controllers

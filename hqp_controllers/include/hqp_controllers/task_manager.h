@@ -27,7 +27,7 @@ public:
   //  bool removeTask(unsigned int id);
    // bool removeTaskLink(unsigned int id);
     /**Computes the task jacobians and velocities of all tasks*/
-    void computeTaskKinematics();
+    void updateTasks();
    /**solves the corresponding HQP. The solution is returned in dq */
     void computeHQP();
 

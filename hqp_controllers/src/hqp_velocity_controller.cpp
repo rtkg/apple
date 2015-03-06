@@ -390,8 +390,8 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 {
     if(active_)
     {
-        //compute jacobians and poses of the task links
-        task_manager_.computeTaskKinematics();
+        //compute jacobians and poses of the task links, as well as the task functions and jacobians
+        task_manager_.updateTasks();
 
         //compute the HQP controls
         task_manager_.computeHQP();

@@ -20,51 +20,46 @@ class TaskGeometry
 public:
 
     TaskGeometry();
-    TaskGeometry(std::string const& link);
+    TaskGeometry(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data);
 
-//    void setLink(std::string const& link);
 
-//    std::string getLink() const;
-//    std::string getRoot() const;
-//    TaskGeometryType getType() const;
-//    boost::shared_ptr<Eigen::VectorXd> getLinkData() const;
-//    boost::shared_ptr<Eigen::VectorXd> getRootData() const;
+    std::string getLinkFrame() const;
+    std::string getTaskFrame() const;
+Eigen::VectorXd getLinkData() const;
+Eigen::VectorXd getTaskData() const;
 //    boost::shared_ptr<Eigen::Affine3d> getLinkTransform() const;
 
 //    friend std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom);
 
-//    static boost::shared_ptr<TaskGeometry>  makeTaskGeometry(TaskGeometryType type, std::string const& link, std::string const& root, Eigen::VectorXd const& link_data); ///<factory method
-//    //**Sets the TaskGeometry::link_data_ member and updates the internatl representation of the data in the subclasses */
-//    virtual void setLinkData(Eigen::VectorXd const& link_data) = 0;
-//    //**Sets the TaskGeometry::trans_l_r_ member and updates the TaskGeometry::root_data_ member in the subclasses */
-//    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r) = 0;
+  static boost::shared_ptr<TaskGeometry>  makeTaskGeometry(TaskGeometryType type, std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data); ///<factory method
+   //**transforms the TaskGeometry::link_data_ into the given task frame and sets TaskGeometry::task_data_ accordingly*/
+    virtual void transformTaskData(Eigen::Affine3d const& T_l_t) = 0;
 //    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const = 0;
 //    virtual void addMarker(visualization_msgs::MarkerArray& markers) = 0;
 
 protected:
 
-    std::string link_;
-//    boost::shared_ptr<Eigen::VectorXd> link_data_; ///< the geometry data expressed in the link frame
-//    boost::shared_ptr<Eigen::VectorXd> root_data_; ///< the geometry data expressed in the root frame (translated and rotated!)
-//    boost::shared_ptr<Eigen::Affine3d> trans_l_r_; ///< the transformation fromt the link frame to the root frame (= the pose of the link frame expressed in the root frame)
+    std::string link_frame_;
+        std::string task_frame_;
+  Eigen::VectorXd link_data_; ///< the geometry data expressed in the link frame (constant)
+    Eigen::VectorXd task_data_; ///< the geometry data expressed in the task frame
 };
 //------------------------------------------------------------------------------------------
-//class Point: public TaskGeometry
-//{
-//public:
+class Point: public TaskGeometry
+{
+public:
 
-//    Point();
-//    Point(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
+    Point();
+    Point(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data);
 
-//    virtual void setLinkData(Eigen::VectorXd const& link_data);
-//    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
-//    // virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
-//    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+     virtual void transformTaskData(Eigen::Affine3d const& T_l_t);
+    // virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    //virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
-//protected:
+protected:
 
-//    boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the point in the TaskGeometry::link_ frame
-//};
+   // boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the point in the TaskGeometry::link_ frame
+};
 ////------------------------------------------------------------------------------------------
 //class Sphere: public TaskGeometry
 //{
@@ -102,24 +97,23 @@ protected:
 //    boost::shared_ptr<Eigen::Vector3d> v_; ///< coordinates of the line's unit direction vector expressed in TaskGeometry::link_ frame
 //};
 ////------------------------------------------------------------------------------------------
-////** Plane defined as Plane::n_^T*x - Plane::d_ = 0.0 */
-//class Plane: public TaskGeometry
-//{
-//public:
+//** Plane defined as Plane::n_^T*x - Plane::d_ = 0.0 */
+class Plane: public TaskGeometry
+{
+public:
+Plane();
+Plane(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data);
 
-//    Plane();
-//    Plane(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
+ virtual void transformTaskData(Eigen::Affine3d const& T_l_t);
 
-//    virtual void setLinkData(Eigen::VectorXd const& link_data);
-//    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
 //    //virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
 //    virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
-//protected:
+protected:
 
 //    boost::shared_ptr<Eigen::Vector3d> n_; ///< coordinates of the plane's unit normal expressed in the TaskGeometry::link_ frame
 //    double d_; ///< plane offset
-//};
+};
 ////------------------------------------------------------------------------------------------
 //class Capsule: public TaskGeometry
 //{

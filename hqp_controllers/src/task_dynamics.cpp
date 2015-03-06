@@ -24,7 +24,7 @@ boost::shared_ptr<TaskDynamics>  TaskDynamics::makeTaskDynamics(TaskDynamicsType
     }
     else
     {
-        ROS_ERROR("Task geometry type %d is invalid.",type);
+        ROS_ERROR("Task dynamics type %d is invalid.",type);
         ROS_BREAK();
     }
     return dynamics;

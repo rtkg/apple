@@ -86,7 +86,7 @@ bool TaskManager::addTask(boost::shared_ptr<Task> task)
 //----------------------------------------------
 //boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<TaskObject> > > TaskManager::getTaskObjects()const{return t_objs_;}
 //----------------------------------------------
-void TaskManager::computeTaskKinematics()
+void TaskManager::updateTasks()
 {
     std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
 

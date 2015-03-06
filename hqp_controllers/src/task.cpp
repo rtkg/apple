@@ -21,65 +21,62 @@ namespace hqp_controllers{
 //    str<<std::endl;
 //}
 //---------------------------------------------------------
-Task::Task(unsigned int id, unsigned int priority, std::string const& frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links): id_(id), priority_(priority), frame_(frame), is_equality_task_(is_equality_task), t_dynamics_(t_dynamics), t_links_(t_links)
+Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links): id_(id), priority_(priority), task_frame_(task_frame), is_equality_task_(is_equality_task), t_dynamics_(t_dynamics), t_links_(t_links)
 {
     ROS_ASSERT(t_dynamics.get());
     ROS_ASSERT(t_dynamics->getDimension() > 0);
+
     t_start_ = true;
 }
 //---------------------------------------------------------
-//void Task::updateTaskFunctionDerivatives()
-//{
-//    ros::Time t = ros::Time::now();
-//if(t_start_)
-//{
-//    t_prev_ = t;
-//    t_start_ = false;
-//}
-//    double dt = (t - t_prev_).toSec();
-//    ROS_ASSERT(dt > -1e-8);
+void Task::updateTaskFunctionDerivatives()
+{
+    ros::Time t = ros::Time::now();
+if(t_start_)
+{
+    t_prev_ = t;
+    t_start_ = false;
+}
+    double dt = (t - t_prev_).toSec();
+    ROS_ASSERT(dt > -1e-8);
 
-//    unsigned int t_state_dim = t_dynamics_->getDimension();
+    unsigned int d_dim = t_dynamics_->getDimension();
 
-//    //Euler integration
-//    Eigen::VectorXd e=E_->col(0); //save the task function values - those are not integrated
-//    E_->leftCols(t_state_dim) = E_->leftCols(t_state_dim) + E_->rightCols(t_state_dim)*dt;
-//    E_->col(0) = e;//put back the task function values
+    //Euler integration
+    Eigen::VectorXd e=E_.col(0); //save the task function values - those are not integrated
+    E_.leftCols(d_dim) = E_.leftCols(d_dim) + E_.rightCols(d_dim)*dt;
+    E_.col(0) = e;//put back the task function values
 
-//    //compute new task function derivatives
-//    Eigen::VectorXd dx(t_state_dim);
-//    Eigen::VectorXd x(t_state_dim);
-//    for(unsigned int i=0; i < dim_; i++)
-//    {
-//        x = E_->row(i).head(t_state_dim).transpose();
-//        t_dynamics_->getDX(dx,x);
-//        E_->row(i).tail(t_state_dim) = dx.transpose();
-//    }
-//    t_prev_ = t;
-//}
-////---------------------------------------------------------
-//unsigned int Task::getId()const {return id_;}
-////---------------------------------------------------------
-//TaskType Task::getType()const {return type_;}
-////---------------------------------------------------------
-//void Task::setId(unsigned int id) {id_=id;}
-////---------------------------------------------------------
-//void Task::setSign(const std::string &sign){sign_ = sign;}
-////---------------------------------------------------------
-//std::string Task::getSign()const{return sign_;}
-//unsigned int Task::getDimension()const{return dim_;}
-////---------------------------------------------------------
-//unsigned int Task::getPriority()const {return priority_;}
-////---------------------------------------------------------
-//void Task::setPriority(unsigned int priority) {priority_= priority;}
-////---------------------------------------------------------
-//boost::shared_ptr<Eigen::MatrixXd> Task::getTaskJacobian()const{return A_;}
-////---------------------------------------------------------
-//boost::shared_ptr<Eigen::VectorXd> Task::getTaskFunction()const
-//{
-//    return boost::shared_ptr<Eigen::VectorXd>(new Eigen::VectorXd(E_->col(0)));
-//}
-////---------------------------------------------------------
+    //compute new task function derivatives
+    Eigen::VectorXd dx(d_dim);
+    Eigen::VectorXd x(d_dim);
+    for(unsigned int i=0; i < t_dim_; i++)
+    {
+        x = E_.row(i).head(d_dim).transpose();
+        t_dynamics_->getDX(dx,x);
+        E_.row(i).tail(d_dim) = dx.transpose();
+    }
+    t_prev_ = t;
+}
+//---------------------------------------------------------
+unsigned int Task::getId()const {return id_;}
+//---------------------------------------------------------
+void Task::setId(unsigned int id) {id_=id;}
+//---------------------------------------------------------
+void Task::setIsEqualityTask(bool is_equality_task){is_equality_task_ = is_equality_task;}
+//---------------------------------------------------------
+bool Task::getIsEqualityTask()const{return is_equality_task_;}
+//---------------------------------------------------------
+unsigned int Task::getDimension()const{return t_dim_;}
+//---------------------------------------------------------
+unsigned int Task::getPriority()const {return priority_;}
+//---------------------------------------------------------
+void Task::setPriority(unsigned int priority) {priority_= priority;}
+//---------------------------------------------------------
+Eigen::MatrixXd Task::getTaskJacobian()const{return A_;}
+//---------------------------------------------------------
+Eigen::VectorXd Task::getTaskFunction()const{return E_.col(0);}
+//---------------------------------------------------------
 //boost::shared_ptr<Eigen::VectorXd> Task::getTaskVelocity()const
 //{
 //    return boost::shared_ptr<Eigen::VectorXd>(new Eigen::VectorXd(E_->col(1)));
@@ -94,13 +91,32 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& frame, boo
 ////}
 ////---------------------------------------------------------
 //boost::shared_ptr<TaskDynamics> Task::getTaskDynamics()const{return t_dynamics_;}
-////---------------------------------------------------------
-//boost::shared_ptr<Task> Task::makeTask(unsigned int id, unsigned int priority, TaskType type, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics)
-//{
-//    boost::shared_ptr<Task> task;
+//---------------------------------------------------------
+boost::shared_ptr<Task> Task::makeTask(void* description, TaskDescriptionFormat format)
+{
+    //parse the task description
 
-//    if(type == PROJECT_POINT_PLANE)
-//        task.reset(new ProjectPointPlane(id, priority, sign, t_objs, t_dynamics));
+
+    if(format == ROS_MESSAGE)
+    {
+       hqp_controllers_msgs::Task* t_description = static_cast<hqp_controllers_msgs::Task*>(description);
+    }
+    else if(format == XML)
+    {
+        std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
+        ROS_BREAK();
+    }
+    else
+    {
+        ROS_ERROR("Task description format %d is invalid.", format);
+        ROS_BREAK();
+    }
+
+    //generate the corresponding task
+    boost::shared_ptr<Task> task;
+
+//    if(type == PROJECTION)
+//        task.reset(new Projection(id, priority, is_equality_task, t_dynamics, t_links));
 //    else if(type == PROJECT_POINT_CYLINDER)
 //        task.reset(new ProjectPointCylinder(id, priority, sign, t_objs, t_dynamics));
 //    else if(type == PROJECT_LINE_LINE)
@@ -122,38 +138,23 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& frame, boo
 //        ROS_ERROR("Task type %d is invalid.",type);
 //        ROS_BREAK();
 //    }
-//    return task;
-//}
-////---------------------------------------------------------
-//ProjectPointPlane::ProjectPointPlane(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
-//{
-//    type_ = PROJECT_POINT_PLANE;
+    return task;
+}
+//---------------------------------------------------------
+Projection::Projection(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links) : Task(id, priority, task_frame, is_equality_task, t_dynamics, t_links)
+{
 //    dim_ = t_objs_->at(1).getGeometries()->size();
+ROS_ASSERT(t_links_.size() == 2);
+ROS_ASSERT(t_links_.at(0).get() && t_links_.at(1).get()); //make sure the task links exist
+//make sure task geometries exist
+ROS_ASSERT((t_links_.at(0)->getGeometries().size() > 0) &&  (t_links_.at(1)->getGeometries().size() > 0));
+for (unsigned int i=0; i<t_links_.at(0)->getGeometries().size(); i++)
+ ROS_ASSERT(t_links_.at(0)->getGeometries().at(i).get());
+for (unsigned int i=0; i<t_links_.at(1)->getGeometries().size(); i++)
+ ROS_ASSERT(t_links_.at(1)->getGeometries().at(i).get());
 
-//    verifyTaskObjects();
-
-//    unsigned int n_jnts = t_objs_->at(1).getJacobian()->cols(); //number of controlled joints
-//    A_->resize(dim_, n_jnts);
-//    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
-//    A_->setZero();
-//    E_->setZero();
-//}
-////---------------------------------------------------------
-//void ProjectPointPlane::verifyTaskObjects()
-//{
-//    ROS_ASSERT(t_objs_->size() == 2); //need one point and one set of planes
-//    ROS_ASSERT(t_objs_->at(0).getGeometries().get() && t_objs_->at(1).getGeometries().get()); //make sure the geometries exist
-//    ROS_ASSERT(t_objs_->at(0).getRoot() == t_objs_->at(1).getRoot()); //make sure the geometries associated with the task objects are formed in the same root frame
-//    //check that the task object geometries are valid - first one has to be a single point, second one a set of planes
-//    ROS_ASSERT(t_objs_->at(0).getGeometries()->size() == 1);
-//    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == POINT);
-//    ROS_ASSERT(dim_ > 0);
-//    ROS_ASSERT(t_objs_->at(1).getChain()->getNrOfJoints() == 0);//Make sure the planes are fixed in the environment for now
-//    for (unsigned int i=0; i<dim_;i++)
-//        ROS_ASSERT(t_objs_->at(1).getGeometries()->at(i)->getType() == PLANE);
-
-//}
-////---------------------------------------------------------
+}
+//---------------------------------------------------------
 //double ProjectPointPlane::getSSE()const
 //{
 //    Eigen::VectorXd e(dim_);
@@ -191,9 +192,13 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& frame, boo
 ////    e_->setZero();
 ////    de_->setZero();
 ////}
-////---------------------------------------------------------
-//void ProjectPointPlane::computeTask()
-//{
+//---------------------------------------------------------
+void Projection::updateTask()
+{
+    std::cout<<"ATTENZIONE: Not implemented yet!"<<std::endl;
+
+    //RESIZE MATRICES!!!!
+
 //    //   std::cout<<"joints: ";
 //    //    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)
 //    //        std::cout<<t_objs_.first->getJoints()->at(i).getPosition()<<" ";
@@ -230,8 +235,8 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& frame, boo
 //    updateTaskFunctionDerivatives();
 
 //    //    std::cout<<GRB_DoubleParam_Cutoff<<std::endl;
-//}
-////---------------------------------------------------------
+}
+//---------------------------------------------------------
 //JointSetpoint::JointSetpoint(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
 //{
 //    type_ = JOINT_SETPOINT;
