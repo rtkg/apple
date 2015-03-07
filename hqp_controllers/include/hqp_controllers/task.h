@@ -27,7 +27,6 @@ public:
 //    boost::shared_ptr<TaskDynamics> getTaskDynamics()const;
     unsigned int getId()const;
 
-    unsigned int getDimension()const;
     unsigned int getPriority()const;
     bool getIsEqualityTask()const;
 
@@ -39,7 +38,8 @@ public:
 //    boost::shared_ptr<std::vector<TaskLink> > getTaskLinks()const;
 
     //** Needs to be checked whether the task objects have appropriate properties in each derived task class */
-    static boost::shared_ptr<Task> makeTask(void* description, TaskDescriptionFormat format); ///<factory method
+    static boost::shared_ptr<Task> makeTask(XmlRpc::XmlRpcValue const& t_description); ///<factory method
+    static XmlRpc::XmlRpcValue taskMessageToXmlRpcValue(hqp_controllers_msgs::Task const& msg);
 //    //  virtual void setTaskLinks(std::pair<boost::shared_ptr<TaskLink>, boost::shared_ptr<TaskLink> > t_objs) = 0;
 
     //**Computes task function, velocity and jacobians. Also updates the kinematics of the corresponding task objects.*/
@@ -58,8 +58,7 @@ protected:
     std::string task_frame_;
     bool is_equality_task_;
 
-     unsigned int t_dim_; ///< task dimension == rows of the task jacobian Task::A_ / task function state matrix Task::E_
-     boost::shared_ptr<TaskDynamics> t_dynamics_;
+       boost::shared_ptr<TaskDynamics> t_dynamics_;
       std::vector<boost::shared_ptr<TaskLink> >  t_links_;
 
 

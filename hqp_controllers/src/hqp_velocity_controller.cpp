@@ -19,6 +19,9 @@ HQPVelocityController::~HQPVelocityController()
 //-----------------------------------------------------------------------
 bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw, ros::NodeHandle &n)
 {
+    hqp_controllers_msgs::Task t_description;
+    Task::taskMessageToXmlRpcValue(t_description);
+
     // Get the list of controlled joints
     std::string param_name = "joints";
     if(!n.getParam(param_name, joint_names_))

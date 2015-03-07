@@ -50,7 +50,7 @@ if(t_start_)
     //compute new task function derivatives
     Eigen::VectorXd dx(d_dim);
     Eigen::VectorXd x(d_dim);
-    for(unsigned int i=0; i < t_dim_; i++)
+    for(unsigned int i=0; i < E_.rows(); i++)
     {
         x = E_.row(i).head(d_dim).transpose();
         t_dynamics_->getDX(dx,x);
@@ -66,8 +66,6 @@ void Task::setId(unsigned int id) {id_=id;}
 void Task::setIsEqualityTask(bool is_equality_task){is_equality_task_ = is_equality_task;}
 //---------------------------------------------------------
 bool Task::getIsEqualityTask()const{return is_equality_task_;}
-//---------------------------------------------------------
-unsigned int Task::getDimension()const{return t_dim_;}
 //---------------------------------------------------------
 unsigned int Task::getPriority()const {return priority_;}
 //---------------------------------------------------------
@@ -92,25 +90,36 @@ Eigen::VectorXd Task::getTaskFunction()const{return E_.col(0);}
 ////---------------------------------------------------------
 //boost::shared_ptr<TaskDynamics> Task::getTaskDynamics()const{return t_dynamics_;}
 //---------------------------------------------------------
-boost::shared_ptr<Task> Task::makeTask(void* description, TaskDescriptionFormat format)
+XmlRpc::XmlRpcValue Task::taskMessageToXmlRpcValue(hqp_controllers_msgs::Task const& msg)
 {
-    //parse the task description
+    XmlRpc::XmlRpcValue task;
 
+    task["type"] = msg.type;
+    task["priority"] = msg.priority;
+    task["is_equality_task"] = msg.is_equality_task;
+    task["task_frame"] = msg.task_frame;
+    task["dynamics"]["type"] = msg.dynamics.type;
+    for(unsigned int i=0; i<msg.dynamics.data.size();i++)
+        task["dynamics"]["data"][i] = msg.dynamics.data[i];
+    for(unsigned int i=0; i<msg.t_links.size();i++)
+    {
+        task["t_links"][i]["link_frame"] = msg.t_links[i].link_frame;
+        for(unsigned int j=0; j<msg.t_links[i].geometries.size();j++)
+        {
+            task["t_links"][i]["geometries"][j]["type"] = msg.t_links[i].geometries[j].type;
+            for(unsigned int k=0; k<msg.t_links[i].geometries[j].data.size();k++)
+                task["t_links"][i]["geometries"][j]["data"][k]=msg.t_links[i].geometries[j].data[k];
+        }
+    }
 
-    if(format == ROS_MESSAGE)
-    {
-       hqp_controllers_msgs::Task* t_description = static_cast<hqp_controllers_msgs::Task*>(description);
-    }
-    else if(format == XML)
-    {
-        std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
-        ROS_BREAK();
-    }
-    else
-    {
-        ROS_ERROR("Task description format %d is invalid.", format);
-        ROS_BREAK();
-    }
+    return task;
+}
+//---------------------------------------------------------
+boost::shared_ptr<Task> Task::makeTask(XmlRpc::XmlRpcValue const& t_description)
+{
+//make task dynamics
+
+    //make task links
 
     //generate the corresponding task
     boost::shared_ptr<Task> task;
