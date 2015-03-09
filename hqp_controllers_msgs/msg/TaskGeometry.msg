@@ -9,7 +9,7 @@ uint16 CONE = 8
 uint16 CYLINDER = 9
 uint16 SPHERE = 10
 
-uint16 type
-float64[] data 
+uint16 g_type
+float64[] g_data 
 
 

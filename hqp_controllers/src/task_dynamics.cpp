@@ -3,6 +3,14 @@
 
 namespace hqp_controllers{
 //----------------------------------------------------------
+std::ostream& operator<<(std::ostream& str, TaskDynamics const& t_dynamics)
+{
+     str<<"TASK DYNAMICS: "<<std::endl;
+     str<<"dynamics dimension: "<<t_dynamics.d_dim_<<std::endl;
+
+     str<<std::endl;
+}
+//----------------------------------------------------------
 boost::shared_ptr<TaskDynamics>  TaskDynamics::makeTaskDynamics(TaskDynamicsType type, Eigen::VectorXd const& data)
 {
     boost::shared_ptr<TaskDynamics> dynamics;

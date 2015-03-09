@@ -19,6 +19,8 @@ public:
     virtual void getDX(Eigen::VectorXd& dx, Eigen::VectorXd& x)const = 0;
     static boost::shared_ptr<TaskDynamics>  makeTaskDynamics(TaskDynamicsType type, Eigen::VectorXd const& data); ///<factory method
 
+friend std::ostream& operator<<(std::ostream& str, TaskDynamics const& t_dynamics);
+
 protected:
 
     unsigned int d_dim_; ///< dimension of the state space

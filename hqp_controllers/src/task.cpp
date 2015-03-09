@@ -1,27 +1,33 @@
 #include <hqp_controllers/task.h>
 #include <hqp_controllers/utilities.h>
+#include <typeinfo>
 
 namespace hqp_controllers{
 //---------------------------------------------------------
-//std::ostream& operator<<(std::ostream& str, Task const& task)
-//{
-//    str<<"TASK: "<<std::endl;
-//    str<<"id: "<<task.id_<<std::endl;
-//    str<<"type: "<<task.type_<<std::endl;
-//    str<<"priority: "<<task.priority_<<std::endl;
-//    str<<"sign: "<<task.sign_<<std::endl;
-//    str<<"dim: "<<task.dim_<<std::endl;
-//    str<<"A_:"<<std::endl<<(*task.A_)<<std::endl;
-//    str<<"E_:"<<std::endl<<(*task.E_)<<std::endl;
-//    str<<"t_prev_:"<<task.t_prev_.toSec()<<std::endl;
-//    str<<"Task objects:";
-//    for(unsigned int i=0; i<task.t_objs_->size(); i++)
-//        str<<task.t_objs_->at(i);
+std::ostream& operator<<(std::ostream& str, Task const& task)
+{
+    str<<"TASK: "<<std::endl;
+    str<<"id: "<<task.id_<<std::endl;
+    str<<"type: "<<typeid(task).name()<<std::endl;
+    str<<"task frame: "<<task.task_frame_<<std::endl;
+    str<<"priority: "<<task.priority_<<std::endl;
+    str<<"is equality task: "<<task.is_equality_task_<<std::endl;
+    str<<"ds: "<<task.ds_<<std::endl;
+    str<<"di: "<<task.di_<<std::endl;
+    str<<"A_:"<<std::endl<<task.A_<<std::endl;
+    str<<"E_:"<<std::endl<<task.E_<<std::endl;
+    str<<"t_prev_:"<<task.t_prev_.toSec()<<std::endl;
+    str<<"t_start_:"<<task.t_start_<<std::endl;
 
-//    str<<std::endl;
-//}
+    str<< *(task.t_dynamics_)<<std::endl;
+
+    for(unsigned int i=0; i<task.t_links_.size(); i++)
+        str<< *(task.t_links_.at(i));
+
+    str<<std::endl;
+}
 //---------------------------------------------------------
-Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links): id_(id), priority_(priority), task_frame_(task_frame), is_equality_task_(is_equality_task), t_dynamics_(t_dynamics), t_links_(t_links)
+Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links): id_(id), priority_(priority), task_frame_(task_frame), is_equality_task_(is_equality_task), t_dynamics_(t_dynamics), t_links_(t_links), ds_(0.0), di_(1.0)
 {
     ROS_ASSERT(t_dynamics.get());
     ROS_ASSERT(t_dynamics->getDimension() > 0);
@@ -29,14 +35,21 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame
     t_start_ = true;
 }
 //---------------------------------------------------------
+void Task::setTaskVelocityDamping(double ds, double di)
+{
+    ROS_ASSERT((ds_ >= 0.0) && (di > 0.0));
+    ds_ = ds;
+    di_ = di;
+}
+//---------------------------------------------------------
 void Task::updateTaskFunctionDerivatives()
 {
     ros::Time t = ros::Time::now();
-if(t_start_)
-{
-    t_prev_ = t;
-    t_start_ = false;
-}
+    if(t_start_)
+    {
+        t_prev_ = t;
+        t_start_ = false;
+    }
     double dt = (t - t_prev_).toSec();
     ROS_ASSERT(dt > -1e-8);
 
@@ -94,74 +107,145 @@ XmlRpc::XmlRpcValue Task::taskMessageToXmlRpcValue(hqp_controllers_msgs::Task co
 {
     XmlRpc::XmlRpcValue task;
 
-    task["type"] = msg.type;
+    task["t_type"] = msg.t_type;
     task["priority"] = msg.priority;
     task["is_equality_task"] = msg.is_equality_task;
     task["task_frame"] = msg.task_frame;
-    task["dynamics"]["type"] = msg.dynamics.type;
-    for(unsigned int i=0; i<msg.dynamics.data.size();i++)
-        task["dynamics"]["data"][i] = msg.dynamics.data[i];
+    task["ds"] = msg.ds;
+        task["di"] = msg.di;
+    task["dynamics"]["d_type"] = msg.dynamics.d_type;
+    for(unsigned int i=0; i<msg.dynamics.d_data.size();i++)
+        task["dynamics"]["d_data"][i] = msg.dynamics.d_data[i];
     for(unsigned int i=0; i<msg.t_links.size();i++)
     {
         task["t_links"][i]["link_frame"] = msg.t_links[i].link_frame;
         for(unsigned int j=0; j<msg.t_links[i].geometries.size();j++)
         {
-            task["t_links"][i]["geometries"][j]["type"] = msg.t_links[i].geometries[j].type;
-            for(unsigned int k=0; k<msg.t_links[i].geometries[j].data.size();k++)
-                task["t_links"][i]["geometries"][j]["data"][k]=msg.t_links[i].geometries[j].data[k];
+            task["t_links"][i]["geometries"][j]["g_type"] = msg.t_links[i].geometries[j].g_type;
+            for(unsigned int k=0; k<msg.t_links[i].geometries[j].g_data.size();k++)
+                task["t_links"][i]["geometries"][j]["g_data"][k]=msg.t_links[i].geometries[j].g_data[k];
         }
     }
 
     return task;
 }
 //---------------------------------------------------------
-boost::shared_ptr<Task> Task::makeTask(XmlRpc::XmlRpcValue const& t_description)
+boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_description, KDL::Tree const& k_tree, std::vector< hardware_interface::JointHandle > const& joints)
 {
-//make task dynamics
+    ROS_ASSERT(t_description["t_type"].getType() == XmlRpc::XmlRpcValue::TypeInt);
+    TaskType t_type = static_cast<TaskType>((int)t_description["t_type"]);
+
+    ROS_ASSERT(t_description["priority"].getType() == XmlRpc::XmlRpcValue::TypeInt);
+    int priority = (int)t_description["priority"];
+
+    ROS_ASSERT(t_description["is_equality_task"].getType() == XmlRpc::XmlRpcValue::TypeInt); //TypeBoolean ain't working for some reason
+    bool is_equality_task;
+    if ((int)t_description["is_equality_task"] == 0)
+        is_equality_task = false;
+    else if ((int)t_description["is_equality_task"] == 1)
+        is_equality_task = true;
+    else
+        ROS_BREAK();
+
+    ROS_ASSERT(t_description["task_frame"].getType() == XmlRpc::XmlRpcValue::TypeString);
+    std::string task_frame = (std::string)t_description["task_frame"];
+
+    ROS_ASSERT(t_description["ds"].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+    double ds = (double)t_description["ds"];
+
+        ROS_ASSERT(t_description["di"].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+        double di = (double)t_description["di"];
+
+    //make task dynamics
+    ROS_ASSERT(t_description["dynamics"]["d_type"].getType() == XmlRpc::XmlRpcValue::TypeInt);
+    TaskDynamicsType d_type = static_cast<TaskDynamicsType>((int)t_description["dynamics"]["d_type"]);
+
+    ROS_ASSERT(t_description["dynamics"]["d_data"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+    Eigen::VectorXd d_data(t_description["dynamics"]["d_data"].size());
+    for(unsigned int i=0; i<t_description["dynamics"]["d_data"].size(); i++)
+        d_data(i) = t_description["dynamics"]["d_data"][i];
+
+    boost::shared_ptr<TaskDynamics> t_dynamics = TaskDynamics::makeTaskDynamics(d_type, d_data);
 
     //make task links
+    ROS_ASSERT(t_description["t_links"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+    std::vector<boost::shared_ptr<TaskLink> > t_links;
+    for(unsigned int i=0; i<t_description["t_links"].size(); i++)
+    {
+        ROS_ASSERT(t_description["t_links"][i]["link_frame"].getType() == XmlRpc::XmlRpcValue::TypeString);
+        std::string link_frame = t_description["t_links"][i]["link_frame"];
+
+        KDL::Chain chain;
+        if(!k_tree.getChain(task_frame,link_frame, chain))
+        {
+            ROS_ERROR("Error in Task::makeTask(...): could not get kinematic chain from %s to %s.", task_frame.c_str(),link_frame.c_str());
+            ROS_BREAK();
+        }
+        boost::shared_ptr<TaskLink> t_link(new TaskLink(task_frame, chain, joints));
+
+        ROS_ASSERT(t_description["t_links"][i]["geometries"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+        for(unsigned int j=0; j<t_description["t_links"][i]["geometries"].size(); j++)
+        {
+            TaskGeometryType g_type = static_cast<TaskGeometryType>((int)t_description["t_links"][i]["geometries"][j]["g_type"]);
+            Eigen::VectorXd g_data(t_description["t_links"][i]["geometries"][j]["g_data"].size());
+            for(unsigned int k=0; k<t_description["t_links"][i]["geometries"][j]["g_data"].size(); k++)
+                g_data(k) = t_description["t_links"][i]["geometries"][j]["g_data"][k];
+
+            boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(g_type, link_frame, task_frame, g_data);
+            t_link->addGeometry(geom);
+        }
+        t_links.push_back(t_link);
+    }
 
     //generate the corresponding task
     boost::shared_ptr<Task> task;
 
-//    if(type == PROJECTION)
-//        task.reset(new Projection(id, priority, is_equality_task, t_dynamics, t_links));
-//    else if(type == PROJECT_POINT_CYLINDER)
-//        task.reset(new ProjectPointCylinder(id, priority, sign, t_objs, t_dynamics));
-//    else if(type == PROJECT_LINE_LINE)
-//        task.reset(new ProjectLineLine(id, priority, sign, t_objs, t_dynamics));
-//    else if(type == JOINT_SETPOINT)
-//        task.reset(new JointSetpoint(id, priority, sign, t_objs, t_dynamics));
-//    else if(type == JOINT_VELOCITY_LIMITS)
-//        task.reset(new JointVelocityLimits(id, priority, sign, t_objs, t_dynamics));
-//    else if(type == PARALLEL_LINES)
-//        task.reset(new ParallelLines(id, priority, sign, t_objs, t_dynamics));
-//    else if(type == ANGLE_LINES)
-//        task.reset(new AngleLines(id, priority, sign, t_objs, t_dynamics));
-//    else if(type == COPLANAR_LINES)
-//        task.reset(new CoplanarLines(id, priority, sign, t_objs, t_dynamics));
-//    else if(type == PROJECT_SPHERE_PLANE)
-//        task.reset(new ProjectSpherePlane(id, priority, sign, t_objs, t_dynamics));
-//    else
-//    {
-//        ROS_ERROR("Task type %d is invalid.",type);
-//        ROS_BREAK();
-//    }
+    if(t_type == PROJECTION)
+        task.reset(new Projection(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
+    //    else if(type == PROJECT_POINT_CYLINDER)
+    //        task.reset(new ProjectPointCylinder(id, priority, sign, t_objs, t_dynamics));
+    //    else if(type == PROJECT_LINE_LINE)
+    //        task.reset(new ProjectLineLine(id, priority, sign, t_objs, t_dynamics));
+    //    else if(type == JOINT_SETPOINT)
+    //        task.reset(new JointSetpoint(id, priority, sign, t_objs, t_dynamics));
+    //    else if(type == JOINT_VELOCITY_LIMITS)
+    //        task.reset(new JointVelocityLimits(id, priority, sign, t_objs, t_dynamics));
+    //    else if(type == PARALLEL_LINES)
+    //        task.reset(new ParallelLines(id, priority, sign, t_objs, t_dynamics));
+    //    else if(type == ANGLE_LINES)
+    //        task.reset(new AngleLines(id, priority, sign, t_objs, t_dynamics));
+    //    else if(type == COPLANAR_LINES)
+    //        task.reset(new CoplanarLines(id, priority, sign, t_objs, t_dynamics));
+    //    else if(type == PROJECT_SPHERE_PLANE)
+    //        task.reset(new ProjectSpherePlane(id, priority, sign, t_objs, t_dynamics));
+    else
+    {
+        ROS_ERROR("Task type %d is invalid.", t_type);
+        ROS_BREAK();
+    }
+
+    task->setTaskVelocityDamping(ds,di);
     return task;
 }
 //---------------------------------------------------------
 Projection::Projection(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links) : Task(id, priority, task_frame, is_equality_task, t_dynamics, t_links)
 {
-//    dim_ = t_objs_->at(1).getGeometries()->size();
-ROS_ASSERT(t_links_.size() == 2);
-ROS_ASSERT(t_links_.at(0).get() && t_links_.at(1).get()); //make sure the task links exist
-//make sure task geometries exist
-ROS_ASSERT((t_links_.at(0)->getGeometries().size() > 0) &&  (t_links_.at(1)->getGeometries().size() > 0));
-for (unsigned int i=0; i<t_links_.at(0)->getGeometries().size(); i++)
- ROS_ASSERT(t_links_.at(0)->getGeometries().at(i).get());
-for (unsigned int i=0; i<t_links_.at(1)->getGeometries().size(); i++)
- ROS_ASSERT(t_links_.at(1)->getGeometries().at(i).get());
+    //    dim_ = t_objs_->at(1).getGeometries()->size();
+    ROS_ASSERT(t_links_.size() == 2);
+    ROS_ASSERT(t_links_.at(0).get() && t_links_.at(1).get()); //make sure the task links exist
+    //make sure task geometries exist
+    ROS_ASSERT((t_links_.at(0)->getGeometries().size() > 0) &&  (t_links_.at(1)->getGeometries().size() > 0));
+    for (unsigned int i=0; i<t_links_.at(0)->getGeometries().size(); i++)
+        ROS_ASSERT(t_links_.at(0)->getGeometries().at(i).get());
+    for (unsigned int i=0; i<t_links_.at(1)->getGeometries().size(); i++)
+        ROS_ASSERT(t_links_.at(1)->getGeometries().at(i).get());
 
+}
+//---------------------------------------------------------
+void Task::computeTaskLinkKinematics()
+{
+    for(unsigned int i=0; i<t_links_.size(); i++)
+        t_links_[i]->computeKinematics();
 }
 //---------------------------------------------------------
 //double ProjectPointPlane::getSSE()const
@@ -206,44 +290,48 @@ void Projection::updateTask()
 {
     std::cout<<"ATTENZIONE: Not implemented yet!"<<std::endl;
 
-    //RESIZE MATRICES!!!!
+    //compute forward kinematics and jacobians
+    computeTaskLinkKinematics();
 
-//    //   std::cout<<"joints: ";
-//    //    for(unsigned int i = 0; i<t_objs_.first->getJoints()->size();i++)
-//    //        std::cout<<t_objs_.first->getJoints()->at(i).getPosition()<<" ";
+    unsigned int n_jnts = t_links_[0]->getNumJoints();
+    A_.resize(0, n_jnts);
+    E_.resize(0, n_jnts);
+    unsigned int t_dim = 0;
+    for (unsigned int i = 0; i<t_links_[0]->getGeometries().size(); i++)
+        for (unsigned int j = 0; j<t_links_[1]->getGeometries().size(); j++)
+    {
+        ProjectionQuantities proj = t_links_[0]->getGeometries().at(i)->project(*(t_links_[1]->getGeometries().at(j)));
 
-//    //Get the task point p(q) expressed in the task root frame
-//    Eigen::Vector3d p = (*(t_objs_->at(0).getGeometries()->at(0)->getRootData()));
+        for (unsigned int k = 0; k<proj.d_.rows(); k++)
+        {
+            t_dim++;
+            //get the jacobian of the current projection points
+            Eigen::Vector3d delta_p1 = proj.P1_.col(k) - t_links_[0]->getLinkTransform().translation();
+            Eigen::Vector3d delta_p2 = proj.P2_.col(k) - t_links_[1]->getLinkTransform().translation();
 
-//    //Get the vector from the link frame origin to the task point expressed in the task object root frame
-//    Eigen::Vector3d delta_p = p - t_objs_->at(0).getLinkTransform()->translation();
+            Eigen::Matrix3d jac = t_links_[0]->getJacobian(delta_p1) - t_links_[1]->getJacobian(delta_p2) ;
 
-//    //Get the Jacobain w.r.t the task point p(q)
-//    boost::shared_ptr<Eigen::MatrixXd> jac = t_objs_->at(0).getJacobian(delta_p);
+            A_.conservativeResize(t_dim, n_jnts);
+            A_.bottomRows<1>() = proj.N_.col(k).transpose() * jac.topRows<3>();
 
-//    //Compute the task function values and jacobians
-//    Eigen::VectorXd plane(4);
-//    for(unsigned int i=0; i<dim_;i++)
-//    {
-//        plane = (*(t_objs_->at(1).getGeometries()->at(i)->getRootData()));
-//        //task function values
-//        (*E_)(i,0) = plane.head<3>().transpose()*p-plane.tail<1>()(0);
+            E_.conservativeResize(t_dim ,t_dynamics_->getDimension());
+            E_(t_dim,0) = proj.d_(k);
+        }
 
-//        A_->row(i) = plane.head<3>().transpose() * jac->topRows<3>();
-//    }
+    }
 
-//    //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
-//    //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
-//    //    std::cout<<"p: "<<p.transpose()<<std::endl;
-//    //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
-//    //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
-//    //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
-//    //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
 
-//    //compute task function derivatives
-//    updateTaskFunctionDerivatives();
+     //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
+     //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
+     //    std::cout<<"p: "<<p.transpose()<<std::endl;
+     //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
+     //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
+     //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
+     //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
 
-//    //    std::cout<<GRB_DoubleParam_Cutoff<<std::endl;
+   //compute task function derivatives
+       updateTaskFunctionDerivatives();
+
 }
 //---------------------------------------------------------
 //JointSetpoint::JointSetpoint(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)

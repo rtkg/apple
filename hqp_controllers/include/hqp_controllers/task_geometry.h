@@ -14,6 +14,20 @@ enum TaskGeometryType {POINT = 1, LINE = 2, PLANE = 3, FRAME = 4, CAPSULE = 5, J
 #define PLANE_SCALE  0.8
 #define CONE_SCALE   0.3
 #define LINE_WIDTH   0.005
+
+class Point;
+class Plane;
+
+//----------------------------------------------------------------------------------------------------
+struct ProjectionQuantities
+{
+    Eigen::Matrix3d P1_; ///< Matrix holding the first set of projection points
+    Eigen::Matrix3d P2_; ///< Matrix holding the second set of projection points
+    Eigen::Matrix3d N_; ///< Matrix holding the projection normals
+    Eigen::VectorXd d_; ///< Matrix holding the projection offsets
+
+    ProjectionQuantities(Eigen::Matrix3d const& P1, Eigen::Matrix3d const& P2, Eigen::Matrix3d const& N, Eigen::VectorXd const& d);
+};
 //----------------------------------------------------------------------------------------------------
 class TaskGeometry
 {
@@ -25,23 +39,27 @@ public:
 
     std::string getLinkFrame() const;
     std::string getTaskFrame() const;
-Eigen::VectorXd getLinkData() const;
-Eigen::VectorXd getTaskData() const;
-//    boost::shared_ptr<Eigen::Affine3d> getLinkTransform() const;
+    Eigen::VectorXd getLinkData() const;
+    Eigen::VectorXd getTaskData() const;
+    //    boost::shared_ptr<Eigen::Affine3d> getLinkTransform() const;
 
-//    friend std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom);
+    friend std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom);
 
-  static boost::shared_ptr<TaskGeometry>  makeTaskGeometry(TaskGeometryType type, std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data); ///<factory method
-   //**transforms the TaskGeometry::link_data_ into the given task frame and sets TaskGeometry::task_data_ accordingly*/
+    static boost::shared_ptr<TaskGeometry>  makeTaskGeometry(TaskGeometryType type, std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data); ///<factory method
+    //**transforms the TaskGeometry::link_data_ into the given task frame and sets TaskGeometry::task_data_ accordingly*/
     virtual void transformTaskData(Eigen::Affine3d const& T_l_t) = 0;
-//    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const = 0;
-//    virtual void addMarker(visualization_msgs::MarkerArray& markers) = 0;
+    //    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const = 0;
+    //    virtual void addMarker(visualization_msgs::MarkerArray& markers) = 0;
+
+    virtual ProjectionQuantities project(TaskGeometry const& geom)const = 0;
+    virtual ProjectionQuantities projectOntoPoint(Point const& point)const = 0;
+    virtual ProjectionQuantities projectOntoPlane(Plane const& plane)const = 0;
 
 protected:
 
     std::string link_frame_;
-        std::string task_frame_;
-  Eigen::VectorXd link_data_; ///< the geometry data expressed in the link frame (constant)
+    std::string task_frame_;
+    Eigen::VectorXd link_data_; ///< the geometry data expressed in the link frame (constant)
     Eigen::VectorXd task_data_; ///< the geometry data expressed in the task frame
 };
 //------------------------------------------------------------------------------------------
@@ -52,13 +70,18 @@ public:
     Point();
     Point(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data);
 
-     virtual void transformTaskData(Eigen::Affine3d const& T_l_t);
+    virtual void transformTaskData(Eigen::Affine3d const& T_l_t);
     // virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
     //virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
-protected:
+    virtual ProjectionQuantities project(TaskGeometry const& geom)const;
 
-   // boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the point in the TaskGeometry::link_ frame
+ protected:
+
+     virtual ProjectionQuantities projectOntoPoint(Point const& point)const;
+     virtual ProjectionQuantities projectOntoPlane(Plane const& plane)const;
+
+    // boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the point in the TaskGeometry::link_ frame
 };
 ////------------------------------------------------------------------------------------------
 //class Sphere: public TaskGeometry
@@ -106,10 +129,13 @@ Plane(std::string const& link_frame, std::string const& task_frame, Eigen::Vecto
 
  virtual void transformTaskData(Eigen::Affine3d const& T_l_t);
 
-//    //virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
 //    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+virtual ProjectionQuantities project(TaskGeometry const& geom)const;
 
 protected:
+
+ virtual ProjectionQuantities projectOntoPoint(Point const& point)const;
+ virtual ProjectionQuantities projectOntoPlane(Plane const& plane)const;
 
 //    boost::shared_ptr<Eigen::Vector3d> n_; ///< coordinates of the plane's unit normal expressed in the TaskGeometry::link_ frame
 //    double d_; ///< plane offset

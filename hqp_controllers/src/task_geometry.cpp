@@ -4,24 +4,23 @@
 #include <kdl/jacobian.hpp>
 #include <ros/ros.h>
 #include <math.h>
+#include <typeinfo>
 
 namespace hqp_controllers {
-
-
 //------------------------------------------------------
-//std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom)
-//{
-//    str<<"TASK GEOMETRY"<<std::endl;
-//    str<<"type: "<<geom.type_<<std::endl;
-//    str<<"link: "<<geom.link_<<std::endl;
-//    str<<"root: "<<geom.root_<<std::endl;
-//    str<<"link data: "<<geom.link_data_->transpose()<<std::endl;
-//    str<<"root data: "<<geom.root_data_->transpose()<<std::endl;
-//    str<<"link transform translation:"<<std::endl<<geom.trans_l_r_->translation().transpose()<<std::endl;
-//    str<<"link transform rotation:"<<std::endl<<geom.trans_l_r_->linear()<<std::endl;
-//    str<<std::endl;
-//}
-////------------------------------------------------------
+ProjectionQuantities::ProjectionQuantities(Eigen::Matrix3d const& P1, Eigen::Matrix3d const& P2, Eigen::Matrix3d const& N, Eigen::VectorXd const& d) : P1_(P1), P2_(P2), N_(N), d_(d){}
+//------------------------------------------------------
+std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom)
+{
+    str<<"TASK GEOMETRY"<<std::endl;
+    str<<"type: "<<typeid(geom).name()<<std::endl;
+    str<<"link frame: "<<geom.link_frame_<<std::endl;
+    str<<"task frame: "<<geom.task_frame_<<std::endl;
+    str<<"link data: "<<geom.link_data_.transpose()<<std::endl;
+    str<<"task data: "<<geom.task_data_.transpose()<<std::endl;
+    str<<std::endl;
+}
+//------------------------------------------------------
 TaskGeometry::TaskGeometry() : link_frame_(""), task_frame_(""){}
 //------------------------------------------------------
 TaskGeometry::TaskGeometry(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : link_frame_(link_frame), task_frame_(task_frame), link_data_(link_data){}
@@ -76,6 +75,28 @@ Point::Point(std::string const& link_frame, std::string const& task_frame, Eigen
 void Point::transformTaskData(Eigen::Affine3d const& T_l_t)
 {
    task_data_ = T_l_t * link_data_.head<3>();
+}
+//------------------------------------------------------------------------
+ProjectionQuantities Point::project(const TaskGeometry &geom)const
+{
+   ROS_ASSERT(task_frame_ == geom.getTaskFrame());
+   return geom.projectOntoPoint(*this);
+}
+//------------------------------------------------------------------------
+ProjectionQuantities Point::projectOntoPoint(const Point &point)const
+{
+    Eigen::Matrix3d P1(3,1); P1.col(0) = point.getTaskData();
+    Eigen::Matrix3d P2(3,1); P2.col(0) = task_data_;
+    Eigen::Matrix3d N(3,1); N.col(0) = P1.col(0) - P2.col(0);
+    Eigen::VectorXd d(1); d(0)=N.col(0).norm();
+    N=N/d(0);
+
+   return ProjectionQuantities(P1, P2, N, d);
+}
+//------------------------------------------------------------------------
+ProjectionQuantities Point::projectOntoPlane(const Plane &plane)const
+{
+std::cout<<"ATTENZIONE: Point::projectOntoPlane(...) is not implemented yet!"<<std::endl;
 }
 //------------------------------------------------------------------------
 //void Point::addMarker(visualization_msgs::MarkerArray& markers)
@@ -182,12 +203,29 @@ void Point::transformTaskData(Eigen::Affine3d const& T_l_t)
 //------------------------------------------------------------------------
 Plane::Plane() : TaskGeometry() {}
 //------------------------------------------------------------------------
-Plane::Plane(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data)
+Plane::Plane(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : TaskGeometry(link_frame, task_frame, link_data)
 {
  ROS_ASSERT(link_data_.rows() == 4); //plane is described by unit normal n and offset d
 
  //normalize on the plane normal just to be sure ...
  link_data_ = link_data_/link_data_.head<3>().norm();
+}
+//------------------------------------------------------------------------
+ProjectionQuantities Plane::project(const TaskGeometry &geom)const
+{
+   ROS_ASSERT(task_frame_ == geom.getTaskFrame());
+   return geom.projectOntoPlane(*this);
+}
+//------------------------------------------------------------------------
+ProjectionQuantities Plane::projectOntoPoint(const Point &point)const
+{
+std::cout<<"ATTENZIONE: Plane::projectOntoPoint() is not implemented yet!"<<std::endl;
+}
+//------------------------------------------------------------------------
+ProjectionQuantities Plane::projectOntoPlane(const Plane &plane)const
+{
+    ROS_ERROR("Error in Plane::projectOntoPlane(...): Cannot project plane onto plane!");
+    ROS_BREAK();
 }
 //------------------------------------------------------------------------
 //void Plane::addMarker(visualization_msgs::MarkerArray& markers)

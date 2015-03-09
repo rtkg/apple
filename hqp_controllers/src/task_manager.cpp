@@ -17,41 +17,28 @@ TaskManager::TaskManager() : hqp_computed_(false)
 //----------------------------------------------
 unsigned int TaskManager::getValidTaskId() const
 {
-           std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
-
-/*    if(tasks_->size() == 0)
+   if(tasks_.size() == 0)
         return 0;
     else
-        return tasks_->rbegin()->first + 1;  */  //The task with the largest id (id's are also map keys) is at the end
+        return tasks_.rbegin()->first + 1;  //The task with the largest id (id's are also map keys) is at the end
 }
 //----------------------------------------------
 bool TaskManager::addTask(boost::shared_ptr<Task> task)
 {
-        std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
+    //Make sure a task with the same id doesn't already exist in the map
+    std::pair<std::map<unsigned int, boost::shared_ptr<Task> >::iterator,bool> it;
+    it = tasks_.insert(std::pair<unsigned int, boost::shared_ptr<Task> >(task->getId(),task));
+    if(it.second == false)
+    {
+        ROS_ERROR("Cannot add task with id %d since it already exists.", task->getId());
+        return false;
+    }
 
-//    //make sure the task objects associated with the given task exist
-//    TaskObject t_obj;
-//    for(unsigned int i = 0; i<task->getTaskObjects()->size(); i++)
-//        if(!getTaskObject(task->getTaskObjects()->at(i).getId(), t_obj))
-//        {
-//            ROS_ERROR("Cannot add task with id %d since the required task object with id %d does not exist in the task objects map.", task->getId(),task->getTaskObjects()->at(i).getId());
-//            return false;
-//        }
+    //=================== DEBUG PRINT =========================
+    //std::cout<<"ADDED TASK: "<<std::endl<< *(task);
+    //=================== DEBUG PRINT END =========================
 
-//    //Make sure a task with the same id doesn't already exist in the map
-//    std::pair<std::map<unsigned int, boost::shared_ptr<Task> >::iterator,bool> it;
-//    it = tasks_->insert(std::pair<unsigned int, boost::shared_ptr<Task> >(task->getId(),task));
-//    if(it.second == false)
-//    {
-//        ROS_ERROR("Cannot add task with id %d since it already exists.", task->getId());
-//        return false;
-//    }
-
-//    //=================== DEBUG PRINT =========================
-//    //std::cout<<"ADDED TASK: "<<std::endl<< *(task);
-//    //=================== DEBUG PRINT END =========================
-
-//    return true;
+    return true;
 }
 //----------------------------------------------
 //bool TaskManager::removeTaskObject(unsigned int id)
@@ -88,16 +75,14 @@ bool TaskManager::addTask(boost::shared_ptr<Task> task)
 //----------------------------------------------
 void TaskManager::updateTasks()
 {
-    std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
-
-//    //iterate through all task objects and compute the kinematics
-//    for (std::map<unsigned int, boost::shared_ptr<TaskObject> >::iterator it=t_objs_->begin(); it!=t_objs_->end(); ++it)
-//        it->second->computeKinematics();
+    //iterate through all tasks and compute the kinematics, task functions & task jacobians
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_.begin(); it!=tasks_.end(); ++it)
+        it->second->updateTask();
 }
 //----------------------------------------------
 bool TaskManager::getDQ(Eigen::VectorXd& dq)const
 {
-    std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
+    std::cout<<"ATTENZIONE: TaskManager::getDQ(...) not implemented yet!"<<std::endl;
 
 //    if(!hqp_computed_)
 //        return false;

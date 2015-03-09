@@ -8,6 +8,7 @@
 #include <hqp_controllers/task_link.h>
 #include <hqp_controllers/task_dynamics.h>
 #include <hqp_controllers_msgs/Task.h>
+#include <kdl/tree.hpp>
 
 namespace hqp_controllers {
 //----------------------------------------------------------------
@@ -23,32 +24,33 @@ public:
     void setId(unsigned int id);
     void setPriority(unsigned int priority);
     void setIsEqualityTask(bool is_equality_task);
-//    //  void setTaskDynamics(boost::shared_ptr<std::vector<TaskDynamics> > t_dynamics);
-//    boost::shared_ptr<TaskDynamics> getTaskDynamics()const;
+    void setTaskVelocityDamping(double ds, double di);
+    //    //  void setTaskDynamics(boost::shared_ptr<std::vector<TaskDynamics> > t_dynamics);
+    //    boost::shared_ptr<TaskDynamics> getTaskDynamics()const;
     unsigned int getId()const;
 
     unsigned int getPriority()const;
     bool getIsEqualityTask()const;
 
-  Eigen::MatrixXd getTaskJacobian()const;
-  Eigen::VectorXd getTaskFunction()const;
-//    boost::shared_ptr<Eigen::VectorXd> getTaskVelocity()const;
+    Eigen::MatrixXd getTaskJacobian()const;
+    Eigen::VectorXd getTaskFunction()const;
+    //    boost::shared_ptr<Eigen::VectorXd> getTaskVelocity()const;
 
 
-//    boost::shared_ptr<std::vector<TaskLink> > getTaskLinks()const;
+    //    boost::shared_ptr<std::vector<TaskLink> > getTaskLinks()const;
 
     //** Needs to be checked whether the task objects have appropriate properties in each derived task class */
-    static boost::shared_ptr<Task> makeTask(XmlRpc::XmlRpcValue const& t_description); ///<factory method
+    static boost::shared_ptr<Task> makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_description, KDL::Tree const& k_tree, std::vector< hardware_interface::JointHandle > const& joints); ///<factory method
     static XmlRpc::XmlRpcValue taskMessageToXmlRpcValue(hqp_controllers_msgs::Task const& msg);
-//    //  virtual void setTaskLinks(std::pair<boost::shared_ptr<TaskLink>, boost::shared_ptr<TaskLink> > t_objs) = 0;
+    //    //  virtual void setTaskLinks(std::pair<boost::shared_ptr<TaskLink>, boost::shared_ptr<TaskLink> > t_objs) = 0;
 
     //**Computes task function, velocity and jacobians. Also updates the kinematics of the corresponding task objects.*/
     virtual void updateTask()=0;
 
-//    //** get the summed squared error of the task - should be implemented here, once the tasks are cleaned up */
-//    virtual double getSSE()const=0;
+    //    //** get the summed squared error of the task - should be implemented here, once the tasks are cleaned up */
+    //    virtual double getSSE()const=0;
 
-//    friend std::ostream& operator<<(std::ostream& str, Task const& task);
+    friend std::ostream& operator<<(std::ostream& str, Task const& task);
 
 protected:
     Task(){};
@@ -58,16 +60,20 @@ protected:
     std::string task_frame_;
     bool is_equality_task_;
 
-       boost::shared_ptr<TaskDynamics> t_dynamics_;
-      std::vector<boost::shared_ptr<TaskLink> >  t_links_;
+    boost::shared_ptr<TaskDynamics> t_dynamics_;
+    std::vector<boost::shared_ptr<TaskLink> >  t_links_;
 
 
-     Eigen::MatrixXd  A_; ///< task jacobian
-     Eigen::MatrixXd  E_; ///< task function state matrix, rows \in Task::t_dim_ correspond to the task function dynamics of the single task dimensions, columns correspond to derivatives
+    Eigen::MatrixXd  A_; ///< task jacobian
+    Eigen::MatrixXd  E_; ///< task function state matrix, rows \in Task::t_dim_ correspond to the task function dynamics of the single task dimensions, columns correspond to derivatives
 
-     ros::Time t_prev_;
+    ros::Time t_prev_;
     bool t_start_;
+    double ds_;
+    double di_;
+
     void updateTaskFunctionDerivatives();
+    void computeTaskLinkKinematics();
 
 };
 //----------------------------------------------------------------
@@ -85,7 +91,7 @@ protected:
 private:
 
 
-   // unsigned int jnt_index_; ///< index (in the TaskLink::joints_ vector) of the joint controlled by this task
+    // unsigned int jnt_index_; ///< index (in the TaskLink::joints_ vector) of the joint controlled by this task
 };
 //----------------------------------------------------------------
 //class JointSetpoint: public Task
