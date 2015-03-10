@@ -8,7 +8,17 @@
 
 namespace hqp_controllers {
 //------------------------------------------------------
-ProjectionQuantities::ProjectionQuantities(Eigen::Matrix3d const& P1, Eigen::Matrix3d const& P2, Eigen::Matrix3d const& N, Eigen::VectorXd const& d) : P1_(P1), P2_(P2), N_(N), d_(d){}
+std::ostream& operator<<(std::ostream& str, ProjectionQuantities const& proj)
+{
+    str<<"PROJECTION QUANTITIES"<<std::endl;
+    str<<"P1:"<<std::endl<<proj.P1_<<std::endl;
+    str<<"P2:"<<std::endl<<proj.P2_<<std::endl;
+    str<<"N:"<<std::endl<<proj.N_<<std::endl;
+    str<<"d: "<<proj.d_.transpose()<<std::endl;
+    str<<std::endl;
+}
+//------------------------------------------------------
+ProjectionQuantities::ProjectionQuantities(Eigen::Matrix3Xd const& P1, Eigen::Matrix3Xd const& P2, Eigen::Matrix3Xd const& N, Eigen::VectorXd const& d) : P1_(P1), P2_(P2), N_(N), d_(d){}
 //------------------------------------------------------
 std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom)
 {
@@ -85,13 +95,20 @@ ProjectionQuantities Point::project(const TaskGeometry &geom)const
 //------------------------------------------------------------------------
 ProjectionQuantities Point::projectOntoPoint(const Point &point)const
 {
-    Eigen::Matrix3d P1(3,1); P1.col(0) = point.getTaskData();
-    Eigen::Matrix3d P2(3,1); P2.col(0) = task_data_;
-    Eigen::Matrix3d N(3,1); N.col(0) = P1.col(0) - P2.col(0);
-    Eigen::VectorXd d(1); d(0)=N.col(0).norm();
-    N=N/d(0);
 
-   return ProjectionQuantities(P1, P2, N, d);
+ProjectionQuantities proj;
+proj.P1_.resize(Eigen::NoChange, 1);
+proj.P2_.resize(Eigen::NoChange, 1);
+proj.N_.resize(Eigen::NoChange, 1);
+proj.d_.resize(1);
+
+proj.P1_ << point.getTaskData();
+proj.P2_ << task_data_;
+proj.N_ << proj.P1_ - proj.P2_;
+proj.d_(0) = proj.N_.norm();
+proj.N_ = proj.N_/proj.d_(0);
+
+   return proj;
 }
 //------------------------------------------------------------------------
 ProjectionQuantities Point::projectOntoPlane(const Plane &plane)const
@@ -99,37 +116,32 @@ ProjectionQuantities Point::projectOntoPlane(const Plane &plane)const
 std::cout<<"ATTENZIONE: Point::projectOntoPlane(...) is not implemented yet!"<<std::endl;
 }
 //------------------------------------------------------------------------
-//void Point::addMarker(visualization_msgs::MarkerArray& markers)
-//{
-//    visualization_msgs::Marker marker;
+void Point::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    visualization_msgs::Marker marker;
 
-//    marker.header.frame_id = link_;
-//    marker.header.stamp = ros::Time::now();
-//    marker.type = visualization_msgs::Marker::POINTS;
-//    marker.action = visualization_msgs::Marker::ADD;
-//    marker.id = markers.markers.size();
-//    marker.lifetime = ros::Duration(0.1);
-//    geometry_msgs::Point p;
-//    p.x=(*p_)(0);
-//    p.y=(*p_)(1);
-//    p.z=(*p_)(2);
-//    marker.points.push_back(p);
-//    marker.scale.x = POINT_SCALE;
-//    marker.scale.y = POINT_SCALE;
-//    marker.scale.z = POINT_SCALE;
-//    marker.color.r = 1.0;
-//    marker.color.g = 0.0;
-//    marker.color.b = 0.0;
-//    marker.color.a = 1.0;
+    marker.header.frame_id = link_frame_;
+    marker.header.stamp = ros::Time::now();
+    marker.type = visualization_msgs::Marker::POINTS;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.id = markers.markers.size();
+    marker.lifetime = ros::Duration(0.1);
+    geometry_msgs::Point p;
+    p.x=link_data_(0);
+    p.y=link_data_(1);
+    p.z=link_data_(2);
+    marker.points.push_back(p);
+    marker.scale.x = POINT_SCALE;
+    marker.scale.y = POINT_SCALE;
+    marker.scale.z = POINT_SCALE;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    marker.color.a = 1.0;
 
-//    markers.markers.push_back(marker);
-//}
-////------------------------------------------------------------------------
-////void Point::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
-////{
-////    ROS_WARN("Point::computeWitnessPoints(...) not implemented yet!");
-////}
-////------------------------------------------------------------------------
+    markers.markers.push_back(marker);
+}
+//------------------------------------------------------------------------
 //Line::Line() : TaskGeometry()
 //{
 //    type_ = LINE;
@@ -228,54 +240,57 @@ ProjectionQuantities Plane::projectOntoPlane(const Plane &plane)const
     ROS_BREAK();
 }
 //------------------------------------------------------------------------
-//void Plane::addMarker(visualization_msgs::MarkerArray& markers)
-//{
-//    //transformation which points x in the plane normal direction
-//    Eigen::Quaterniond q;
-//    q.setFromTwoVectors(Eigen::Vector3d::UnitX() ,(*n_));
+void Plane::addMarker(visualization_msgs::MarkerArray& markers)
+{
+    Eigen::Vector3d n(link_data_.head<3>());
+    double d = link_data_(3);
 
-//    visualization_msgs::Marker m;
+    //transformation which points x in the plane normal direction
+    Eigen::Quaterniond q;
+    q.setFromTwoVectors(Eigen::Vector3d::UnitX() , n);
 
-//    //normal
-//    m.header.frame_id = link_;
-//    m.header.stamp = ros::Time::now();
-//    m.type =  visualization_msgs::Marker::ARROW;
-//    m.action = visualization_msgs::Marker::ADD;
-//    m.lifetime = ros::Duration(0.1);
-//    m.id = markers.markers.size();
-//    m.pose.position.x = (*n_)(0)*d_;
-//    m.pose.position.y = (*n_)(1)*d_;
-//    m.pose.position.z = (*n_)(2)*d_;
-//    m.pose.orientation.x = q.x();
-//    m.pose.orientation.y = q.y();
-//    m.pose.orientation.z = q.z();
-//    m.pose.orientation.w = q.w();
-//    m.scale.x = LINE_SCALE;
-//    m.scale.y = 0.05 * LINE_SCALE;
-//    m.scale.z = 0.05 * LINE_SCALE;
-//    m.color.r = 1.0;
-//    m.color.g = 0.0;
-//    m.color.b = 1.0;
-//    m.color.a = 1.0;
-//    markers.markers.push_back(m);
+    visualization_msgs::Marker marker;
 
-//    //plane
-//    q.setFromTwoVectors(Eigen::Vector3d::UnitZ() ,(*n_));
-//    m.type = visualization_msgs::Marker::CUBE;
-//    m.id = markers.markers.size();
-//    m.pose.orientation.x = q.x();
-//    m.pose.orientation.y = q.y();
-//    m.pose.orientation.z = q.z();
-//    m.pose.orientation.w = q.w();
-//    m.scale.x = PLANE_SCALE;
-//    m.scale.y = PLANE_SCALE;
-//    m.scale.z = 0.0001;
-//    m.color.r = 1.0;
-//    m.color.g = 0.0;
-//    m.color.b = 1.0;
-//    m.color.a = 0.4;
-//    markers.markers.push_back(m);
-//}
+    //normal
+    marker.header.frame_id = link_frame_;
+    marker.header.stamp = ros::Time::now();
+    marker.type =  visualization_msgs::Marker::ARROW;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.lifetime = ros::Duration(0.1);
+    marker.id = markers.markers.size();
+    marker.pose.position.x = n(0) * d;
+    marker.pose.position.y = n(1) * d;
+    marker.pose.position.z = n(2) * d;
+    marker.pose.orientation.x = q.x();
+    marker.pose.orientation.y = q.y();
+    marker.pose.orientation.z = q.z();
+    marker.pose.orientation.w = q.w();
+    marker.scale.x = LINE_SCALE;
+    marker.scale.y = 0.05 * LINE_SCALE;
+    marker.scale.z = 0.05 * LINE_SCALE;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 1.0;
+    marker.color.a = 1.0;
+    markers.markers.push_back(marker);
+
+    //plane
+    q.setFromTwoVectors(Eigen::Vector3d::UnitZ() ,n);
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.id = markers.markers.size();
+    marker.pose.orientation.x = q.x();
+    marker.pose.orientation.y = q.y();
+    marker.pose.orientation.z = q.z();
+    marker.pose.orientation.w = q.w();
+    marker.scale.x = PLANE_SCALE;
+    marker.scale.y = PLANE_SCALE;
+    marker.scale.z = 0.0001;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 1.0;
+    marker.color.a = 0.4;
+    markers.markers.push_back(marker);
+}
 //------------------------------------------------------------------------
 void Plane::transformTaskData(Eigen::Affine3d const& T_l_t)
 {

@@ -29,8 +29,9 @@ std::ostream& operator<<(std::ostream& str, Task const& task)
 //---------------------------------------------------------
 Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links): id_(id), priority_(priority), task_frame_(task_frame), is_equality_task_(is_equality_task), t_dynamics_(t_dynamics), t_links_(t_links), ds_(0.0), di_(1.0)
 {
-    ROS_ASSERT(t_dynamics.get());
-    ROS_ASSERT(t_dynamics->getDimension() > 0);
+    ROS_ASSERT(t_dynamics_.get());
+    ROS_ASSERT(t_dynamics_->getDimension() > 0);
+    ROS_ASSERT(priority_ >= 1);
 
     t_start_ = true;
 }
@@ -88,13 +89,8 @@ Eigen::MatrixXd Task::getTaskJacobian()const{return A_;}
 //---------------------------------------------------------
 Eigen::VectorXd Task::getTaskFunction()const{return E_.col(0);}
 //---------------------------------------------------------
-//boost::shared_ptr<Eigen::VectorXd> Task::getTaskVelocity()const
-//{
-//    return boost::shared_ptr<Eigen::VectorXd>(new Eigen::VectorXd(E_->col(1)));
-//}
-////---------------------------------------------------------
-//boost::shared_ptr<std::vector<TaskObject> > Task::getTaskObjects()const{return t_objs_;}
-////---------------------------------------------------------
+Eigen::VectorXd Task::getTaskVelocity()const{return E_.col(1);}
+//---------------------------------------------------------
 ////void Task::setTaskDynamics(boost::shared_ptr<TaskDynamics> t_dynamics)
 ////{
 ////    ROS_ASSERT(t_dynamics->getDimension() > 0);
@@ -248,6 +244,8 @@ void Task::computeTaskLinkKinematics()
         t_links_[i]->computeKinematics();
 }
 //---------------------------------------------------------
+ std::vector<boost::shared_ptr<TaskLink> > Task::getTaskLinks()const{return t_links_;}
+//---------------------------------------------------------
 //double ProjectPointPlane::getSSE()const
 //{
 //    Eigen::VectorXd e(dim_);
@@ -288,50 +286,61 @@ void Task::computeTaskLinkKinematics()
 //---------------------------------------------------------
 void Projection::updateTask()
 {
-    std::cout<<"ATTENZIONE: Not implemented yet!"<<std::endl;
-
     //compute forward kinematics and jacobians
     computeTaskLinkKinematics();
 
     unsigned int n_jnts = t_links_[0]->getNumJoints();
+    unsigned int d_dim = t_dynamics_->getDimension();
+
     A_.resize(0, n_jnts);
-    E_.resize(0, n_jnts);
+    E_.resize(0, d_dim + 1);
     unsigned int t_dim = 0;
     for (unsigned int i = 0; i<t_links_[0]->getGeometries().size(); i++)
         for (unsigned int j = 0; j<t_links_[1]->getGeometries().size(); j++)
-    {
-        ProjectionQuantities proj = t_links_[0]->getGeometries().at(i)->project(*(t_links_[1]->getGeometries().at(j)));
-
-        for (unsigned int k = 0; k<proj.d_.rows(); k++)
         {
-            t_dim++;
-            //get the jacobian of the current projection points
-            Eigen::Vector3d delta_p1 = proj.P1_.col(k) - t_links_[0]->getLinkTransform().translation();
-            Eigen::Vector3d delta_p2 = proj.P2_.col(k) - t_links_[1]->getLinkTransform().translation();
+            ProjectionQuantities proj = t_links_[0]->getGeometries().at(i)->project(*(t_links_[1]->getGeometries().at(j)));
+           // std::cerr<<"Projection quantities: "<<std::endl<<proj<<std::endl;
+            for (unsigned int k = 0; k<proj.d_.rows(); k++)
+            {
+                t_dim++;
 
-            Eigen::Matrix3d jac = t_links_[0]->getJacobian(delta_p1) - t_links_[1]->getJacobian(delta_p2) ;
+                //TASK FUNCTION
+                E_.conservativeResize(t_dim , Eigen::NoChange);
+                E_(t_dim - 1,0) = proj.d_(k);
+                //CHECK FOR INFLUENCE ZONE HERE!!!
 
-            A_.conservativeResize(t_dim, n_jnts);
-            A_.bottomRows<1>() = proj.N_.col(k).transpose() * jac.topRows<3>();
+                //TASK JACOBIAN
+                //get the jacobian of the current projection points
+                Eigen::Vector3d delta_p1 = proj.P1_.col(k) - t_links_[0]->getLinkTransform().translation();
+                Eigen::Vector3d delta_p2 = proj.P2_.col(k) - t_links_[1]->getLinkTransform().translation();
 
-            E_.conservativeResize(t_dim ,t_dynamics_->getDimension());
-            E_(t_dim,0) = proj.d_(k);
+//                std::cerr<<"delta_p1: "<<delta_p1.transpose()<<std::endl;
+//                std::cerr<<"delta_p2: "<<delta_p2.transpose()<<std::endl;
+
+                Eigen::MatrixXd jac = t_links_[0]->getJacobian(delta_p1) - t_links_[1]->getJacobian(delta_p2) ;
+
+                A_.conservativeResize(t_dim, Eigen::NoChange);
+                A_.bottomRows<1>() = proj.N_.col(k).transpose() * jac.topRows<3>();
+            }
+
         }
 
-    }
 
+    //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
+    //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
+    //    std::cout<<"p: "<<p.transpose()<<std::endl;
+    //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
+    //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
+    //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
+    //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
 
-     //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
-     //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
-     //    std::cout<<"p: "<<p.transpose()<<std::endl;
-     //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
-     //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
-     //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
-     //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
+    //compute task function derivatives
+    updateTaskFunctionDerivatives();
 
-   //compute task function derivatives
-       updateTaskFunctionDerivatives();
+   //std::cerr<<"A_:"<<std::endl<<A_<<std::endl;
+   //std::cerr<<"E_:"<<std::endl<<E_<<std::endl;
 
+    //APPLY TASK DAMPING HERE!
 }
 //---------------------------------------------------------
 //JointSetpoint::JointSetpoint(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)

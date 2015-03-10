@@ -23,13 +23,13 @@ struct HQPStage
     HQPStage(Task const& task);
     void appendTask(Task const& task);
 
-    boost::shared_ptr<Eigen::VectorXd> de_;
-    boost::shared_ptr<Eigen::VectorXd> x_; //HQP solution for this stage
-    boost::shared_ptr<Eigen::VectorXd> w_; //slack variables for this stage
-    boost::shared_ptr<std::vector<std::string> > signs_;
-    boost::shared_ptr<Eigen::MatrixXd> A_;
+    Eigen::VectorXd de_; ///<desired task velocities
+    Eigen::VectorXd x_; ///<HQP solution for this stage
+    Eigen::VectorXd w_; ///<slack variables for this stage
+    std::vector<bool> is_equalities_;
+    Eigen::MatrixXd A_;
 
-    unsigned int dim_;
+    unsigned int s_dim_;
     bool solved_;
 
     friend std::ostream& operator<<(std::ostream& str, HQPStage const& stage);

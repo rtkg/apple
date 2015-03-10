@@ -34,10 +34,10 @@ public:
 
     Eigen::MatrixXd getTaskJacobian()const;
     Eigen::VectorXd getTaskFunction()const;
-    //    boost::shared_ptr<Eigen::VectorXd> getTaskVelocity()const;
+    Eigen::VectorXd getTaskVelocity()const;
 
 
-    //    boost::shared_ptr<std::vector<TaskLink> > getTaskLinks()const;
+std::vector<boost::shared_ptr<TaskLink> > getTaskLinks()const;
 
     //** Needs to be checked whether the task objects have appropriate properties in each derived task class */
     static boost::shared_ptr<Task> makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_description, KDL::Tree const& k_tree, std::vector< hardware_interface::JointHandle > const& joints); ///<factory method

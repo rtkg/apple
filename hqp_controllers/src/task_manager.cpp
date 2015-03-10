@@ -93,19 +93,19 @@ bool TaskManager::getDQ(Eigen::VectorXd& dq)const
 //    return true;
 }
 //----------------------------------------------
-//bool TaskManager::getTaskObject(unsigned int id, TaskObject& t_obj)const
-//{
-//    std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(id);
-//    if(it == t_objs_->end())
-//    {
-//        ROS_WARN("TaskManager::getTaskObject(...): could not find task object with id %d.",id);
-//        return false;
-//    }
-//    else
-//        t_obj = *it->second;
+bool TaskManager::getTask(unsigned int id, boost::shared_ptr<Task>& task)const
+{
+    std::map<unsigned int,boost::shared_ptr<Task> >::const_iterator it = tasks_.find(id);
+    if(it == tasks_.end())
+    {
+        ROS_WARN("TaskManager::getTask(...): could not find task with id %d.",id);
+        return false;
+    }
+    else
+        task.reset(it->second.get());
 
-//    return true;
-//}
+    return true;
+}
 //----------------------------------------------
 void TaskManager::reset()
 {
@@ -144,47 +144,48 @@ void TaskManager::getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses
 //    }
 }
 //----------------------------------------------
-//bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const
-//{
-//    for(unsigned int i=0; i<vis_ids.size(); i++)
-//    {
-//        //Make sure the task object with id vis_ids(i) exists
-//        std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(vis_ids(i));
-//        if(it == t_objs_->end())
-//        {
-//            ROS_ERROR("Could not find task object with id %d. Associated geometries can not be visualized.", vis_ids(i));
-//            return false;
-//        }
+bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& markers, Eigen::VectorXi const& vis_ids)const
+{
+    for(unsigned int i=0; i<vis_ids.size(); i++)
+    {
+        //Make sure the task with id vis_ids(i) exists
+        std::map<unsigned int, boost::shared_ptr<Task> >::const_iterator it = tasks_.find(vis_ids(i));
+        if(it == tasks_.end())
+        {
+            ROS_ERROR("Could not find task with id %d. Associated geometries can not be visualized.", vis_ids(i));
+            return false;
+        }
 
-//        //Add markers for all geometries associated to the object with id vis_ids(i)
-//        for(unsigned int j=0; j<it->second->getGeometries()->size();j++)
-//            it->second->getGeometries()->at(j)->addMarker(t_geoms);
-
-//    }
-//    return true;
-//}
-
+        //Add markers for all geometries associated to the task with id vis_ids(i)
+        for(unsigned int i=0; i < it->second->getTaskLinks().size(); i++)
+        {
+            TaskLink* link = it->second->getTaskLinks().at(i).get();
+            for(unsigned int j=0; j < link->getGeometries().size(); j++)
+                link->getGeometries().at(j)->addMarker(markers);
+        }
+    }
+    return true;
+}
 //----------------------------------------------
 void TaskManager::computeHQP()
 {
     std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
 
 
-//    hqp_->clear();
-//    hqp_computed_ = false;
-//    //iterate through all tasks, compute task velocities and jacobians and insert the corresponding HQP stages
-//    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_->begin(); task_it!=tasks_->end(); ++task_it)
-//    {
-//        task_it->second->computeTask();
-//        unsigned int priority =  task_it->second->getPriority();
+   hqp_.clear();
+    hqp_computed_ = false;
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_.begin(); task_it!=tasks_.end(); ++task_it)
+    {
 
-//        //if no stage with the given priority is in the hqp yet, create one, otherwise append the task to the existing stage
-//        std::map<unsigned int,boost::shared_ptr<HQPStage> >::iterator stage_it = hqp_->find(priority);
-//        if(stage_it == hqp_->end())
-//            (*hqp_)[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
-//        else
-//            stage_it->second->appendTask(*task_it->second);
-//    }
+        unsigned int priority =  task_it->second->getPriority();
+
+       //if no stage with the given priority is in the hqp yet, create one, otherwise append the task to the existing stage
+        std::map<unsigned int,boost::shared_ptr<HQPStage> >::const_iterator stage_it = hqp_.find(priority);
+        if(stage_it == hqp_.end())
+            hqp_[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
+        else
+            stage_it->second->appendTask(*task_it->second);
+    }
 
 //    if(hqp_solver_.solve(*hqp_))
 //        hqp_computed_ = true;

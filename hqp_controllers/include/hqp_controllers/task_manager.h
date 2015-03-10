@@ -31,9 +31,9 @@ public:
     //void writeHQP();
 
     unsigned int getValidTaskId() const;
-    //bool getTaskLink(unsigned int id, TaskLink& t_obj)const;
+    bool getTask(unsigned int id, boost::shared_ptr<Task>& task)const;
     void getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses);
-    //bool getTaskGeometryMarkers(visualization_msgs::MarkerArray& t_geoms,Eigen::VectorXi const& vis_ids)const;
+    bool getTaskGeometryMarkers(visualization_msgs::MarkerArray& markers, Eigen::VectorXi const& vis_ids)const;
 
     bool getDQ(Eigen::VectorXd& dq)const;
 

@@ -70,9 +70,9 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
     //remove_tasks_srv_= n.advertiseService("remove_tasks",&HQPVelocityController::removeTasks,this);
 
-    // vis_t_link_srv_ = n.advertiseService("visualize_task_objects",&HQPVelocityController::visualizeTaskGeometries,this);
+     vis_t_geom_srv_ = n.advertiseService("visualize_task_geometries",&HQPVelocityController::visualizeTaskGeometries, this);
     //============================================== REGISTER CALLBACKS END =========================================
-    //vis_t_obj_pub_.init(n, "task_objects", 1);
+    vis_t_geom_pub_.init(n, "task_geometries", 1);
     t_statuses_pub_.init(n, "task_statuses", 1);
 
     return true;
@@ -145,29 +145,29 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
 //    return true;
 //}
 //-----------------------------------------------------------------------
-//bool HQPVelocityController::visualizeTaskLinks(hqp_controllers_msgs::VisualizeTaskLinks::Request & req, hqp_controllers_msgs::VisualizeTaskLinks::Response &res)
-//{
-//    res.success = true;
-//    lock_.lock();
-//    vis_ids_.resize(req.ids.size());
-//    for(unsigned int i=0; i<req.ids.size();i++)
-//        vis_ids_(i)=req.ids[i];
+bool HQPVelocityController::visualizeTaskGeometries(hqp_controllers_msgs::VisualizeTaskGeometries::Request & req, hqp_controllers_msgs::VisualizeTaskGeometries::Response &res)
+{
+    res.success = true;
+    lock_.lock();
+    vis_ids_.resize(req.ids.size());
+    for(unsigned int i=0; i<req.ids.size();i++)
+        vis_ids_(i)=req.ids[i];
 
-//    //check wether task objects with the requested ids exist
-//    TaskLink t_obj;
-//    for(unsigned int i=0; i<vis_ids_.size(); i++)
-//        if(!task_manager_.getTaskLink(vis_ids_(i), t_obj))
-//        {
-//            res.success = false;
-//            ROS_ERROR("Task object with id %d does not exist, cannot visualize.", vis_ids_(i));
-//            vis_ids_.resize(0);
-//        }
-//        else
-//            res.success = true;
+    //check wether tasks with the requested ids exist
+    boost::shared_ptr<Task> dummy;
+    for(unsigned int i=0; i<vis_ids_.size(); i++)
+        if(!task_manager_.getTask(vis_ids_(i), dummy))
+        {
+            res.success = false;
+            ROS_ERROR("Task with id %d does not exist, cannot visualize.", vis_ids_(i));
+            vis_ids_.resize(0);
+        }
+        else
+            res.success = true;
 
-//    lock_.unlock();
-//    return res.success;
-//}
+    lock_.unlock();
+    return res.success;
+}
 //-----------------------------------------------------------------------
 //bool HQPVelocityController::resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res)
 //{
@@ -207,9 +207,10 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
     {
         //compute jacobians and poses of the task links, as well as the task functions and jacobians
         task_manager_.updateTasks();
-  ROS_BREAK();
+
         //compute the HQP controls
         task_manager_.computeHQP();
+        ROS_BREAK();
         //set the computed task velocities if the computation was succesful, otherwise set them to zero
         if(!task_manager_.getDQ(commands_))
             commands_.setZero();
@@ -242,11 +243,11 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 
         // try to publish the task object geometries
         // populate the message
-       // vis_t_obj_pub_.msg_.markers.clear();
-       // task_manager_.getTaskGeometryMarkers(vis_t_obj_pub_.msg_,vis_ids_);
+        vis_t_geom_pub_.msg_.markers.clear();
+        task_manager_.getTaskGeometryMarkers(vis_t_geom_pub_.msg_,vis_ids_);
 
-//        if (vis_t_obj_pub_.trylock())
-//            vis_t_obj_pub_.unlockAndPublish();
+        if (vis_t_geom_pub_.trylock())
+            vis_t_geom_pub_.unlockAndPublish();
 
         // if the controller is active, try to publish the task statuses
         if(active_)

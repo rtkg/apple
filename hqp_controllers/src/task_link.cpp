@@ -34,7 +34,7 @@ TaskLink::TaskLink(std::string const& task_frame, KDL::Chain const& chain, std::
     n_jnts_ = joints_.size();
     jac_.resize(6,n_jnts_);
     jac_.setZero();
-    chain_jac_.resize(n_jnts_);
+    chain_jac_.resize(joint_map_.rows());
 
     if(chain_.getNrOfSegments() == 0)
         link_frame_ = task_frame_;
@@ -88,47 +88,52 @@ void TaskLink::computeJointMap()
 //----------------------------------------------------
 void TaskLink::computeKinematics()
 {
-        //read the chain joint positions from the controlled joints
-        unsigned int n_jnts = joint_map_.rows();
-
-        KDL::JntArray q(n_jnts);
-        for(unsigned int i=0; i<n_jnts; i++)
-            q.data(i) = joints_.at(joint_map_(i)).getPosition();
-
-        //compute the chain jacobian
-        KDL::Frame pose;
-        if(fk_solver_->JntToCart(q,pose) < 0)
-            ROS_ERROR("Could not compute forward kinematics of task link with link frame %s.",link_frame_.c_str());
-
-        if(j_solver_->JntToJac(q, chain_jac_) < 0)
-            ROS_ERROR("Could not compute jacobian of task link with link frame %s.",link_frame_.c_str());
-
-        KDLToEigen(pose, T_l_t_);
-
-        //map the chain jacobian to the controlled joint jacobian
-        jac_.setZero();
-        for(unsigned int i=0; i<n_jnts; i++)
-            jac_.col(joint_map_(i)) = chain_jac_.data.col(i);
-
-        //Transform the associated geometries
-        for(unsigned int i=0; i<geometries_.size(); i++)
-            geometries_.at(i)->transformTaskData(T_l_t_);
-
-    //        std::cout<<"number of joints: "<<n_jnts<<std::endl;
-    //        std::cout<<"Task object w. root: "<<root_<<", link: "<<link_<<" and id: "<<id_<<std::endl;
-    //        std::cout<<"Pose translation: "<<std::endl<< trans_l_r_->translation().transpose()<<std::endl;
-    //        std::cout<<"Pose rotation: "<<std::endl<< trans_l_r_->rotation()<<std::endl;
-    //        std::cout<<"Chain jacobian: "<<std::endl<<chain_jacobian_->data<<std::endl;
-    //        std::cout<<"Jacobian: "<<std::endl<< *jacobian_<<std::endl;
-    //        std::cout<<std::endl;
-
     //    //========= DEBUG PRINT CHAIN ==========
     //    std::ostringstream out;
-    //    printKDLChain(out, *chain_);
-    //    std::cout<<"CHAIN:"<<std::endl;
+    //    printKDLChain(out, chain_);
     //    std::cout<<out.str()<<std::endl;
     //    //========= DEBUG PRINT CHAIN END ==========
 
+    //read the chain joint positions from the controlled joints
+    unsigned int n_jnts = joint_map_.rows();
+
+    KDL::JntArray q(n_jnts);
+    for(unsigned int i=0; i<n_jnts; i++)
+        q.data(i) = joints_.at(joint_map_(i)).getPosition();
+
+    //compute the chain jacobian
+    if(j_solver_->JntToJac(q, chain_jac_) < 0)
+    {
+        ROS_ERROR("Error in TaskLink::computeKinematics(): could not compute jacobian w.r.t. link frame %s.",link_frame_.c_str());
+        ROS_BREAK();
+    }
+
+    //compute the forward kinematics
+    KDL::Frame pose;
+    if(fk_solver_->JntToCart(q,pose) < 0)
+    {
+        ROS_ERROR("Error in TaskLink::computeKinematics(): could not compute forward kinematics w.r.t. link frame %s.",link_frame_.c_str());
+        ROS_BREAK();
+    }
+
+    KDLToEigen(pose, T_l_t_);
+
+    //Transform the associated geometries
+    for(unsigned int i=0; i<geometries_.size(); i++)
+        geometries_.at(i)->transformTaskData(T_l_t_);
+
+    //map the chain jacobian to the controlled joint jacobian
+    jac_.setZero();
+    for(unsigned int i=0; i<n_jnts; i++)
+        jac_.col(joint_map_(i)) = chain_jac_.data.col(i);
+
+//    std::cout<<"number of joints: "<<n_jnts<<std::endl;
+//    std::cout<<"task frame: "<<task_frame_<<", link frame: "<<link_frame_<<std::endl;
+//    std::cout<<"Pose translation: "<<std::endl<< T_l_t_.translation().transpose()<<std::endl;
+//    std::cout<<"Pose rotation: "<<std::endl<< T_l_t_.rotation()<<std::endl;
+//    std::cout<<"Chain jacobian: "<<std::endl<<chain_jac_.data<<std::endl;
+//    std::cout<<"Jacobian: "<<std::endl<< jac_<<std::endl;
+//    std::cout<<std::endl;
 }
 //----------------------------------------------------
 Eigen::Affine3d TaskLink::getLinkTransform() const {return T_l_t_;}

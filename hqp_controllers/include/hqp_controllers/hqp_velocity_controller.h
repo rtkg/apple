@@ -57,15 +57,15 @@ private:
     //ros::ServiceServer remove_tasks_srv_;
     ros::ServiceServer activate_hqp_control_srv_;
     //ros::ServiceServer reset_hqp_control_srv_;
-    //ros::ServiceServer vis_t_link_srv_;
+    ros::ServiceServer vis_t_geom_srv_;
     TaskManager task_manager_;
     boost::mutex lock_;
 
-    realtime_tools::RealtimePublisher<visualization_msgs::MarkerArray> vis_t_obj_pub_;
+    realtime_tools::RealtimePublisher<visualization_msgs::MarkerArray> vis_t_geom_pub_;
     realtime_tools::RealtimePublisher<hqp_controllers_msgs::TaskStatuses> t_statuses_pub_;
     ros::Time last_publish_time_;
     //double publish_rate_;
-    //Eigen::VectorXi vis_ids_; ///< only task object geometries with ids in vis_ids_ will be published
+    Eigen::VectorXi vis_ids_; ///< only task geometries with ids in vis_ids_ will be published
     bool active_;
 
     //**Helper function to read joint limits from the parameter server and generate the corresponding tasks.*/
@@ -80,7 +80,7 @@ private:
    // bool resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res);
     bool setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res);
     //bool removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res);
-    //bool visualizeTaskLinks(hqp_controllers_msgs::VisualizeTaskLinks::Request & req, hqp_controllers_msgs::VisualizeTaskObjects::Response &res);
+    bool visualizeTaskGeometries(hqp_controllers_msgs::VisualizeTaskGeometries::Request & req, hqp_controllers_msgs::VisualizeTaskGeometries::Response &res);
 };
 
 
