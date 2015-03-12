@@ -82,9 +82,9 @@ void TaskLink::computeJointMap()
 //----------------------------------------------------
 //std::string TaskLink::getLink() const{return link_;}
 //----------------------------------------------------
-//boost::shared_ptr<KDL::Chain> TaskLink::getChain() const {return chain_;}
+KDL::Chain TaskLink::getChain() const {return chain_;}
 //----------------------------------------------------
-//boost::shared_ptr<std::vector< hardware_interface::JointHandle > > TaskLink::getJoints() const {return joints_;}
+std::vector< hardware_interface::JointHandle>  TaskLink::getJoints() const {return joints_;}
 //----------------------------------------------------
 void TaskLink::computeKinematics()
 {
@@ -140,6 +140,8 @@ Eigen::Affine3d TaskLink::getLinkTransform() const {return T_l_t_;}
 //----------------------------------------------------
 Eigen::MatrixXd TaskLink::getJacobian() const {return jac_;}
 //----------------------------------------------------
+Eigen::VectorXi TaskLink::getJointMap()const{return joint_map_;}
+//----------------------------------------------------
 Eigen::MatrixXd TaskLink::getJacobian(Eigen::Vector3d& base_AB) const
 {
     //change the reference point
@@ -156,6 +158,16 @@ Eigen::MatrixXd TaskLink::getJacobian(Eigen::Vector3d& base_AB) const
 }
 //----------------------------------------------------
 //boost::shared_ptr<KDL::Jacobian> TaskLink::getChainJacobian() const {return chain_jacobian_;}
+//----------------------------------------------------
+//double TaskLink::getJointValue()const
+//{
+//    if(chain_.segments.rbegin()->getJoint().getType() != KDL::Joint::None)
+//    {
+//        ROS_ERROR("Error in TaskLink::getJointValue: Joint is fixed");
+//        ROS_BREAK();
+//    }
+//    return joints_.at(joint_map_.tail<1>()(0)).getPosition();
+//}
 //----------------------------------------------------
 void TaskLink::addGeometry(boost::shared_ptr<TaskGeometry> geometry)
 {

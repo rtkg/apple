@@ -13,13 +13,12 @@ namespace hqp_controllers {
 #define PRESOLVE         -1
 #define OPTIMALITY_TOL   1e-6
 #define SCALE_FLAG       1
-#define TIME_LIMIT       0.02
+#define TIME_LIMIT       0.005
 #define OUTPUT_FLAG      0
 #define DUAL_REDUCTIONS  1
 //--------------------------------------------------------------
 struct HQPStage
 {
-    HQPStage();
     HQPStage(Task const& task);
     void appendTask(Task const& task);
 
@@ -27,12 +26,15 @@ struct HQPStage
     Eigen::VectorXd x_; ///<HQP solution for this stage
     Eigen::VectorXd w_; ///<slack variables for this stage
     std::vector<bool> is_equalities_;
-    Eigen::MatrixXd A_;
+    Eigen::MatrixXd J_;
 
     unsigned int s_dim_;
     bool solved_;
 
     friend std::ostream& operator<<(std::ostream& str, HQPStage const& stage);
+
+private:
+        HQPStage(){};
 };
 //--------------------------------------------------------------
 class HQPSolver
@@ -47,13 +49,13 @@ private:
 
     GRBEnv env_;
     // boost::mutex env_lock_;
-    Eigen::VectorXd solution_;
+   // Eigen::VectorXd solution_;
 
     Eigen::VectorXd b_;
     Eigen::VectorXd w_;
     Eigen::MatrixXd A_;
 //    Eigen::VectorXd x_;
-    std::vector<std::string> signs_;
+    std::vector<char> senses_;
 
     void reset();
 };

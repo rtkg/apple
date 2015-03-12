@@ -18,7 +18,7 @@
 #include <hqp_controllers/task_manager.h>
 #include <hqp_controllers_msgs/SetTasks.h>
 #include <hqp_controllers_msgs/SetTaskLinks.h>
-#include <hqp_controllers_msgs/TaskStatuses.h>
+#include <hqp_controllers_msgs/TaskStatusArray.h>
 #include <hqp_controllers_msgs/VisualizeTaskGeometries.h>
 #include <hqp_controllers_msgs/ActivateHQPControl.h>
 #include <hqp_controllers_msgs/RemoveTasks.h>
@@ -62,7 +62,7 @@ private:
     boost::mutex lock_;
 
     realtime_tools::RealtimePublisher<visualization_msgs::MarkerArray> vis_t_geom_pub_;
-    realtime_tools::RealtimePublisher<hqp_controllers_msgs::TaskStatuses> t_statuses_pub_;
+    realtime_tools::RealtimePublisher<hqp_controllers_msgs::TaskStatusArray> t_status_pub_;
     ros::Time last_publish_time_;
     //double publish_rate_;
     Eigen::VectorXi vis_ids_; ///< only task geometries with ids in vis_ids_ will be published

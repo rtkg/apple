@@ -75,9 +75,13 @@ boost::shared_ptr<TaskGeometry> TaskGeometry::makeTaskGeometry(TaskGeometryType 
     return geom;
 }
 //------------------------------------------------------------------------
-Point::Point() : TaskGeometry(){}
+ProjectableGeometry::ProjectableGeometry() : TaskGeometry(){}
 //------------------------------------------------------------------------
-Point::Point(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : TaskGeometry(link_frame, task_frame, link_data)
+ProjectableGeometry::ProjectableGeometry(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : TaskGeometry(link_frame, task_frame, link_data){}
+//------------------------------------------------------------------------
+Point::Point() : ProjectableGeometry(){}
+//------------------------------------------------------------------------
+Point::Point(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : ProjectableGeometry(link_frame, task_frame, link_data)
 {
     ROS_ASSERT(link_data_.rows() == 3); //point is described by x/y/z coordinates
 }
@@ -87,7 +91,7 @@ void Point::transformTaskData(Eigen::Affine3d const& T_l_t)
    task_data_ = T_l_t * link_data_.head<3>();
 }
 //------------------------------------------------------------------------
-ProjectionQuantities Point::project(const TaskGeometry &geom)const
+ProjectionQuantities Point::project(const ProjectableGeometry &geom)const
 {
    ROS_ASSERT(task_frame_ == geom.getTaskFrame());
    return geom.projectOntoPoint(*this);
@@ -105,7 +109,7 @@ proj.d_.resize(1);
 proj.P1_ << point.getTaskData();
 proj.P2_ << task_data_;
 proj.N_ << proj.P1_ - proj.P2_;
-proj.d_(0) = proj.N_.norm();
+proj.d_(0) = proj.N_.norm()*(-1);
 proj.N_ = proj.N_/proj.d_(0);
 
    return proj;
@@ -114,6 +118,7 @@ proj.N_ = proj.N_/proj.d_(0);
 ProjectionQuantities Point::projectOntoPlane(const Plane &plane)const
 {
 std::cout<<"ATTENZIONE: Point::projectOntoPlane(...) is not implemented yet!"<<std::endl;
+ROS_BREAK();
 }
 //------------------------------------------------------------------------
 void Point::addMarker(visualization_msgs::MarkerArray& markers)
@@ -125,7 +130,7 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.type = visualization_msgs::Marker::POINTS;
     marker.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration();//(0.1);
     geometry_msgs::Point p;
     p.x=link_data_(0);
     p.y=link_data_(1);
@@ -213,9 +218,9 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
 
 
 //------------------------------------------------------------------------
-Plane::Plane() : TaskGeometry() {}
+Plane::Plane() : ProjectableGeometry() {}
 //------------------------------------------------------------------------
-Plane::Plane(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : TaskGeometry(link_frame, task_frame, link_data)
+Plane::Plane(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : ProjectableGeometry(link_frame, task_frame, link_data)
 {
  ROS_ASSERT(link_data_.rows() == 4); //plane is described by unit normal n and offset d
 
@@ -223,7 +228,7 @@ Plane::Plane(std::string const& link_frame, std::string const& task_frame, Eigen
  link_data_ = link_data_/link_data_.head<3>().norm();
 }
 //------------------------------------------------------------------------
-ProjectionQuantities Plane::project(const TaskGeometry &geom)const
+ProjectionQuantities Plane::project(const ProjectableGeometry &geom)const
 {
    ROS_ASSERT(task_frame_ == geom.getTaskFrame());
    return geom.projectOntoPlane(*this);
@@ -488,65 +493,25 @@ void Plane::transformTaskData(Eigen::Affine3d const& T_l_t)
 //    root_data_->head<3>() = trans_f_r.translation();
 //    root_data_->tail<3>() = trans_f_r.linear().eulerAngles(0, 1, 2);
 //}
-////------------------------------------------------------------------------
-////void Frame::computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const
-////{
-////    ROS_WARN("Frame::computeWitnessPoints(...) not implemented yet!");
-////}
-////------------------------------------------------------------------------
-//JointPosition::JointPosition() : q_pos_(0.0)
-//{
-//    type_ = JOINT_POSITION;
-//    trans_j_l_.reset(new Eigen::Affine3d);
-//    trans_j_r_0_.reset(new Eigen::Affine3d);
-//}
-////------------------------------------------------------------------------
-//JointPosition::JointPosition(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data) : TaskGeometry(link, root)
-//{
-//    type_ = JOINT_POSITION;
-//    setLinkData(link_data);
-//}
-////------------------------------------------------------------------------
-//void JointPosition::setLinkData(Eigen::VectorXd const& link_data)
-//{
-//    //Joint position is described by a frame expressed in the link with z pointing in the joint axis and zero angle pointing in x
-//    //link_data.tail<6>() is the initial transformation of the joint to the root
-//    //the position angle q = link_data(0)
-//    ROS_ASSERT(link_data.rows() == 13);
-//    link_data_.reset(new Eigen::VectorXd(link_data));
-//    q_pos_ = link_data(0);
-//    Eigen::Vector3d transl = link_data.segment(1,3);
-//    Eigen::Vector3d rpy = link_data.segment(4,3);
+//------------------------------------------------------------------------
+JointPosition::JointPosition() : TaskGeometry(){}
+//------------------------------------------------------------------------
+JointPosition::JointPosition(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : TaskGeometry(link_frame, task_frame, link_data)
+{
+ ROS_ASSERT(link_data_.rows() == 1); //joint position is described by one value only
+}
+//------------------------------------------------------------------------
+void JointPosition::transformTaskData(const Eigen::Affine3d &T_l_t)
+{
+    task_data_ = link_data_; //transformation ain't changing the joint position
+}
+//------------------------------------------------------------------------
+void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
+{
 
-//    Eigen::Matrix3d rot;
-//    //create a x-y-z rotation matrix
-//    rot = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
-//    trans_j_l_.reset(new Eigen::Affine3d);
-//    trans_j_l_->translation() = transl;
-//    trans_j_l_->linear() = rot;
+ROS_ERROR("Error in JointPosition::addMarker(...): not implemented yet!;");
+ROS_BREAK();
 
-//    trans_j_r_0_.reset(new Eigen::Affine3d);
-//    transl = link_data.segment(7,3);
-//    rpy = link_data.tail<3>();
-//    rot = Eigen::AngleAxisd(rpy(0), Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(rpy(1), Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(rpy(2), Eigen::Vector3d::UnitZ());
-//    trans_j_r_0_->translation() = transl;
-//    trans_j_r_0_->linear() = rot;
-//}
-////------------------------------------------------------------------------
-//void JointPosition::setLinkTransform(Eigen::Affine3d const& trans_l_r)
-//{
-//    trans_l_r_.reset(new Eigen::Affine3d(trans_l_r));
-//    Eigen::Affine3d trans_j_r( (*trans_l_r_) * (*trans_j_l_) ); //joint frame expressed in root
-
-//    root_data_.reset(new Eigen::VectorXd(13));
-//    (*root_data_)(0) = q_pos_;
-//    root_data_->segment(1,3) = trans_j_r.translation();
-//    root_data_->segment(4,3) = trans_j_r.linear().eulerAngles(0, 1, 2);
-//    root_data_->tail<6>() = link_data_->tail<6>(); //initial transform from joint to root doesn't change
-//}
-////------------------------------------------------------------------------
-//void JointPosition::addMarker(visualization_msgs::MarkerArray& markers)
-//{
 //    Eigen::Quaterniond q(trans_j_r_0_->linear());
 //    visualization_msgs::Marker a;
 
@@ -637,7 +602,7 @@ void Plane::transformTaskData(Eigen::Affine3d const& T_l_t)
 //    p.z = 0;
 //    l.points.push_back(p);
 //    markers.markers.push_back(l);
-//}
+}
 ////------------------------------------------------------------------------
 //JointLimits::JointLimits()
 //{

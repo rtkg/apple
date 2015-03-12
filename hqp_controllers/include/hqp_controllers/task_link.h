@@ -23,22 +23,24 @@ public:
 
     //std::string getLink() const;
 
-   // boost::shared_ptr<KDL::Chain> getChain() const;
-//    boost::shared_ptr<std::vector< hardware_interface::JointHandle > > getJoints() const;
-     std::vector<boost::shared_ptr<TaskGeometry> >  getGeometries() const;
-  Eigen::Affine3d getLinkTransform() const;
-     Eigen::MatrixXd getJacobian() const;
+    KDL::Chain getChain() const;
+    std::vector< hardware_interface::JointHandle> getJoints() const;
+    std::vector<boost::shared_ptr<TaskGeometry> >  getGeometries() const;
+    Eigen::Affine3d getLinkTransform() const;
+    Eigen::MatrixXd getJacobian() const;
     //**Changes the reference point of the task object jacobian by the vector from base_AB, which is the vector from the old ref point to the new ref point expressed in the jacobian root frame */
-  Eigen::MatrixXd getJacobian(Eigen::Vector3d& base_AB) const;
+    Eigen::MatrixXd getJacobian(Eigen::Vector3d& base_AB) const;
     //boost::shared_ptr<KDL::Jacobian> getChainJacobian() const;
-     unsigned int getNumJoints();
-   /** Computes the the pose of the task link (forward kinematics) and the jacobian.*/
+    unsigned int getNumJoints();
+    /** Computes the the pose of the task link (forward kinematics) and the jacobian.*/
     void computeKinematics();
+    Eigen::VectorXi getJointMap()const;
+    //double getJointValue()const;
 
     friend std::ostream& operator<<(std::ostream& str, TaskLink const& obj);
 
 private:
-        TaskLink(){};
+    TaskLink(){};
 
     void computeJointMap();
 

@@ -36,8 +36,7 @@ public:
     Eigen::VectorXd getTaskFunction()const;
     Eigen::VectorXd getTaskVelocity()const;
 
-
-std::vector<boost::shared_ptr<TaskLink> > getTaskLinks()const;
+    std::vector<boost::shared_ptr<TaskLink> > getTaskLinks()const;
 
     //** Needs to be checked whether the task objects have appropriate properties in each derived task class */
     static boost::shared_ptr<Task> makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_description, KDL::Tree const& k_tree, std::vector< hardware_interface::JointHandle > const& joints); ///<factory method
@@ -48,7 +47,7 @@ std::vector<boost::shared_ptr<TaskLink> > getTaskLinks()const;
     virtual void updateTask()=0;
 
     //    //** get the summed squared error of the task - should be implemented here, once the tasks are cleaned up */
-    //    virtual double getSSE()const=0;
+        virtual double getTaskProgress()const=0;
 
     friend std::ostream& operator<<(std::ostream& str, Task const& task);
 
@@ -59,22 +58,17 @@ protected:
     unsigned int priority_;
     std::string task_frame_;
     bool is_equality_task_;
-
     boost::shared_ptr<TaskDynamics> t_dynamics_;
     std::vector<boost::shared_ptr<TaskLink> >  t_links_;
-
-
-    Eigen::MatrixXd  A_; ///< task jacobian
-    Eigen::MatrixXd  E_; ///< task function state matrix, rows \in Task::t_dim_ correspond to the task function dynamics of the single task dimensions, columns correspond to derivatives
-
-    ros::Time t_prev_;
-    bool t_start_;
+    Eigen::MatrixXd  J_; ///< task jacobian
+    Eigen::MatrixX2d  E_; ///< task function state matrix, rows \in Task::t_dim_ correspond to the task function dynamics of the single task dimensions, columns correspond to derivatives
+//    ros::Time t_prev_;
+//    bool t_start_;
     double ds_;
     double di_;
 
-    void updateTaskFunctionDerivatives();
+//    void updateTaskFunctionDerivatives();
     void computeTaskLinkKinematics();
-
 };
 //----------------------------------------------------------------
 class Projection: public Task
@@ -83,34 +77,31 @@ public:
     Projection(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links);
 
     virtual void updateTask();
-    //    virtual double getSSE()const;
+    virtual double getTaskProgress()const;
 
 protected:
     Projection(){};
 
 private:
 
-
-    // unsigned int jnt_index_; ///< index (in the TaskLink::joints_ vector) of the joint controlled by this task
 };
 //----------------------------------------------------------------
-//class JointSetpoint: public Task
-//{
-//public:
-//    JointSetpoint(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskLink> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
+class JointSetpoint: public Task
+{
+public:
+    JointSetpoint(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links);
 
-//    virtual void computeTask();
-//    virtual double getSSE()const;
+    virtual void updateTask();
+    virtual double getTaskProgress()const;
 
-//protected:
-//    JointSetpoint(){};
+protected:
+    JointSetpoint(){};
 
-//private:
-//    //**Helper function to make sure that the given task objects are valid in the context of the task */
-//    void verifyTaskLinks();
-//    int jnt_index_;
-//};
-////----------------------------------------------------------------
+private:
+
+};
+//----------------------------------------------------------------
+
 //class JointVelocityLimits: public Task
 //{
 //public:

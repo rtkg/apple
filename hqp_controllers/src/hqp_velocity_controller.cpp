@@ -73,7 +73,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
      vis_t_geom_srv_ = n.advertiseService("visualize_task_geometries",&HQPVelocityController::visualizeTaskGeometries, this);
     //============================================== REGISTER CALLBACKS END =========================================
     vis_t_geom_pub_.init(n, "task_geometries", 1);
-    t_statuses_pub_.init(n, "task_statuses", 1);
+    t_status_pub_.init(n, "task_status_array", 1);
 
     return true;
 }
@@ -147,8 +147,15 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
 //-----------------------------------------------------------------------
 bool HQPVelocityController::visualizeTaskGeometries(hqp_controllers_msgs::VisualizeTaskGeometries::Request & req, hqp_controllers_msgs::VisualizeTaskGeometries::Response &res)
 {
-    res.success = true;
     lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot visualize task geometries!");
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
+
     vis_ids_.resize(req.ids.size());
     for(unsigned int i=0; i<req.ids.size();i++)
         vis_ids_(i)=req.ids[i];
@@ -203,6 +210,7 @@ bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQP
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
 {
+    lock_.lock();
     if(active_)
     {
         //compute jacobians and poses of the task links, as well as the task functions and jacobians
@@ -210,55 +218,52 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 
         //compute the HQP controls
         task_manager_.computeHQP();
-        ROS_BREAK();
+
         //set the computed task velocities if the computation was succesful, otherwise set them to zero
         if(!task_manager_.getDQ(commands_))
             commands_.setZero();
 
-        //        std::cout<<"commands: "<<commands_.transpose()<<std::endl;
+//        std::cout<<"computed DQ: "<<commands_.transpose()<<std::endl;
+//ROS_BREAK();
+
+        for(unsigned int i=0; i<n_joints_; i++)
+            joints_.at(i).setCommand(commands_(i));
+
+        // ================= DEBUG PRINT ============================
+        //    for (int i=0; i<n_joints_; i++)
+        //    {
+        //        std::cout<<joints_->at(i).getName()<<std::endl;
+        //        std::cout<<joints_->at(i).getPosition()<<std::endl;
+        //        std::cout<<joints_->at(i).getVelocity()<<std::endl;
+        //        std::cout<<joints_->at(i).getEffort()<<std::endl;
+        //        std::cout<<std::endl;
+        //    }
+        // ================= DEBUG PRINT END ============================
+
+        //======================= PUBLISH =================
+        // limit rate of publishing
+        if (PUBLISH_RATE > 0.0 && last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE) < time)
+        {
+            // we're actually publishing, so increment time
+            last_publish_time_ = last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE);
+
+            // try to publish the task object geometries
+            // populate the message
+            vis_t_geom_pub_.msg_.markers.clear();
+            task_manager_.getTaskGeometryMarkers(vis_t_geom_pub_.msg_,vis_ids_);
+
+            if (vis_t_geom_pub_.trylock())
+                vis_t_geom_pub_.unlockAndPublish();
+
+                        task_manager_.getTaskStatusArray(t_status_pub_.msg_);
+                        if (t_status_pub_.trylock())
+                            t_status_pub_.unlockAndPublish();
+        }
     }
     else
         commands_.setZero();
 
-    for(unsigned int i=0; i<n_joints_; i++)
-        joints_.at(i).setCommand(commands_(i));
-
-    // ================= DEBUG PRINT ============================
-    //    for (int i=0; i<n_joints_; i++)
-    //    {
-    //        std::cout<<joints_->at(i).getName()<<std::endl;
-    //        std::cout<<joints_->at(i).getPosition()<<std::endl;
-    //        std::cout<<joints_->at(i).getVelocity()<<std::endl;
-    //        std::cout<<joints_->at(i).getEffort()<<std::endl;
-    //        std::cout<<std::endl;
-    //    }
-    // ================= DEBUG PRINT END ============================
-
-    //======================= PUBLISH =================
-    // limit rate of publishing
-    if (PUBLISH_RATE > 0.0 && last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE) < time)
-    {
-        // we're actually publishing, so increment time
-        last_publish_time_ = last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE);
-
-        // try to publish the task object geometries
-        // populate the message
-        vis_t_geom_pub_.msg_.markers.clear();
-        task_manager_.getTaskGeometryMarkers(vis_t_geom_pub_.msg_,vis_ids_);
-
-        if (vis_t_geom_pub_.trylock())
-            vis_t_geom_pub_.unlockAndPublish();
-
-        // if the controller is active, try to publish the task statuses
-        if(active_)
-        {
-            task_manager_.getTaskStatuses(t_statuses_pub_.msg_);
-            if (t_statuses_pub_.trylock())
-                t_statuses_pub_.unlockAndPublish();
-        }
-
-    }
-    //======================= END PUBLISH =================
+    lock_.unlock();
 }
 //-----------------------------------------------------------------------
 } //end namespace hqp_controllers

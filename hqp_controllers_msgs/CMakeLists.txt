@@ -18,7 +18,7 @@ add_message_files(
   TaskGeometry.msg
   TaskDynamics.msg
   TaskStatus.msg
-  TaskStatuses.msg
+  TaskStatusArray.msg
   )
 
 add_service_files(

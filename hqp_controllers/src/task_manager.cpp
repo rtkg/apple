@@ -5,15 +5,7 @@
 namespace hqp_controllers{
 
 //----------------------------------------------
-TaskManager::TaskManager() : hqp_computed_(false)
-{
-
-               std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
-
-//    tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
-//    t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
-//    hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
-}
+TaskManager::TaskManager() : hqp_computed_(false){}
 //----------------------------------------------
 unsigned int TaskManager::getValidTaskId() const
 {
@@ -77,23 +69,25 @@ void TaskManager::updateTasks()
 {
     //iterate through all tasks and compute the kinematics, task functions & task jacobians
     for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_.begin(); it!=tasks_.end(); ++it)
+    {
+   //     std::cerr<<"trying to update task with id: "<<it->second->getId()<<", corresponding map key: "<<it->first<<std::endl;
+   //     std::cerr<<"task boost ptr: "<<it->second<<", task ptr: "<<it->second.get()<<std::endl;
         it->second->updateTask();
+    }
 }
 //----------------------------------------------
 bool TaskManager::getDQ(Eigen::VectorXd& dq)const
 {
-    std::cout<<"ATTENZIONE: TaskManager::getDQ(...) not implemented yet!"<<std::endl;
+    if(!hqp_computed_)
+        return false;
 
-//    if(!hqp_computed_)
-//        return false;
-
-//    //final solution is in the last stage of the hqp
-//    ROS_ASSERT(hqp_->rbegin()->second->solved_); //just to be sure ...
-//    dq = *(hqp_->rbegin()->second->x_);
-//    return true;
+    //final solution is in the last stage of the hqp
+    ROS_ASSERT(hqp_.rbegin()->second->solved_); //just to be sure ...
+    dq = hqp_.rbegin()->second->x_;
+    return true;
 }
 //----------------------------------------------
-bool TaskManager::getTask(unsigned int id, boost::shared_ptr<Task>& task)const
+bool TaskManager::getTask(unsigned int id, boost::shared_ptr<Task> task)const
 {
     std::map<unsigned int,boost::shared_ptr<Task> >::const_iterator it = tasks_.find(id);
     if(it == tasks_.end())
@@ -102,7 +96,7 @@ bool TaskManager::getTask(unsigned int id, boost::shared_ptr<Task>& task)const
         return false;
     }
     else
-        task.reset(it->second.get());
+        task = it->second;
 
     return true;
 }
@@ -110,7 +104,7 @@ bool TaskManager::getTask(unsigned int id, boost::shared_ptr<Task>& task)const
 void TaskManager::reset()
 {
 
-std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
+std::cout<<"ATTENZIONE: TaskManager::reset() not implemented yet!"<<std::endl;
 
 //    tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
 //    t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
@@ -119,29 +113,24 @@ std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
 //    hqp_computed_ = false;
 }
 //----------------------------------------------
-void TaskManager::getTaskStatuses(hqp_controllers_msgs::TaskStatuses& t_statuses)
+void TaskManager::getTaskStatusArray(hqp_controllers_msgs::TaskStatusArray& t_status_array)
 {
-    std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
+    t_status_array.statuses.clear();
 
-//    t_statuses.statuses.clear();
+    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_.begin(); it!=tasks_.end(); ++it)
+    {
+        hqp_controllers_msgs::TaskStatus status;
+        status.id = it->second->getId();
+        for(unsigned int i=0; i < it->second->getTaskFunction().rows(); i++)
+        {
+            status.e.push_back(it->second->getTaskFunction()(i));
+            status.de.push_back(it->second->getTaskVelocity()(i));
+        }
 
-//    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator it=tasks_->begin(); it!=tasks_->end(); ++it)
-//    {
-//        hqp_controllers_msgs::TaskStatus status;
-//        status.id = it->second->getId();
-//        unsigned int t_dim = it->second->getTaskFunction()->size();
-//        ROS_ASSERT(t_dim == it->second->getTaskVelocity()->size()); //just to be sure ...
+        status.progress = it->second->getTaskProgress();
 
-//        for(unsigned int i=0; i < t_dim; i++)
-//        {
-//            status.e.push_back( (*it->second->getTaskFunction())(i));
-//            status.de.push_back( (*it->second->getTaskVelocity())(i));
-//        }
-
-//        status.sse = it->second->getSSE();
-
-//        t_statuses.statuses.push_back(status);
-//    }
+        t_status_array.statuses.push_back(status);
+    }
 }
 //----------------------------------------------
 bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& markers, Eigen::VectorXi const& vis_ids)const
@@ -169,11 +158,7 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& marker
 //----------------------------------------------
 void TaskManager::computeHQP()
 {
-    std::cout<<"ATTENZIONE: not implemented yet!"<<std::endl;
-
-
    hqp_.clear();
-    hqp_computed_ = false;
     for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_.begin(); task_it!=tasks_.end(); ++task_it)
     {
 
@@ -187,9 +172,10 @@ void TaskManager::computeHQP()
             stage_it->second->appendTask(*task_it->second);
     }
 
-//    if(hqp_solver_.solve(*hqp_))
-//        hqp_computed_ = true;
-
+    if(hqp_solver_.solve(hqp_))
+        hqp_computed_ = true;
+    else
+        hqp_computed_ = false;
 }
 //----------------------------------------------
 //void TaskManager::writeHQP()

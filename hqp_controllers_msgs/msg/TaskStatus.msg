@@ -1,7 +1,7 @@
-uint16     id   #id of the task associated to this status
-float64    sse  #summed squared task error over all task dimensions
-float64[]  e    #task function vector
-float64[]  de   #task velocity vector
+uint16     id       #id of the task associated to this status
+float64    progress #positive value indicating the task progress (0 indicates that the task is complete)
+float64[]  e        #task function vector
+float64[]  de       #task velocity vector
 
 
 

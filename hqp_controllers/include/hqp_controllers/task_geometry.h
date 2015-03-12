@@ -53,10 +53,6 @@ public:
     virtual void transformTaskData(Eigen::Affine3d const& T_l_t) = 0;
     virtual void addMarker(visualization_msgs::MarkerArray& markers) = 0;
 
-    virtual ProjectionQuantities project(TaskGeometry const& geom)const = 0;
-    virtual ProjectionQuantities projectOntoPoint(Point const& point)const = 0;
-    virtual ProjectionQuantities projectOntoPlane(Plane const& plane)const = 0;
-
 protected:
 
     std::string link_frame_;
@@ -65,7 +61,19 @@ protected:
     Eigen::VectorXd task_data_; ///< the geometry data expressed in the task frame
 };
 //------------------------------------------------------------------------------------------
-class Point: public TaskGeometry
+class ProjectableGeometry: public TaskGeometry
+{
+  public:
+
+    ProjectableGeometry();
+    ProjectableGeometry(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data);
+
+    virtual ProjectionQuantities project(ProjectableGeometry const& geom)const = 0;
+    virtual ProjectionQuantities projectOntoPoint(Point const& point)const = 0;
+    virtual ProjectionQuantities projectOntoPlane(Plane const& plane)const = 0;
+};
+//------------------------------------------------------------------------------------------
+class Point: public ProjectableGeometry
 {
 public:
 
@@ -76,7 +84,7 @@ public:
     // virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
     virtual void addMarker(visualization_msgs::MarkerArray& markers);
 
-    virtual ProjectionQuantities project(TaskGeometry const& geom)const;
+    virtual ProjectionQuantities project(ProjectableGeometry const& geom)const;
 
  protected:
 
@@ -85,7 +93,22 @@ public:
 
     // boost::shared_ptr<Eigen::Vector3d> p_; ///< coordinates of the point in the TaskGeometry::link_ frame
 };
-////------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
+class JointPosition: public TaskGeometry
+{
+public:
+
+    JointPosition();
+    JointPosition(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data);
+
+    virtual void transformTaskData(Eigen::Affine3d const& T_l_t);
+    // virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
+    virtual void addMarker(visualization_msgs::MarkerArray& markers);
+
+ protected:
+
+};
+//------------------------------------------------------------------------------------------
 //class Sphere: public TaskGeometry
 //{
 //public:
@@ -123,7 +146,7 @@ public:
 //};
 ////------------------------------------------------------------------------------------------
 //** Plane defined as Plane::n_^T*x - Plane::d_ = 0.0 */
-class Plane: public TaskGeometry
+class Plane: public ProjectableGeometry
 {
 public:
 Plane();
@@ -132,7 +155,7 @@ Plane(std::string const& link_frame, std::string const& task_frame, Eigen::Vecto
  virtual void transformTaskData(Eigen::Affine3d const& T_l_t);
 
  virtual void addMarker(visualization_msgs::MarkerArray& markers);
-virtual ProjectionQuantities project(TaskGeometry const& geom)const;
+virtual ProjectionQuantities project(ProjectableGeometry const& geom)const;
 
 protected:
 
@@ -179,24 +202,7 @@ protected:
 //    boost::shared_ptr<Eigen::Affine3d> trans_f_l_; ///< transformation from the frame to the TaskGeometry::link_ frame (= pose of Frame::trans_f_l_ in the link frame)
 
 //};
-////------------------------------------------------------------------------------------------
-//class JointPosition: public TaskGeometry
-//{
-//public:
-//    JointPosition();
-//    JointPosition(std::string const& link, std::string const& root, Eigen::VectorXd const& link_data);
-
-//    virtual void setLinkData(Eigen::VectorXd const& link_data);
-//    virtual void setLinkTransform(Eigen::Affine3d const& trans_l_r);
-//    //  virtual void computeWitnessPoints(Eigen::Matrix3d& pts,TaskGeometry const& geom) const;
-//    virtual void addMarker(visualization_msgs::MarkerArray& markers);
-
-//protected:
-//    boost::shared_ptr<Eigen::Affine3d> trans_j_l_; ///< transformation from the joint frame to the TaskGeometry::link_ frame (= pose of Frame::trans_j_l_ in the link frame)
-//    boost::shared_ptr<Eigen::Affine3d> trans_j_r_0_; ///< initial transformation from the joint frame to the TaskGeometry::root_ frame
-//    double q_pos_; ///<Joint position value
-//};
-////------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------
 //class Cone: public TaskGeometry
 //{
 //public:

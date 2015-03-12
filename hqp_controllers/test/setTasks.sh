@@ -6,11 +6,12 @@ rosservice call /apple/apple_hqp_vel_controller/activate_hqp_control false
 
 #rosservice call /apple/apple_hqp_vel_controller/set_tasks '{tasks: [{t_type: 1, priority: 1, is_equality_task: true, task_frame: "world", ds: 0.01, di: 0.03, dynamics: {d_type: 1, d_data: [-1.0]}, t_links: [{link_frame: "lbr_iiwa_link_7", geometries: [{g_type: 1, g_data: [1.0, 2.0, 3.0]}, {g_type: 3, g_data: [0.0, 0.0, 1.0, 0.3]}]}, {link_frame: "world", geometries: [{g_type: 1, g_data: [4.0, 5.0, 6.0]}]} ]} ]}'
 
-rosservice call /apple/apple_hqp_vel_controller/set_tasks '{tasks: [{t_type: 1, priority: 1, is_equality_task: true, task_frame: "world", ds: 0.01, di: 0.03, dynamics: {d_type: 1, d_data: [-1.0]}, t_links: [{link_frame: "lbr_iiwa_link_7", geometries: [{g_type: 1, g_data: [0.5, 0.0, 0.0]} ]}, {link_frame: "world", geometries: [{g_type: 1, g_data: [0.0, 0.0, 0.2]}]} ]} ]}'
+rosservice call /apple/apple_hqp_vel_controller/set_tasks '{tasks: [{t_type: 1, priority: 1, is_equality_task: true, task_frame: "world", ds: 0.01, di: 0.03, dynamics: {d_type: 1, d_data: [-0.1]}, t_links: [{link_frame: "world", geometries: [{g_type: 1, g_data: [1.0, 0.0, 0.8]} ]}, {link_frame: "lbr_iiwa_link_7", geometries: [{g_type: 1, g_data: [0.0, 0.0, 0.2]}]} ]} ]}'
 
+rosservice call /apple/apple_hqp_vel_controller/visualize_task_geometries '{ids: [0]}'
 
 rosservice call /apple/apple_hqp_vel_controller/activate_hqp_control true
 
-rosservice call /apple/apple_hqp_vel_controller/visualize_task_geometries '{ids: [0]}'
+
 
 

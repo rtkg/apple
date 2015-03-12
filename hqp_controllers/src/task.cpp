@@ -14,10 +14,8 @@ std::ostream& operator<<(std::ostream& str, Task const& task)
     str<<"is equality task: "<<task.is_equality_task_<<std::endl;
     str<<"ds: "<<task.ds_<<std::endl;
     str<<"di: "<<task.di_<<std::endl;
-    str<<"A_:"<<std::endl<<task.A_<<std::endl;
+    str<<"A_:"<<std::endl<<task.J_<<std::endl;
     str<<"E_:"<<std::endl<<task.E_<<std::endl;
-    str<<"t_prev_:"<<task.t_prev_.toSec()<<std::endl;
-    str<<"t_start_:"<<task.t_start_<<std::endl;
 
     str<< *(task.t_dynamics_)<<std::endl;
 
@@ -33,7 +31,7 @@ Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame
     ROS_ASSERT(t_dynamics_->getDimension() > 0);
     ROS_ASSERT(priority_ >= 1);
 
-    t_start_ = true;
+    ROS_ASSERT(t_dynamics_->getDimension() == 1); //1D state-space for now
 }
 //---------------------------------------------------------
 void Task::setTaskVelocityDamping(double ds, double di)
@@ -43,35 +41,35 @@ void Task::setTaskVelocityDamping(double ds, double di)
     di_ = di;
 }
 //---------------------------------------------------------
-void Task::updateTaskFunctionDerivatives()
-{
-    ros::Time t = ros::Time::now();
-    if(t_start_)
-    {
-        t_prev_ = t;
-        t_start_ = false;
-    }
-    double dt = (t - t_prev_).toSec();
-    ROS_ASSERT(dt > -1e-8);
+//void Task::updateTaskFunctionDerivatives()
+//{
+//    ros::Time t = ros::Time::now();
+//    if(t_start_)
+//    {
+//        t_prev_ = t;
+//        t_start_ = false;
+//    }
+//    double dt = (t - t_prev_).toSec();
+//    ROS_ASSERT(dt > -1e-8);
 
-    unsigned int d_dim = t_dynamics_->getDimension();
+//    unsigned int d_dim = t_dynamics_->getDimension();
 
-    //Euler integration
-    Eigen::VectorXd e=E_.col(0); //save the task function values - those are not integrated
-    E_.leftCols(d_dim) = E_.leftCols(d_dim) + E_.rightCols(d_dim)*dt;
-    E_.col(0) = e;//put back the task function values
+//    //Euler integration
+//    Eigen::VectorXd e=E_.col(0); //save the task function values - those are not integrated
+//    E_.leftCols(d_dim) = E_.leftCols(d_dim) + E_.rightCols(d_dim)*dt;
+//    E_.col(0) = e;//put back the task function values
 
-    //compute new task function derivatives
-    Eigen::VectorXd dx(d_dim);
-    Eigen::VectorXd x(d_dim);
-    for(unsigned int i=0; i < E_.rows(); i++)
-    {
-        x = E_.row(i).head(d_dim).transpose();
-        t_dynamics_->getDX(dx,x);
-        E_.row(i).tail(d_dim) = dx.transpose();
-    }
-    t_prev_ = t;
-}
+//    //compute new task function derivatives
+//    Eigen::VectorXd dx(d_dim);
+//    Eigen::VectorXd x(d_dim);
+//    for(unsigned int i=0; i < E_.rows(); i++)
+//    {
+//        x = E_.row(i).head(d_dim).transpose();
+//        t_dynamics_->getDX(dx,x);
+//        E_.row(i).tail(d_dim) = dx.transpose();
+//    }
+//    t_prev_ = t;
+//}
 //---------------------------------------------------------
 unsigned int Task::getId()const {return id_;}
 //---------------------------------------------------------
@@ -85,7 +83,7 @@ unsigned int Task::getPriority()const {return priority_;}
 //---------------------------------------------------------
 void Task::setPriority(unsigned int priority) {priority_= priority;}
 //---------------------------------------------------------
-Eigen::MatrixXd Task::getTaskJacobian()const{return A_;}
+Eigen::MatrixXd Task::getTaskJacobian()const{return J_;}
 //---------------------------------------------------------
 Eigen::VectorXd Task::getTaskFunction()const{return E_.col(0);}
 //---------------------------------------------------------
@@ -200,8 +198,8 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
         task.reset(new Projection(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
     //    else if(type == PROJECT_POINT_CYLINDER)
     //        task.reset(new ProjectPointCylinder(id, priority, sign, t_objs, t_dynamics));
-    //    else if(type == PROJECT_LINE_LINE)
-    //        task.reset(new ProjectLineLine(id, priority, sign, t_objs, t_dynamics));
+        else if(t_type == JOINT_SETPOINT)
+        task.reset(new JointSetpoint(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
     //    else if(type == JOINT_SETPOINT)
     //        task.reset(new JointSetpoint(id, priority, sign, t_objs, t_dynamics));
     //    else if(type == JOINT_VELOCITY_LIMITS)
@@ -222,20 +220,6 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
 
     task->setTaskVelocityDamping(ds,di);
     return task;
-}
-//---------------------------------------------------------
-Projection::Projection(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links) : Task(id, priority, task_frame, is_equality_task, t_dynamics, t_links)
-{
-    //    dim_ = t_objs_->at(1).getGeometries()->size();
-    ROS_ASSERT(t_links_.size() == 2);
-    ROS_ASSERT(t_links_.at(0).get() && t_links_.at(1).get()); //make sure the task links exist
-    //make sure task geometries exist
-    ROS_ASSERT((t_links_.at(0)->getGeometries().size() > 0) &&  (t_links_.at(1)->getGeometries().size() > 0));
-    for (unsigned int i=0; i<t_links_.at(0)->getGeometries().size(); i++)
-        ROS_ASSERT(t_links_.at(0)->getGeometries().at(i).get());
-    for (unsigned int i=0; i<t_links_.at(1)->getGeometries().size(); i++)
-        ROS_ASSERT(t_links_.at(1)->getGeometries().at(i).get());
-
 }
 //---------------------------------------------------------
 void Task::computeTaskLinkKinematics()
@@ -283,132 +267,141 @@ void Task::computeTaskLinkKinematics()
 ////    e_->setZero();
 ////    de_->setZero();
 ////}
-//---------------------------------------------------------
-void Projection::updateTask()
+/// //---------------------------------------------------------
+ Projection::Projection(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links) : Task(id, priority, task_frame, is_equality_task, t_dynamics, t_links)
+ {
+     //    dim_ = t_objs_->at(1).getGeometries()->size();
+     ROS_ASSERT(t_links_.size() == 2);
+     ROS_ASSERT(t_links_.at(0).get() && t_links_.at(1).get()); //make sure the task links exist
+     //make sure task geometries exist
+     ROS_ASSERT((t_links_.at(0)->getGeometries().size() > 0) &&  (t_links_.at(1)->getGeometries().size() > 0));
+     for (unsigned int i=0; i<t_links_.at(0)->getGeometries().size(); i++)
+         ROS_ASSERT(t_links_.at(0)->getGeometries().at(i).get());
+     for (unsigned int i=0; i<t_links_.at(1)->getGeometries().size(); i++)
+         ROS_ASSERT(t_links_.at(1)->getGeometries().at(i).get());
+
+ }
+ //---------------------------------------------------------
+ void Projection::updateTask()
+ {
+     //compute forward kinematics and jacobians
+     computeTaskLinkKinematics();
+
+     unsigned int n_jnts = t_links_[0]->getNumJoints();
+
+     J_.resize(0, n_jnts);
+     E_.resize(0, 2);
+     unsigned int t_dim = 0;
+     for (unsigned int i = 0; i<t_links_[0]->getGeometries().size(); i++)
+         for (unsigned int j = 0; j<t_links_[1]->getGeometries().size(); j++)
+         {
+             ProjectableGeometry* geom1 = static_cast<ProjectableGeometry*>(t_links_[0]->getGeometries().at(i).get());
+             ProjectableGeometry* geom2 = static_cast<ProjectableGeometry*>(t_links_[1]->getGeometries().at(i).get());
+             ProjectionQuantities proj = geom1->project(* geom2);
+
+             //std::cerr<<"Projection quantities: "<<std::endl<<proj<<std::endl;
+             for (unsigned int k = 0; k<proj.d_.rows(); k++)
+             {
+                 t_dim++;
+
+                 //TASK FUNCTION
+                 E_.conservativeResize(t_dim , Eigen::NoChange);
+                 Eigen::VectorXd x(1), dx(1);
+                 //CHECK FOR INFLUENCE ZONE HERE!!!
+                 x(0) = proj.d_(k);
+                 t_dynamics_->getDX(dx, x);
+                 //APPLY TASK DAMPING HERE!
+                 E_(t_dim - 1,0) = x(0);
+                 E_(t_dim - 1,1) = dx(0);
+
+                 //TASK JACOBIAN
+                 //get the jacobian of the current projection points
+                 Eigen::Vector3d delta_p1 = proj.P1_.col(k) - t_links_[0]->getLinkTransform().translation();
+                 Eigen::Vector3d delta_p2 = proj.P2_.col(k) - t_links_[1]->getLinkTransform().translation();
+
+                 //                std::cerr<<"delta_p1: "<<delta_p1.transpose()<<std::endl;
+                 //                std::cerr<<"delta_p2: "<<delta_p2.transpose()<<std::endl;
+                 //                std::cerr<<"J1: "<<std::endl<<t_links_[0]->getJacobian(delta_p1)<<std::endl;
+                 //                std::cerr<<"J2: "<<std::endl<<t_links_[1]->getJacobian(delta_p2)<<std::endl;
+
+                 Eigen::MatrixXd jac = t_links_[0]->getJacobian(delta_p1) - t_links_[1]->getJacobian(delta_p2) ;
+
+                 J_.conservativeResize(t_dim, Eigen::NoChange);
+                 J_.bottomRows<1>() = proj.N_.col(k).transpose() * jac.topRows<3>();
+             }
+
+         }
+     //compute task function derivatives
+     //updateTaskFunctionDerivatives();
+
+     //   std::cerr<<"task jacobian J_:"<<std::endl<<J_<<std::endl;
+     //   std::cerr<<"E_:"<<std::endl<<E_<<std::endl;
+     //   std::cerr<<"NEXT"<<std::endl<<std::endl;
+ }
+ //---------------------------------------------------------
+ double Projection::getTaskProgress()const
 {
-    //compute forward kinematics and jacobians
-    computeTaskLinkKinematics();
+    if (is_equality_task_)
+        return pow(E_.col(0).norm(),2); //SSE of the task functions
+    else
+    {
+        //for inequality projection tasks, a negative task function value per definiton indicates 0 sse
+        double sse = 0;
+        for (unsigned int i=0; i < E_.rows();i++)
+            if(E_(i,0) > 0.0)
+                sse+=pow(E_(i,0),2);
 
-    unsigned int n_jnts = t_links_[0]->getNumJoints();
-    unsigned int d_dim = t_dynamics_->getDimension();
-
-    A_.resize(0, n_jnts);
-    E_.resize(0, d_dim + 1);
-    unsigned int t_dim = 0;
-    for (unsigned int i = 0; i<t_links_[0]->getGeometries().size(); i++)
-        for (unsigned int j = 0; j<t_links_[1]->getGeometries().size(); j++)
-        {
-            ProjectionQuantities proj = t_links_[0]->getGeometries().at(i)->project(*(t_links_[1]->getGeometries().at(j)));
-           // std::cerr<<"Projection quantities: "<<std::endl<<proj<<std::endl;
-            for (unsigned int k = 0; k<proj.d_.rows(); k++)
-            {
-                t_dim++;
-
-                //TASK FUNCTION
-                E_.conservativeResize(t_dim , Eigen::NoChange);
-                E_(t_dim - 1,0) = proj.d_(k);
-                //CHECK FOR INFLUENCE ZONE HERE!!!
-
-                //TASK JACOBIAN
-                //get the jacobian of the current projection points
-                Eigen::Vector3d delta_p1 = proj.P1_.col(k) - t_links_[0]->getLinkTransform().translation();
-                Eigen::Vector3d delta_p2 = proj.P2_.col(k) - t_links_[1]->getLinkTransform().translation();
-
-//                std::cerr<<"delta_p1: "<<delta_p1.transpose()<<std::endl;
-//                std::cerr<<"delta_p2: "<<delta_p2.transpose()<<std::endl;
-
-                Eigen::MatrixXd jac = t_links_[0]->getJacobian(delta_p1) - t_links_[1]->getJacobian(delta_p2) ;
-
-                A_.conservativeResize(t_dim, Eigen::NoChange);
-                A_.bottomRows<1>() = proj.N_.col(k).transpose() * jac.topRows<3>();
-            }
-
-        }
-
-
-    //    std::cout<<"NEW TASK TO COMPUTE"<<std::endl;
-    //    std::cout<<std::endl<<"delta_p: "<<delta_p.transpose()<<std::endl;
-    //    std::cout<<"p: "<<p.transpose()<<std::endl;
-    //    std::cout<<"plane link: "<<(*(t_objs_.second->getGeometries()->at(0)->getLinkData())).transpose()<<std::endl;
-    //    std::cout<<"plane root: "<<plane.transpose()<<std::endl;
-    //    std::cout<<"pos jac:"<<std::endl<<jac->topRows<3>()<<std::endl;
-    //    std::cout<<"A_:"<<std::endl<<(*A_)<<std::endl;
-
-    //compute task function derivatives
-    updateTaskFunctionDerivatives();
-
-   //std::cerr<<"A_:"<<std::endl<<A_<<std::endl;
-   //std::cerr<<"E_:"<<std::endl<<E_<<std::endl;
-
-    //APPLY TASK DAMPING HERE!
+        return sse;
+    }
 }
 //---------------------------------------------------------
-//JointSetpoint::JointSetpoint(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
-//{
-//    type_ = JOINT_SETPOINT;
-//    dim_ = 1;
+JointSetpoint::JointSetpoint(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links)
+{
+unsigned int n_links =  t_links_.size();
+    ROS_ASSERT(n_links > 0);
+    for (unsigned int i=0; i<t_links_.size(); i++)
+    {
+        ROS_ASSERT(t_links_.at(i).get()); //make sure the task links exist
+        ROS_ASSERT(t_links_.at(i)->getGeometries().size() == 1); //one joint geometry per task link
+        ROS_ASSERT(t_links_.at(i)->getGeometries().at(0).get()); //make sure the geometry exist
+        ROS_ASSERT( typeid(*t_links_.at(i)->getGeometries().at(0)) == typeid(JointPosition)); //make sure the geometry is a joint position
+        ROS_ASSERT(t_links_.at(i)->getChain().segments.rbegin()->getJoint().getType() != KDL::Joint::None); //make sure its not a fixed joint
+    }
 
-//    verifyTaskObjects();
+    E_.resize(n_links, 2);
+    J_.resize(n_links, t_links_.at(0)->getJoints().size());
+}
+//---------------------------------------------------------
+void JointSetpoint::updateTask()
+{
+    std::cerr<<"ATTENZIONE: JointSetpoint::updateTask() not implemented yet"<<std::endl;
+    for (unsigned int i=0; i<t_links_.size(); i++)
+    {
+        //Get the setpoint
+        double q_set = t_links_.at(i)->getGeometries().at(0)->getTaskData()(0);
+        //Get the current joint value
+        unsigned int jnt_index = t_links_.at(i)->getJointMap().tail<1>()(0);
+        double q = t_links_.at(i)->getJoints().at(jnt_index).getPosition();
 
-//    unsigned int n_jnts = t_objs_->at(0).getJacobian()->cols(); //number of controlled joints
-//    A_->resize(dim_, n_jnts);
-//    E_->resize(dim_,t_dynamics_->getDimension()+1); //needs to be one higher to containt state plus derivatives in the matrix rows
-//    A_->setZero();
-//    E_->setZero();
+        //CHECK FOR INFLUENCE ZONE HERE!!!
+        Eigen::VectorXd x(1), dx(1);
+        x(0) = q_set - q;
+        t_dynamics_->getDX(dx, x);
+        //APPLY TASK DAMPING HERE!
+        E_(i, 0) = x(0);
+        E_(i, 1) = dx(0);
 
-//    unsigned int n_sgmnts =  t_objs_->at(0).getChain()->getNrOfSegments();
-//    std::string jnt_name = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getName();
-//    KDL::Joint::JointType type = t_objs_->at(0).getChain()->getSegment(n_sgmnts - 1).getJoint().getType();
-//    //Translational joints are not allowed for now ...
-//    ROS_ASSERT( (type == KDL::Joint::RotAxis) || (type == KDL::Joint::RotX) || (type == KDL::Joint::RotY) || (type == KDL::Joint::RotZ));
-
-//    jnt_index_ = -1;
-//    for(unsigned int i=0; i<t_objs_->at(0).getJoints()->size(); i++)
-//        if(jnt_name == t_objs_->at(0).getJoints()->at(i).getName())
-//            jnt_index_ = i;
-
-//    ROS_ASSERT(jnt_index_ > -1); //make sure the joint was found
-//    //allow only equalities for now, although it shouldn't be a problem to include inequalities on this task
-//    ROS_ASSERT(sign == "=");
-//}
-////---------------------------------------------------------
-//void JointSetpoint::verifyTaskObjects()
-//{
-//    ROS_ASSERT(t_objs_->size() == 1); //need one Joint Setpoint
-//    ROS_ASSERT(t_objs_->at(0).getGeometries().get()); //make sure a task geometry exists
-//    ROS_ASSERT(t_objs_->at(0).getGeometries()->at(0)->getType() == JOINT_POSITION);
-//}
-////---------------------------------------------------------
-//void JointSetpoint::computeTask()
-//{
-//    //Get the setpoint
-//    double q_set = (*t_objs_->at(0).getGeometries()->at(0)->getRootData())(0);
-
-//    //Get the current joint value
-//    double q = t_objs_->at(0).getJoints()->at(jnt_index_).getPosition();
-
-//    //Compute the task function
-//    (*E_)(0,0) = q_set - q;
-
-//    //Compute the task jacobian
-//    (*A_)(0,jnt_index_) = -1.0;
-
-//    //compute task function derivatives
-//    updateTaskFunctionDerivatives();
-
-//    //    std::cout<<"q: "<<q<<std::endl;
-//    //    std::cout<<"q_set: "<<q_set<<std::endl;
-//    //    std::cout<<"JointSetpoint: A_: "<<std::endl<<(*A_)<<std::endl;
-//    //    std::cout<<"JointSetpoint: E_: "<<std::endl<<(*E_)<<std::endl;
-
-//    //    exit(0);
-//}
-////---------------------------------------------------------
-//double JointSetpoint::getSSE()const
-//{
+        //Compute the task jacobian
+        J_(i, jnt_index) = -1.0;
+    }
+}
+//---------------------------------------------------------
+double JointSetpoint::getTaskProgress()const
+{
+    std::cerr<<"ATTENZIONE: JointSetpoint::getTaskProgress() not implemented yet!"<<std::endl;
 //    return pow((*E_)(0, 0), 2);
-//}
-////---------------------------------------------------------
+}
+//---------------------------------------------------------
 //JointVelocityLimits::JointVelocityLimits(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskObject> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics) : Task(id, priority, sign, t_objs, t_dynamics)
 //{
 //    type_ = JOINT_VELOCITY_LIMITS;
