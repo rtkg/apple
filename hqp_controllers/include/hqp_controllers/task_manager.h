@@ -21,7 +21,7 @@ public:
     bool addTask(boost::shared_ptr<Task> task);
 
     void reset();
-  //  bool removeTask(unsigned int id);
+    bool removeTask(unsigned int id);
 
     /**Computes the task jacobians and velocities of all tasks*/
     void updateTasks();

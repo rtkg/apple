@@ -24,11 +24,10 @@ add_message_files(
 add_service_files(
   FILES
   SetTasks.srv
-  SetTaskLinks.srv
   VisualizeTaskGeometries.srv
   ActivateHQPControl.srv
   RemoveTasks.srv
-  RemoveTaskLinks.srv
+  LoadTasks.srv
   FindCanTask.srv
   )
 

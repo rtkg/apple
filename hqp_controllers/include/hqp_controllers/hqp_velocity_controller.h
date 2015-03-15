@@ -17,16 +17,15 @@
 #include <std_srvs/Empty.h>
 #include <hqp_controllers/task_manager.h>
 #include <hqp_controllers_msgs/SetTasks.h>
-#include <hqp_controllers_msgs/SetTaskLinks.h>
 #include <hqp_controllers_msgs/TaskStatusArray.h>
 #include <hqp_controllers_msgs/VisualizeTaskGeometries.h>
 #include <hqp_controllers_msgs/ActivateHQPControl.h>
 #include <hqp_controllers_msgs/RemoveTasks.h>
-#include <hqp_controllers_msgs/RemoveTaskLinks.h>
+#include <hqp_controllers_msgs/LoadTasks.h>
 
 namespace hqp_controllers
 {
-#define PUBLISH_RATE 50 //The rate to publish task geometries
+#define PUBLISH_RATE 50 //The rate to publish
 
 /**
    * \brief Forward command controller for a set of joints.
@@ -54,12 +53,14 @@ public:
 private:
 
     ros::ServiceServer set_tasks_srv_;
-    //ros::ServiceServer remove_tasks_srv_;
+    ros::ServiceServer remove_tasks_srv_;
     ros::ServiceServer activate_hqp_control_srv_;
-    //ros::ServiceServer reset_hqp_control_srv_;
+    ros::ServiceServer reset_hqp_control_srv_;
     ros::ServiceServer vis_t_geom_srv_;
+    ros::ServiceServer load_tasks_srv_;
     TaskManager task_manager_;
     boost::mutex lock_;
+    ros::NodeHandle n_;
 
     realtime_tools::RealtimePublisher<visualization_msgs::MarkerArray> vis_t_geom_pub_;
     realtime_tools::RealtimePublisher<hqp_controllers_msgs::TaskStatusArray> t_status_pub_;
@@ -77,9 +78,10 @@ private:
 
 
     bool activateHQPControl(hqp_controllers_msgs::ActivateHQPControl::Request & req, hqp_controllers_msgs::ActivateHQPControl::Response &res);
-   // bool resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res);
+    bool resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res);
     bool setTasks(hqp_controllers_msgs::SetTasks::Request & req, hqp_controllers_msgs::SetTasks::Response &res);
-    //bool removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res);
+    bool removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res);
+     bool loadTasks(hqp_controllers_msgs::LoadTasks::Request & req, hqp_controllers_msgs::LoadTasks::Response &res);
     bool visualizeTaskGeometries(hqp_controllers_msgs::VisualizeTaskGeometries::Request & req, hqp_controllers_msgs::VisualizeTaskGeometries::Response &res);
 };
 

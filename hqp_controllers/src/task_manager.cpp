@@ -26,42 +26,30 @@ bool TaskManager::addTask(boost::shared_ptr<Task> task)
         return false;
     }
 
-    //=================== DEBUG PRINT =========================
+    //=================== DEBUG PRINT =============================
     //std::cout<<"ADDED TASK: "<<std::endl<< *(task);
     //=================== DEBUG PRINT END =========================
 
     return true;
 }
 //----------------------------------------------
-//bool TaskManager::removeTaskObject(unsigned int id)
-//{
-//    //check whether an object with that id exists and remove it in case
-//    std::map<unsigned int,boost::shared_ptr<TaskObject> >::iterator it = t_objs_->find(id);
-//    if(it == t_objs_->end())
-//    {
-//        ROS_WARN("TaskManager::removeTaskObject(...): cannot remove task object with id %d because it does not exist.",id);
-//        return false;
-//    }
-//    else
-//        t_objs_->erase(it);
+bool TaskManager::removeTask(unsigned int id)
+{
+    //check whether a task with that id exists and remove it in case
+    std::map<unsigned int,boost::shared_ptr<Task> >::iterator it = tasks_.find(id);
+    if(it == tasks_.end())
+    {
+        ROS_WARN("TaskManager::removeTask(...): cannot remove task with id %d because it does not exist.",id);
+        return false;
+    }
+    else
+        tasks_.erase(it);
 
-//    return true;
-//}
-//----------------------------------------------
-//bool TaskManager::removeTask(unsigned int id)
-//{
-//    //check whether a task with that id exists and remove it in case
-//    std::map<unsigned int,boost::shared_ptr<Task> >::iterator it = tasks_->find(id);
-//    if(it == tasks_->end())
-//    {
-//        ROS_WARN("TaskManager::removeTask(...): cannot remove task with id %d because it does not exist.",id);
-//        return false;
-//    }
-//    else
-//        tasks_->erase(it);
+//    hqp_.clear();
+//    hqp_computed_ = false;
 
-//    return true;
-//}
+    return true;
+}
 //----------------------------------------------
 //boost::shared_ptr<std::map<unsigned int, boost::shared_ptr<TaskObject> > > TaskManager::getTaskObjects()const{return t_objs_;}
 //----------------------------------------------
@@ -103,14 +91,9 @@ bool TaskManager::getTask(unsigned int id, boost::shared_ptr<Task> task)const
 //----------------------------------------------
 void TaskManager::reset()
 {
-
-std::cout<<"ATTENZIONE: TaskManager::reset() not implemented yet!"<<std::endl;
-
-//    tasks_.reset(new std::map<unsigned int, boost::shared_ptr<Task> >);
-//    t_objs_.reset(new std::map<unsigned int, boost::shared_ptr<TaskObject> >);
-//    hqp_.reset(new std::map<unsigned int, boost::shared_ptr<HQPStage> >);
-//    std::cout<<"reset in task manager"<<std::endl;
-//    hqp_computed_ = false;
+   tasks_.clear();
+   hqp_.clear();
+   hqp_computed_ = false;
 }
 //----------------------------------------------
 void TaskManager::getTaskStatusArray(hqp_controllers_msgs::TaskStatusArray& t_status_array)

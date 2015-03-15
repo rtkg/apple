@@ -52,6 +52,11 @@ void TaskLink::computeJointMap()
     unsigned int n_chain_sgmnts = chain_.getNrOfSegments(); //if there are locked joints, the segment nr != the joint nr
     joint_map_.resize(n_chain_jnts);
 
+//    std::cerr<<"computing joint map for chain: "<<std::endl;
+//    std::ostringstream out;
+//    printKDLChain(out, chain_);
+//    std::cerr<<out.str()<<std::endl;
+
     unsigned int k=0; //index of the unlocked joints
     for(unsigned int i=0; i<n_chain_sgmnts; i++)//iterate over all chain segments
     {
@@ -66,17 +71,15 @@ void TaskLink::computeJointMap()
     }
 
     // ============= DEBUG PRINT =============================
-    //    std::cout<<"CHAIN JOINTS"<<std::endl;
-    //    for(unsigned int i=0; i<n_chain_sgmnts; i++)
-    //    {
-    //        std::cout<<chain_->getSegment(i).getJoint().getName()<<std::endl;
-    //    }
-    //    std::cout<<std::endl<<"CONTROLLED JOINTS"<<std::endl;
-    //    for (unsigned int j=0; j<n_jnts; j++)
-    //    {
-    //        std::cout<<joints_->at(j).getName()<<std::endl;
-    //    }
-    //    std::cout<<std::endl<<"JOINT MAP"<<std::endl<<(*joint_map_).transpose()<<std::endl;
+//        std::cerr<<"CHAIN JOINTS"<<std::endl;
+//        for(unsigned int i=0; i<n_chain_sgmnts; i++)
+//            std::cerr<<chain_.getSegment(i).getJoint().getName()<<std::endl;
+
+//        std::cerr<<std::endl<<"CONTROLLED JOINTS"<<std::endl;
+//        for (unsigned int j=0; j<n_jnts; j++)
+//            std::cerr<<joints_.at(j).getName()<<std::endl;
+
+//       std::cerr<<std::endl<<"JOINT MAP"<<std::endl<<joint_map_.transpose()<<std::endl;
     // ============= DEBUG PRINT END =============================
 }
 //----------------------------------------------------
@@ -177,6 +180,10 @@ void TaskLink::addGeometry(boost::shared_ptr<TaskGeometry> geometry)
 
     geometries_.push_back(geometry);
 }
+//----------------------------------------------------
+std::string TaskLink::getLinkFrame()const{return link_frame_;}
+//----------------------------------------------------
+std::string TaskLink::getTaskFrame()const{return task_frame_;}
 //----------------------------------------------------
 std::vector<boost::shared_ptr<TaskGeometry> > TaskLink::getGeometries() const {return geometries_;}
 //----------------------------------------------------

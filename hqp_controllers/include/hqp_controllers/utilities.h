@@ -46,6 +46,16 @@ inline Eigen::Matrix3d skewSymmetricMatrix(Eigen::Vector3d const& v)
     return m;
 }
 //----------------------------------------------------------
+inline void removeRow(Eigen::VectorXi& vector, unsigned int rowToRemove)
+{
+    unsigned int numRows = vector.rows()-1;
+
+    if( rowToRemove < numRows )
+        vector.block(rowToRemove,0,numRows-rowToRemove,1) = vector.block(rowToRemove+1,0,numRows-rowToRemove,1);
+
+    vector.conservativeResize(numRows);
+}
+//----------------------------------------------------------
 }//end namespace hqp_controllers
 
 #endif // UTILITIES_H

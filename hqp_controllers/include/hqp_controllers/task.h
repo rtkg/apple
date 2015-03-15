@@ -47,7 +47,7 @@ public:
     virtual void updateTask()=0;
 
     //    //** get the summed squared error of the task - should be implemented here, once the tasks are cleaned up */
-        virtual double getTaskProgress()const=0;
+    virtual double getTaskProgress()const=0;
 
     friend std::ostream& operator<<(std::ostream& str, Task const& task);
 
@@ -62,12 +62,12 @@ protected:
     std::vector<boost::shared_ptr<TaskLink> >  t_links_;
     Eigen::MatrixXd  J_; ///< task jacobian
     Eigen::MatrixX2d  E_; ///< task function state matrix, rows \in Task::t_dim_ correspond to the task function dynamics of the single task dimensions, columns correspond to derivatives
-//    ros::Time t_prev_;
-//    bool t_start_;
+    //    ros::Time t_prev_;
+    //    bool t_start_;
     double ds_;
     double di_;
 
-//    void updateTaskFunctionDerivatives();
+    //    void updateTaskFunctionDerivatives();
     void computeTaskLinkKinematics();
 };
 //----------------------------------------------------------------
@@ -86,6 +86,21 @@ private:
 
 };
 //----------------------------------------------------------------
+class Orientation: public Task
+{
+public:
+    Orientation(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links);
+
+    virtual void updateTask();
+    virtual double getTaskProgress()const;
+
+protected:
+    Orientation(){};
+
+private:
+
+};
+//----------------------------------------------------------------
 class JointSetpoint: public Task
 {
 public:
@@ -97,28 +112,21 @@ public:
 protected:
     JointSetpoint(){};
 
-private:
+};
+//----------------------------------------------------------------
+class JointLimitAvoidance: public Task
+{
+public:
+    JointLimitAvoidance(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links);
+
+    virtual void updateTask();
+    virtual double getTaskProgress()const;
+
+protected:
+    JointLimitAvoidance(){};
 
 };
 //----------------------------------------------------------------
-
-//class JointVelocityLimits: public Task
-//{
-//public:
-//    JointVelocityLimits(unsigned int id, unsigned int priority, std::string const& sign, boost::shared_ptr<std::vector<TaskLink> > t_objs, boost::shared_ptr<TaskDynamics> t_dynamics);
-
-//    virtual void computeTask();
-//    virtual double getSSE()const;
-
-//protected:
-//    JointVelocityLimits(){};
-
-//private:
-//    //**Helper function to make sure that the given task objects are valid in the context of the task */
-//    void verifyTaskLinks();
-//    int jnt_index_;
-//};
-////----------------------------------------------------------------
 //class ParallelLines: public Task
 //{
 //public:

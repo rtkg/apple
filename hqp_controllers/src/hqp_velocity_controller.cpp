@@ -5,6 +5,7 @@
 #include <vector>
 #include <Eigen/Geometry>
 #include <hqp_controllers/utilities.h>
+#include <hqp_controllers/utilities.h>
 
 namespace hqp_controllers
 {
@@ -22,6 +23,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
     hqp_controllers_msgs::Task t_description;
     Task::taskMessageToXmlRpcValue(t_description);
 
+    n_ = n;
     // Get the list of controlled joints
     std::string param_name = "joints";
     if(!n.getParam(param_name, joint_names_))
@@ -65,11 +67,10 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
 
     //============================================== REGISTER CALLBACKS =========================================
     activate_hqp_control_srv_ = n.advertiseService("activate_hqp_control",&HQPVelocityController::activateHQPControl,this);
-    //reset_hqp_control_srv_ = n.advertiseService("reset_hqp_control",&HQPVelocityController::resetHQPControl,this);
+    reset_hqp_control_srv_ = n.advertiseService("reset_hqp_control",&HQPVelocityController::resetHQPControl,this);
     set_tasks_srv_ = n.advertiseService("set_tasks",&HQPVelocityController::setTasks,this);
-
-    //remove_tasks_srv_= n.advertiseService("remove_tasks",&HQPVelocityController::removeTasks,this);
-
+    load_tasks_srv_= n.advertiseService("load_tasks",&HQPVelocityController::loadTasks,this);
+    remove_tasks_srv_= n.advertiseService("remove_tasks",&HQPVelocityController::removeTasks,this);
      vis_t_geom_srv_ = n.advertiseService("visualize_task_geometries",&HQPVelocityController::visualizeTaskGeometries, this);
     //============================================== REGISTER CALLBACKS END =========================================
     vis_t_geom_pub_.init(n, "task_geometries", 1);
@@ -108,8 +109,52 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
         XmlRpc::XmlRpcValue t_description = Task::taskMessageToXmlRpcValue(req.tasks[i]);
         boost::shared_ptr<Task> task = Task::makeTask(id, t_description, k_tree_, joints_);
         if(!task_manager_.addTask(task))
+          {
+              ROS_ERROR("Error in HQPVelocityController::setTasks(...): could not add task!");
+              lock_.unlock();
+              res.success = false;
+              return false;
+          }
+    }
+
+    lock_.unlock();
+    res.success = true;
+    return true;
+}
+//------------------------------------------------------------------------
+bool HQPVelocityController::loadTasks(hqp_controllers_msgs::LoadTasks::Request & req, hqp_controllers_msgs::LoadTasks::Response &res)
+{
+    lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot load tasks!");
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
+
+    //FIND ON PARAMETER SERVER
+    XmlRpc::XmlRpcValue t_definitions;
+    std::string searched_param;
+    if (!n_.searchParam(req.task_definitions, searched_param))
+    {
+        ROS_ERROR("Could not find task definition parameters %s on the parameter server!", req.task_definitions.c_str());
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
+
+    n_.getParam(searched_param, t_definitions);
+    ROS_ASSERT(t_definitions.getType() == XmlRpc::XmlRpcValue::TypeArray);
+
+    //GENERATE TASKS
+    for(unsigned int i=0; i<t_definitions.size();i++)
+    {
+        unsigned int id = task_manager_.getValidTaskId();
+               boost::shared_ptr<Task> task = Task::makeTask(id, t_definitions[i], k_tree_, joints_);
+               if(!task_manager_.addTask(task))
         {
-            ROS_ERROR("Error in HQPVelocityController::setTasks(...): could not add task!");
+            ROS_ERROR("Error in HQPVelocityController::loadTasks(...): could not add task!");
             lock_.unlock();
             res.success = false;
             return false;
@@ -121,29 +166,35 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
     return true;
 }
 //------------------------------------------------------------------------
+bool HQPVelocityController::removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res)
+{
+    lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot remove tasks!");
+        lock_.unlock();
+        res.success = false;
+        return false;
+    }
 
-//bool HQPVelocityController::removeTasks(hqp_controllers_msgs::RemoveTasks::Request & req, hqp_controllers_msgs::RemoveTasks::Response &res)
-//{
-//    lock_.lock();
-//    if(active_)
-//    {
-//        ROS_ERROR("HQP control is active: cannot remove tasks!");
-//        lock_.unlock();
-//        res.success = false;
-//        return false;
-//    }
+    for(unsigned int i=0; i<req.ids.size(); i++)
+    {
+        if(!task_manager_.removeTask(req.ids[i]))
+        {
+            lock_.unlock();
+            res.success = false;
+            return false;
+        }
 
-//    for(unsigned int i=0; i<req.ids.size(); i++)
-//        if(!task_manager_.removeTask(req.ids[i]))
-//        {
-//            lock_.unlock();
-//            res.success = false;
-//            return false;
-//        }
-//    lock_.unlock();
-//    res.success = true;
-//    return true;
-//}
+        for(unsigned int j=0; j<vis_ids_.size(); j++)  //check if the task is possibly visualized
+            if(vis_ids_(j) == req.ids[i])
+                removeRow(vis_ids_,j);
+    }
+
+    lock_.unlock();
+    res.success = true;
+    return true;
+}
 //-----------------------------------------------------------------------
 bool HQPVelocityController::visualizeTaskGeometries(hqp_controllers_msgs::VisualizeTaskGeometries::Request & req, hqp_controllers_msgs::VisualizeTaskGeometries::Response &res)
 {
@@ -176,23 +227,23 @@ bool HQPVelocityController::visualizeTaskGeometries(hqp_controllers_msgs::Visual
     return res.success;
 }
 //-----------------------------------------------------------------------
-//bool HQPVelocityController::resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res)
-//{
-//    lock_.lock();
-//    if(active_)
-//    {
-//        ROS_ERROR("HQP control is active: cannot reset!");
-//        lock_.unlock();
-//        return false;
-//    }
+bool HQPVelocityController::resetHQPControl(std_srvs::Empty::Request & req, std_srvs::Empty::Response &res)
+{
+    lock_.lock();
+    if(active_)
+    {
+        ROS_ERROR("HQP control is active: cannot reset!");
+        lock_.unlock();
+        return false;
+    }
 
-//    vis_ids_.resize(0);
-//    task_manager_.reset();
-//    lock_.unlock();
+    vis_ids_.resize(0);
+        task_manager_.reset();
+        lock_.unlock();
 
-//    ROS_INFO("Reset HQP control.");
-//    return true;
-//}
+    ROS_INFO("Reset HQP control.");
+    return true;
+}
 //-----------------------------------------------------------------------
 bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQPControl::Request & req, hqp_controllers_msgs::ActivateHQPControl::Response &res)
 {
@@ -223,7 +274,7 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
         if(!task_manager_.getDQ(commands_))
             commands_.setZero();
 
-//        std::cout<<"computed DQ: "<<commands_.transpose()<<std::endl;
+        //std::cerr<<"computed DQ: "<<commands_.transpose()<<std::endl;
 //ROS_BREAK();
 
         for(unsigned int i=0; i<n_joints_; i++)

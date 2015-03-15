@@ -36,6 +36,8 @@ public:
     void computeKinematics();
     Eigen::VectorXi getJointMap()const;
     //double getJointValue()const;
+    std::string getLinkFrame()const;
+        std::string getTaskFrame()const;
 
     friend std::ostream& operator<<(std::ostream& str, TaskLink const& obj);
 

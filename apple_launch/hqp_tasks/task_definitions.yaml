@@ -1,0 +1,123 @@
+task_definitions: 
+##############  JOINT LIMIT AVOIDANCE ###############
+       - t_type: 4 #joint limit avoidance
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.035 #safety margin
+         di: 0.18  #influence zone
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: lbr_iiwa_link_1
+              geometries: 
+                - g_type: 7 #joint limit
+                  g_data: [1.4835, 2.9671, -2.9671] #dq_max, upper joint limit, lower joint limit
+   
+       - t_type: 4
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.035
+         di: 0.18
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: lbr_iiwa_link_2
+              geometries: 
+                - g_type: 7
+                  g_data: [1.4835, 2.0944, -2.0944] 
+         
+       - t_type: 4
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.035
+         di: 0.18
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: lbr_iiwa_link_3
+              geometries: 
+                - g_type: 7
+                  g_data: [1.7453, 2.9671, -2.9671] 
+
+       - t_type: 4
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.035
+         di: 0.18
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: lbr_iiwa_link_4
+              geometries: 
+                - g_type: 7
+                  g_data: [1.3090, 2.0944, -2.0944] 
+
+       - t_type: 4
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.035
+         di: 0.18
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: lbr_iiwa_link_5
+              geometries: 
+                - g_type: 7
+                  g_data: [2.2689, 2.9671, -2.9671] 
+
+       - t_type: 4
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.035
+         di: 0.18
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: lbr_iiwa_link_6
+              geometries: 
+                - g_type: 7
+                  g_data: [2.2689, 2.0944, -2.0944] 
+
+       - t_type: 4
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.035
+         di: 0.18
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: lbr_iiwa_link_7
+              geometries: 
+                - g_type: 7
+                  g_data: [2.2689, 3.0543, -3.0543] 
+
+#       - t_type: 4
+#         priority: 1
+#         is_equality_task: 0
+#         task_frame: world
+#         ds: 0.035
+#         di: 0.18
+#         dynamics: 
+#           d_type: 1
+#           d_data: [-1.0]
+#         t_links:
+#            - link_frame: velvet_fingers_right
+#              geometries: 
+#                - g_type: 7
+#                  g_data: [1.0, 1.5708, 0.0] 
+
+
