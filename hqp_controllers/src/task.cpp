@@ -256,7 +256,7 @@ void Projection::updateTask()
         for (unsigned int j = 0; j<t_links_[1]->getGeometries().size(); j++)
         {
             ProjectableGeometry* geom1 = dynamic_cast<ProjectableGeometry*>(t_links_[0]->getGeometries().at(i).get());
-            ProjectableGeometry* geom2 = dynamic_cast<ProjectableGeometry*>(t_links_[1]->getGeometries().at(i).get());
+            ProjectableGeometry* geom2 = dynamic_cast<ProjectableGeometry*>(t_links_[1]->getGeometries().at(j).get());
             ProjectionQuantities proj = geom1->project(* geom2);
 
             //std::cerr<<"Projection quantities: "<<std::endl<<proj<<std::endl;

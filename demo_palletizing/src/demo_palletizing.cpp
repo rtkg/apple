@@ -127,13 +127,13 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     sensing_config_[5] = 0.79;
     sensing_config_[6] = -1.48;
     */
-    sensing_config_[0] = 73*M_PI/180;
-    sensing_config_[1] = -106*M_PI/180;
-    sensing_config_[2] = -21*M_PI/180;
-    sensing_config_[3] = -108*M_PI/180;
-    sensing_config_[4] = -7*M_PI/180;
-    sensing_config_[5] = 52*M_PI/180;
-    sensing_config_[6] = -85*M_PI/180;
+    sensing_config_[0] = 1.274;
+    sensing_config_[1] = -1.85;
+    sensing_config_[2] = -0.367;
+    sensing_config_[3] = -1.885;
+    sensing_config_[4] = -0.122;
+    sensing_config_[5] = 0.91;
+    sensing_config_[6] = -1.483;
 #ifdef HQP_GRIPPER_JOINT
     sensing_config_[7] = 0.1;
 #endif
@@ -154,15 +154,21 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
     grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
     grasp_.e_.setZero(); //endeffector point expressed in the endeffector frame
     grasp_.v_(0) = 0.0; grasp_.v_(1) = 0.0; grasp_.v_(2) = 1.0; //cylinder normal
-    grasp_.p_(0) = 1.0; grasp_.p_(1) = -0.9; grasp_.p_(2) = 0.13; //reference point on the cylinder axis
+    grasp_.p_(0) = 1.0; grasp_.p_(1) = -0.9; grasp_.p_(2) = 0.14; //reference point on the cylinder axis
     grasp_.r1_ = 0.05; grasp_.r2_ = 0.15; //cylinder radii
     grasp_.n1_ = grasp_.v_; grasp_.n2_ = -grasp_.v_; //plane normals
     grasp_.d1_ = 0.2; grasp_.d2_= -0.35; //plane offsets
 
-    //generate the task object templates
-    //generateTaskObjectTemplates();
+   //placement zone
+    place_zone_.place_frame_ = "world";
+    place_zone_.e_frame_ = "velvet_fingers_palm";
+    place_zone_.e_.setZero();
+    place_zone_.p_(0) = 0.8; place_zone_.p_(1) = 0.0; place_zone_.p_(2) = 0.13; //reference point on the cylinder axis
+    place_zone_.v_(0) = 0.0; place_zone_.v_(1) = 0.0; place_zone_.v_(2) = 1.0; //cylinder normal
+    place_zone_.r_ = 0.05;
+    place_zone_.n_ = place_zone_.v_;
+    place_zone_.d_ = 0.25;
 }
-
 //-----------------------------------------------------------------
 void DemoPalletizing::activateHQPControl()
 {
@@ -184,6 +190,7 @@ void DemoPalletizing::safeShutdown()
     resetState();
     std_srvs::Empty srv;
     reset_hqp_control_clt_.call(srv);
+    pers_task_vis_ids_.clear();
     ROS_BREAK(); //I must break you ... ros::shutdown() doesn't seem to do the job
 }
 //-----------------------------------------------------------------
@@ -297,7 +304,7 @@ bool DemoPalletizing::setObjectTransfer()
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
     task.is_equality_task = false;
-    task.task_frame = grasp_.obj_frame_;
+    task.task_frame = "world";
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -309,6 +316,11 @@ bool DemoPalletizing::setObjectTransfer()
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(0.5);
     t_link.link_frame = "world";
+    t_link.geometries.push_back(t_geom);
+    //second plane is just to avoid drifting of the controller
+    t_geom.g_data.clear();
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(-1);
+    t_geom.g_data.push_back(-0.52);
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -329,7 +341,7 @@ bool DemoPalletizing::setObjectTransfer()
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
     task.is_equality_task = false;
-    task.task_frame = "world";
+    task.task_frame = place_zone_.place_frame_;
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -338,18 +350,18 @@ bool DemoPalletizing::setObjectTransfer()
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(grasp_.e_(0)); t_geom.g_data.push_back(grasp_.e_(1)); t_geom.g_data.push_back(grasp_.e_(2));
-    t_link.link_frame = grasp_.e_frame_;
+    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
+    t_link.link_frame = place_zone_.e_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
-    t_geom.g_data.push_back(0.8); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0.25);
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(0.05);
-    t_link.link_frame = "world";
+    t_geom.g_data.push_back(place_zone_.p_(0)); t_geom.g_data.push_back(place_zone_.p_(1)); t_geom.g_data.push_back(place_zone_.p_(2));
+    t_geom.g_data.push_back(place_zone_.v_(0)); t_geom.g_data.push_back(place_zone_.v_(1)); t_geom.g_data.push_back(place_zone_.v_(2));
+    t_geom.g_data.push_back(place_zone_.r_);
+    t_link.link_frame = place_zone_.place_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -398,7 +410,7 @@ bool DemoPalletizing::setObjectTransfer()
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
     //visualize all tasks
-    std::vector<unsigned int> ids;
+    std::vector<unsigned int> ids = pers_task_vis_ids_;
     for(unsigned int i=0; i<tasks_.response.ids.size();i++)
         ids.push_back(tasks_.response.ids[i]);
 
@@ -453,27 +465,27 @@ bool DemoPalletizing::setObjectPlace()
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
     task.is_equality_task = false;
-    task.task_frame = "world";
+    task.task_frame = place_zone_.place_frame_;
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(OBJECT_PLACE_DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(OBJECT_TRANSFER_DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(grasp_.e_(0)); t_geom.g_data.push_back(grasp_.e_(1)); t_geom.g_data.push_back(grasp_.e_(2));
-    t_link.link_frame = grasp_.e_frame_;
+    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
+    t_link.link_frame = place_zone_.e_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
-    t_geom.g_data.push_back(0.8); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0.25);
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(0.05);
-    t_link.link_frame = "world";
+    t_geom.g_data.push_back(place_zone_.p_(0)); t_geom.g_data.push_back(place_zone_.p_(1)); t_geom.g_data.push_back(place_zone_.p_(2));
+    t_geom.g_data.push_back(place_zone_.v_(0)); t_geom.g_data.push_back(place_zone_.v_(1)); t_geom.g_data.push_back(place_zone_.v_(2));
+    t_geom.g_data.push_back(place_zone_.r_);
+    t_link.link_frame = place_zone_.place_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -522,7 +534,7 @@ bool DemoPalletizing::setObjectPlace()
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
     //visualize all tasks
-    std::vector<unsigned int> ids;
+    std::vector<unsigned int> ids = pers_task_vis_ids_;
     for(unsigned int i=0; i<tasks_.response.ids.size();i++)
         ids.push_back(tasks_.response.ids[i]);
 
@@ -546,7 +558,7 @@ bool DemoPalletizing::setGripperExtract()
     hqp_controllers_msgs::TaskLink t_link;
     hqp_controllers_msgs::TaskGeometry t_geom;
 
-    //GRASP TRANSFER PLANE
+    //GRIPPER EXTRACT PLANE
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
@@ -563,7 +575,7 @@ bool DemoPalletizing::setGripperExtract()
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(0.5);
+    t_geom.g_data.push_back(0.6);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -585,27 +597,27 @@ bool DemoPalletizing::setGripperExtract()
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
     task.is_equality_task = false;
-    task.task_frame = "world";
+    task.task_frame = place_zone_.place_frame_;
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(GRIPPER_EXTRACT_DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(OBJECT_TRANSFER_DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
-    t_geom.g_data.push_back(0.8); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0.25);
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(0.05);
-    t_link.link_frame = "world";
+    t_geom.g_data.push_back(place_zone_.p_(0)); t_geom.g_data.push_back(place_zone_.p_(1)); t_geom.g_data.push_back(place_zone_.p_(2));
+    t_geom.g_data.push_back(place_zone_.v_(0)); t_geom.g_data.push_back(place_zone_.v_(1)); t_geom.g_data.push_back(place_zone_.v_(2));
+    t_geom.g_data.push_back(place_zone_.r_);
+    t_link.link_frame = place_zone_.place_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(grasp_.e_(0)); t_geom.g_data.push_back(grasp_.e_(1)); t_geom.g_data.push_back(grasp_.e_(2));
-    t_link.link_frame = grasp_.e_frame_;
+    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
+    t_link.link_frame = place_zone_.e_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -654,7 +666,7 @@ bool DemoPalletizing::setGripperExtract()
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
     //visualize all tasks
-    std::vector<unsigned int> ids;
+    std::vector<unsigned int> ids = pers_task_vis_ids_;
     for(unsigned int i=0; i<tasks_.response.ids.size();i++)
         ids.push_back(tasks_.response.ids[i]);
 
@@ -879,7 +891,7 @@ bool DemoPalletizing::setGraspApproach()
         monitored_tasks_.push_back(tasks_.response.ids[i]);
 
     //visualize all tasks
-    std::vector<unsigned int> ids;
+    std::vector<unsigned int> ids = pers_task_vis_ids_;
     for(unsigned int i=0; i<tasks_.response.ids.size();i++)
         ids.push_back(tasks_.response.ids[i]);
 
@@ -962,8 +974,6 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
         return false;
 
     //monitor the task
-    std::cerr<<"monitoring task ids size: "<<tasks_.response.ids.size()<<std::endl;
-    std::cerr<<"monitoring task with id: "<<tasks_.response.ids[0]<<std::endl;
     monitored_tasks_.push_back(tasks_.response.ids[0]);
 
     //could start joint target visualization here, but its messed up for the joints anyway ...
@@ -1041,11 +1051,10 @@ bool DemoPalletizing::loadPersistentTasks()
         return false;
 
     //visualize (some of) the loaded tasks
-    std::vector<unsigned int> ids;
     for(unsigned int i=0; i<5;i++)
-        ids.push_back(persistent_tasks.response.ids[i+7]);
+        pers_task_vis_ids_.push_back(persistent_tasks.response.ids[i+7]);
 
-    if(!visualizeStateTasks(ids))
+    if(!visualizeStateTasks(pers_task_vis_ids_))
         return false;
 
     return true;
@@ -1174,7 +1183,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator sensing state tasks executed successfully.");
     }
-#if 0
+
     {//GRASP APPROACH
         ROS_INFO("Trying grasp approach.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -1279,7 +1288,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-        task_error_tol_ = 1e-3;
+        task_error_tol_ = 5 * 1e-3;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1313,7 +1322,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-        task_error_tol_ = 1e-3;
+        task_error_tol_ = 5 * 1e-3;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1405,12 +1414,12 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator transfer state tasks executed successfully.");
     }
-#endif
 
     deactivateHQPControl();
     resetState();
     std_srvs::Empty srv;
     reset_hqp_control_clt_.call(srv);
+    pers_task_vis_ids_.clear();
 
     ROS_INFO("DEMO FINISHED.");
     return true;

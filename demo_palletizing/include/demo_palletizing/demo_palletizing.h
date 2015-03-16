@@ -18,10 +18,10 @@ namespace demo_palletizing
 //#define HQP_GRIPPER_JOINT 1
 
 #define JOINT_SETPOINT_DYNAMICS_GAIN  -0.5
-#define GRASP_APPROACH_DYNAMICS_GAIN  -0.1
-#define OBJECT_TRANSFER_DYNAMICS_GAIN -0.1
-#define OBJECT_PLACE_DYNAMICS_GAIN    -0.1
-#define GRIPPER_EXTRACT_DYNAMICS_GAIN -0.1
+#define GRASP_APPROACH_DYNAMICS_GAIN  -0.5
+#define OBJECT_TRANSFER_DYNAMICS_GAIN -0.5
+#define OBJECT_PLACE_DYNAMICS_GAIN    -0.5
+#define GRIPPER_EXTRACT_DYNAMICS_GAIN -0.5
 
 #define GRIPPER_ALIGNMENT_ANGLE 0.0
 //-----------------------------------------------------------
@@ -41,6 +41,21 @@ struct GraspInterval
     double d1_, d2_; //plane offsets d1 !> d2
 };
 //-----------------------------------------------------------
+struct PlaceInterval
+{
+    std::string place_frame_;
+    std::string e_frame_; //endeffector frame
+
+    Eigen::Vector3d e_; //endeffector point expressed in e_frame_
+
+    Eigen::Vector3d v_; //place cylinder axis
+    Eigen::Vector3d p_; //place cylinder reference point
+    double r_; //place cylinder radius
+
+    Eigen::Vector3d n_; //place plane normal
+    double d_; //place plane offsets d !> 0
+};
+//-----------------------------------------------------------
 class DemoPalletizing
 {
 public:
@@ -57,9 +72,11 @@ private:
     bool task_status_changed_;
     bool task_success_;
     bool with_gazebo_; ///<indicate whether the node is run in simulation
+    std::vector<unsigned int> pers_task_vis_ids_; ///< indicates which persistent tasks (the ones which are loaded) should always be visualized
 
     //**Grasp definition - this should be modified to grasp different objects */
     GraspInterval grasp_;
+    PlaceInterval place_zone_; ///< placement zone for the object
 
     ros::Subscriber task_status_sub_;
     ros::ServiceClient set_tasks_clt_;
