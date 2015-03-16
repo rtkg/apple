@@ -120,4 +120,108 @@ task_definitions:
 #                - g_type: 7
 #                  g_data: [1.0, 1.5708, 0.0] 
 
+##############  OBSTACLE AVOIDANCE ###############
+       - t_type: 1 #projection
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.0 #safety margin
+         di: 0.05  #influence zone
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: world
+              geometries: 
+                - g_type: 3 #plane
+                  g_data: [0.0, 0.0, 1.0, 0.16] 
+            - link_frame: lbr_iiwa_link_3
+              geometries: 
+                - g_type: 10 #sphere
+                  g_data: [0.0, 0.0, 0.0, 0.075] 
+
+       - t_type: 1 #projection
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.0 #safety margin
+         di: 0.05  #influence zone
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: world
+              geometries: 
+                - g_type: 3 #plane
+                  g_data: [0.0, 0.0, 1.0, 0.16] 
+            - link_frame: lbr_iiwa_link_4
+              geometries: 
+                - g_type: 10 #sphere
+                  g_data: [0.0, 0.0, 0.0, 0.12] 
+
+       - t_type: 1 #projection
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.0 #safety margin
+         di: 0.05  #influence zone
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: world
+              geometries: 
+                - g_type: 3 #plane
+                  g_data: [0.0, 0.0, 1.0, 0.16] 
+            - link_frame: lbr_iiwa_link_5
+              geometries: 
+                - g_type: 10 #sphere
+                  g_data: [0.0, 0.0, 0.0, 0.075] 
+
+       - t_type: 1 #projection
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.0 #safety margin
+         di: 0.05  #influence zone
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: world
+              geometries: 
+                - g_type: 3 #plane
+                  g_data: [0.0, 0.0, 1.0, 0.16] 
+            - link_frame: lbr_iiwa_link_6
+              geometries: 
+                - g_type: 10 #sphere
+                  g_data: [0.0, 0.0, 0.0, 0.1] 
+
+       - t_type: 1 #projection
+         priority: 1
+         is_equality_task: 0
+         task_frame: world
+         ds: 0.0 #safety margin
+         di: 0.05  #influence zone
+         dynamics: 
+           d_type: 1
+           d_data: [-1.0]
+         t_links:
+            - link_frame: world
+              geometries: 
+                - g_type: 3 #plane
+                  g_data: [0.0, 0.0, 1.0, 0.16] 
+            - link_frame: velvet_fingers_palm
+              geometries: 
+                - g_type: 10 #sphere
+                  g_data: [0.04, 0.0, 0.025, 0.11] 
+
+
+
+
+   
+
+ 
+
+
 

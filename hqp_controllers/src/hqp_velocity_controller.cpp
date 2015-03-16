@@ -71,7 +71,7 @@ bool HQPVelocityController::init(hardware_interface::VelocityJointInterface *hw,
     set_tasks_srv_ = n.advertiseService("set_tasks",&HQPVelocityController::setTasks,this);
     load_tasks_srv_= n.advertiseService("load_tasks",&HQPVelocityController::loadTasks,this);
     remove_tasks_srv_= n.advertiseService("remove_tasks",&HQPVelocityController::removeTasks,this);
-     vis_t_geom_srv_ = n.advertiseService("visualize_task_geometries",&HQPVelocityController::visualizeTaskGeometries, this);
+    vis_t_geom_srv_ = n.advertiseService("visualize_task_geometries",&HQPVelocityController::visualizeTaskGeometries, this);
     //============================================== REGISTER CALLBACKS END =========================================
     vis_t_geom_pub_.init(n, "task_geometries", 1);
     t_status_pub_.init(n, "task_status_array", 1);
@@ -109,15 +109,17 @@ bool HQPVelocityController::setTasks(hqp_controllers_msgs::SetTasks::Request & r
         XmlRpc::XmlRpcValue t_description = Task::taskMessageToXmlRpcValue(req.tasks[i]);
         boost::shared_ptr<Task> task = Task::makeTask(id, t_description, k_tree_, joints_);
         if(!task_manager_.addTask(task))
-          {
-              ROS_ERROR("Error in HQPVelocityController::setTasks(...): could not add task!");
-              lock_.unlock();
-              res.success = false;
-              return false;
-          }
+        {
+            ROS_ERROR("Error in HQPVelocityController::setTasks(...): could not add task!");
+            lock_.unlock();
+            res.success = false;
+            return false;
+        }
+        res.ids.push_back(id);
     }
 
     lock_.unlock();
+    ROS_INFO("Sucessfully set %d tasks.", (int)req.tasks.size());
     res.success = true;
     return true;
 }
@@ -151,15 +153,18 @@ bool HQPVelocityController::loadTasks(hqp_controllers_msgs::LoadTasks::Request &
     for(unsigned int i=0; i<t_definitions.size();i++)
     {
         unsigned int id = task_manager_.getValidTaskId();
-               boost::shared_ptr<Task> task = Task::makeTask(id, t_definitions[i], k_tree_, joints_);
-               if(!task_manager_.addTask(task))
+        boost::shared_ptr<Task> task = Task::makeTask(id, t_definitions[i], k_tree_, joints_);
+        if(!task_manager_.addTask(task))
         {
             ROS_ERROR("Error in HQPVelocityController::loadTasks(...): could not add task!");
             lock_.unlock();
             res.success = false;
             return false;
         }
+        res.ids.push_back(id);
     }
+
+    ROS_INFO("Sucessfully loaded %d tasks.",t_definitions.size());
 
     lock_.unlock();
     res.success = true;
@@ -238,8 +243,8 @@ bool HQPVelocityController::resetHQPControl(std_srvs::Empty::Request & req, std_
     }
 
     vis_ids_.resize(0);
-        task_manager_.reset();
-        lock_.unlock();
+    task_manager_.reset();
+    lock_.unlock();
 
     ROS_INFO("Reset HQP control.");
     return true;
@@ -275,7 +280,7 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
             commands_.setZero();
 
         //std::cerr<<"computed DQ: "<<commands_.transpose()<<std::endl;
-//ROS_BREAK();
+        //ROS_BREAK();
 
         for(unsigned int i=0; i<n_joints_; i++)
             joints_.at(i).setCommand(commands_(i));
@@ -306,9 +311,9 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
             if (vis_t_geom_pub_.trylock())
                 vis_t_geom_pub_.unlockAndPublish();
 
-                        task_manager_.getTaskStatusArray(t_status_pub_.msg_);
-                        if (t_status_pub_.trylock())
-                            t_status_pub_.unlockAndPublish();
+            task_manager_.getTaskStatusArray(t_status_pub_.msg_);
+            if (t_status_pub_.trylock())
+                t_status_pub_.unlockAndPublish();
         }
     }
     else

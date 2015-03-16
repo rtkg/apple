@@ -8,9 +8,6 @@
     <arg name="hardware_interface" value="VelocityJointInterface" />
   </include>
 
- <!--load predifined persistent task descriptions (joint limit avoidance, self-collision avoidance ...) definitions for the HQP controller -->
- <rosparam file="$(find apple_launch)/hqp_tasks/task_definitions.yaml" command="load" ns="/apple"/>
-
   <include file="$(find apple_control)/launch/apple_control.launch">
     <arg name="hardware_interface" value="VelocityJointInterface" />
     <arg name="controllers" value="joint_state_controller

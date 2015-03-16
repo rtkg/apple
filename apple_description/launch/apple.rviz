@@ -9,7 +9,7 @@ Panels:
         - /Apple1/Links1
         - /Task Geometries1
         - /TF1/Frames1
-      Splitter Ratio: 0.632588
+      Splitter Ratio: 0.859425
     Tree Height: 288
   - Class: rviz/Selection
     Name: Selection
@@ -103,7 +103,7 @@ Visualization Manager:
           Value: true
         lbr_iiwa_link_7:
           Alpha: 0.4
-          Show Axes: true
+          Show Axes: false
           Show Trail: false
           Value: true
         load_pallet_base:
@@ -122,10 +122,10 @@ Visualization Manager:
           Show Trail: false
           Value: false
         velvet_fingers_palm:
-          Alpha: 0.2
+          Alpha: 0
           Show Axes: true
           Show Trail: false
-          Value: false
+          Value: true
         velvet_fingers_right:
           Alpha: 1
           Show Axes: false
@@ -146,7 +146,7 @@ Visualization Manager:
       Marker Topic: /apple/apple_hqp_vel_controller/task_geometries
       Name: Task Geometries
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/TF
@@ -187,7 +187,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.52555
+      Distance: 2.11426
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -202,7 +202,7 @@ Visualization Manager:
       Pitch: 0.430201
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.260323
+      Yaw: 0.0703228
     Saved: ~
 Window Geometry:
   Displays:
@@ -220,5 +220,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1177
-  X: 351
-  Y: 14
+  X: 545
+  Y: -520

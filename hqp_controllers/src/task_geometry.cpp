@@ -223,7 +223,7 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.type = visualization_msgs::Marker::POINTS;
     marker.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
-    marker.lifetime = ros::Duration();//(0.1);
+    marker.lifetime = ros::Duration(0.1);
     geometry_msgs::Point p;
     p.x=link_data_(0);
     p.y=link_data_(1);
