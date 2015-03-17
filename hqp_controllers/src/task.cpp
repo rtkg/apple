@@ -183,7 +183,10 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
             TaskGeometryType g_type = static_cast<TaskGeometryType>((int)t_description["t_links"][i]["geometries"][j]["g_type"]);
             Eigen::VectorXd g_data(t_description["t_links"][i]["geometries"][j]["g_data"].size());
             for(unsigned int k=0; k<t_description["t_links"][i]["geometries"][j]["g_data"].size(); k++)
+	      {
+		ROS_ASSERT(t_description["t_links"][i]["geometries"][j]["g_data"][k].getType() == XmlRpc::XmlRpcValue::TypeDouble);
                 g_data(k) = t_description["t_links"][i]["geometries"][j]["g_data"][k];
+	      }
 
             boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(g_type, link_frame, task_frame, g_data);
             t_link->addGeometry(geom);

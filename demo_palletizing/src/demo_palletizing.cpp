@@ -1049,7 +1049,7 @@ bool DemoPalletizing::loadPersistentTasks()
         return false;
 
     //visualize (some of) the loaded tasks
-    for(unsigned int i=0; i<5;i++)
+    for(unsigned int i=0; i<6;i++)
         pers_task_vis_ids_.push_back(persistent_tasks.response.ids[i+7]);
 
     if(!visualizeStateTasks(pers_task_vis_ids_))
