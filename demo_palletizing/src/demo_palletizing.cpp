@@ -237,6 +237,9 @@ bool DemoPalletizing::getGraspInterval()
     ROS_ASSERT(data.size() == 7);
     grasp_.r2_ = data[6];
 
+    //Plane normals need to point in opposit directions to give a closed interval
+    ROS_ASSERT((grasp_.n1_.transpose() * grasp_.n2_)  <= 0.0);
+
     return true;
 }
 //-----------------------------------------------------------------
@@ -303,7 +306,7 @@ bool DemoPalletizing::setObjectTransfer()
 
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
-    task.is_equality_task = false;
+    task.is_equality_task = true; //just to avoid drifting of the controller
     task.task_frame = "world";
     task.ds = 0.0;
     task.di = 0.05;
@@ -316,11 +319,6 @@ bool DemoPalletizing::setObjectTransfer()
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(0.5);
     t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    //second plane is just to avoid drifting of the controller
-    t_geom.g_data.clear();
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(-1);
-    t_geom.g_data.push_back(-0.52);
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -378,7 +376,7 @@ bool DemoPalletizing::setObjectTransfer()
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(2 * OBJECT_TRANSFER_DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(4 * OBJECT_TRANSFER_DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -432,7 +430,7 @@ bool DemoPalletizing::setObjectPlace()
 
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
-    task.is_equality_task = false;
+    task.is_equality_task = true;
     task.task_frame = grasp_.obj_frame_;
     task.ds = 0.0;
     task.di = 0.05;
@@ -859,7 +857,7 @@ bool DemoPalletizing::setGraspApproach()
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(2 * GRASP_APPROACH_DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(4 * GRASP_APPROACH_DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
