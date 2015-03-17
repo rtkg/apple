@@ -1061,6 +1061,11 @@ bool DemoPalletizing::loadPersistentTasks()
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
     deactivateHQPControl();
+    resetState();
+    std_srvs::Empty srv;
+    reset_hqp_control_clt_.call(srv);
+    pers_task_vis_ids_.clear();
+
     if(!loadPersistentTasks())
     {
         ROS_ERROR("Could not load persistent tasks!");
@@ -1415,7 +1420,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
 
     deactivateHQPControl();
     resetState();
-    std_srvs::Empty srv;
     reset_hqp_control_clt_.call(srv);
     pers_task_vis_ids_.clear();
 
