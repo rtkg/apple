@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /TF1
         - /TF1/Frames1
         - /PointCloud21
         - /PointCloud22
@@ -179,7 +180,11 @@ Visualization Manager:
           Value: true
         transport_pallet_base:
           Value: true
+        velvet_fingers_left:
+          Value: true
         velvet_fingers_palm:
+          Value: true
+        velvet_fingers_right:
           Value: true
         world:
           Value: true
@@ -203,6 +208,10 @@ Visualization Manager:
                               camera_depth_frame:
                                 camera_depth_optical_frame:
                                   {}
+                              velvet_fingers_left:
+                                {}
+                              velvet_fingers_right:
+                                {}
             transport_pallet_base:
               {}
           load_pallet_base:
@@ -212,8 +221,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.501086
-        Min Value: -0.198902
+        Max Value: 1.2615
+        Min Value: -0.126608
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -291,22 +300,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.89789
+      Distance: 3.58536
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.895188
-        Y: -0.960224
-        Z: 0.557648
+        X: 0.280668
+        Y: -0.208009
+        Z: 0.184608
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: -0.234798
+      Pitch: 0.135203
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.60853
+      Yaw: 5.14537
     Saved: ~
 Window Geometry:
   Displays:

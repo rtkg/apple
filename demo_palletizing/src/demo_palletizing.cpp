@@ -296,7 +296,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.55;
+    data[3] = 0.45;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["extract_bound_plane"] = t_obj;
@@ -308,7 +308,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.28;
+    data[3] = 0.22;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["placement_bound_plane"] = t_obj;
@@ -400,7 +400,7 @@ void DemoPalletizing::generateTaskObjectTemplates()
     t_geom.type = hqp_controllers_msgs::TaskGeometry::PLANE;
     data.resize(4);
     data[0] = 0.0; data[1] = 0.0; data[2] = 1.0;
-    data[3] = 0.17;
+    data[3] = 0.20;
     t_geom.data = data;
     t_obj.geometries.push_back(t_geom);
     task_object_templates_["collision_planes"] = t_obj;
@@ -586,7 +586,7 @@ bool DemoPalletizing::setObjectTransfer()
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["upper_bound_cone"];
-    t_obj.geometries[0].data[6] = 1e-4; //reduce the tilting angle of the vertical axis
+    t_obj.geometries[0].data[6] = 1e-5; //reduce the tilting angle of the vertical axis
     task_objects_.request.objs.push_back(t_obj);
 
     t_obj = task_object_templates_["gripper_vertical_axis"];
@@ -1425,7 +1425,7 @@ bool DemoPalletizing::setGraspApproach()
     task.t_obj_ids.push_back(task_objects_.response.ids[8]);
     task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
     task.dynamics.data.clear();
-    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    task.dynamics.data.push_back(-4);
     tasks_.request.tasks.push_back(task);
 
     //fill in the avoidance tasks
@@ -1493,7 +1493,7 @@ bool DemoPalletizing::setGraspApproach()
     task.t_obj_ids.push_back(task_objects_.response.ids[9]);
     task.dynamics.type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
     task.dynamics.data.clear();
-    task.dynamics.data.push_back(TASK_DYNAMICS_GAIN);
+    task.dynamics.data.push_back(-2) ;//TASK_DYNAMICS_GAIN);
     tasks_.request.tasks.push_back(task);
 
     //send the filled task message to the controller
@@ -1849,7 +1849,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator sensing state tasks executed successfully.");
     }
-
+//ROS_BREAK();
     {//GRASP APPROACH
         ROS_INFO("Trying grasp approach.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -1980,9 +1980,10 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
 	
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
+    //ROS_BREAK();
     //VELVET GRASP
     velvet_interface_node::SmartGrasp graspcall;
-    graspcall.request.current_threshold_contact = 15;
+    graspcall.request.current_threshold_contact = 25;
     graspcall.request.current_threshold_final = 35;
     graspcall.request.max_belt_travel_mm = 100;
     graspcall.request.phalange_delta_rad = 0.02;
