@@ -23,7 +23,10 @@ namespace demo_palletizing
 #define OBJECT_PLACE_DYNAMICS_GAIN    -0.5
 #define GRIPPER_EXTRACT_DYNAMICS_GAIN -0.5
 
-#define GRIPPER_ALIGNMENT_ANGLE 0.0
+#define GRASP_ALIGNMENT_ANGLE    0.1
+#define TRANSFER_ALIGNMENT_ANGLE 0.2
+#define PLACE_ALIGNMENT_ANGLE    0.0
+#define EXTRACT_ALIGNMENT_ANGLE  0.0
 //-----------------------------------------------------------
 ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
 struct GraspInterval

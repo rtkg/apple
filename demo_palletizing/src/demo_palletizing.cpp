@@ -371,19 +371,19 @@ bool DemoPalletizing::setObjectTransfer()
 
     task.t_type = hqp_controllers_msgs::Task::ORIENTATION;
     task.priority = 2;
-    task.is_equality_task = true;
+    task.is_equality_task = false;
     task.task_frame = "world";
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(4 * OBJECT_TRANSFER_DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(OBJECT_TRANSFER_DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(GRIPPER_ALIGNMENT_ANGLE);
+    t_geom.g_data.push_back(TRANSFER_ALIGNMENT_ANGLE);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -500,14 +500,14 @@ bool DemoPalletizing::setObjectPlace()
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(2 * OBJECT_PLACE_DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(4 * OBJECT_PLACE_DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(GRIPPER_ALIGNMENT_ANGLE);
+    t_geom.g_data.push_back(PLACE_ALIGNMENT_ANGLE);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -639,7 +639,7 @@ bool DemoPalletizing::setGripperExtract()
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(GRIPPER_ALIGNMENT_ANGLE);
+    t_geom.g_data.push_back(EXTRACT_ALIGNMENT_ANGLE);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -864,7 +864,7 @@ bool DemoPalletizing::setGraspApproach()
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(GRIPPER_ALIGNMENT_ANGLE);
+    t_geom.g_data.push_back(GRASP_ALIGNMENT_ANGLE);
     t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -1061,6 +1061,11 @@ bool DemoPalletizing::loadPersistentTasks()
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
     deactivateHQPControl();
+    resetState();
+    std_srvs::Empty srv;
+    reset_hqp_control_clt_.call(srv);
+    pers_task_vis_ids_.clear();
+
     if(!loadPersistentTasks())
     {
         ROS_ERROR("Could not load persistent tasks!");
@@ -1415,7 +1420,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
 
     deactivateHQPControl();
     resetState();
-    std_srvs::Empty srv;
     reset_hqp_control_clt_.call(srv);
     pers_task_vis_ids_.clear();
 
