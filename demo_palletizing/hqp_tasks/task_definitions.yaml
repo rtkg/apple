@@ -129,7 +129,7 @@ task_definitions:
          di: 0.05  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-1.0]
+           d_data: [-0.1]
          t_links:
             - link_frame: world
               geometries: 
@@ -148,7 +148,7 @@ task_definitions:
          di: 0.05  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-1.0]
+           d_data: [-0.1]
          t_links:
             - link_frame: world
               geometries: 
@@ -167,7 +167,7 @@ task_definitions:
          di: 0.05  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-1.0]
+           d_data: [-0.1]
          t_links:
             - link_frame: world
               geometries: 
@@ -186,7 +186,7 @@ task_definitions:
          di: 0.05  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-1.0]
+           d_data: [-0.1]
          t_links:
             - link_frame: world
               geometries: 
@@ -205,7 +205,7 @@ task_definitions:
          di: 0.05  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-1.0]
+           d_data: [-0.1]
          t_links:
             - link_frame: world
               geometries: 
@@ -224,7 +224,7 @@ task_definitions:
          di: 0.05  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-1.0]
+           d_data: [-0.1]
          t_links:
             - link_frame: world
               geometries: 

@@ -23,7 +23,7 @@ namespace demo_palletizing
 #define OBJECT_PLACE_DYNAMICS_GAIN    -0.5
 #define GRIPPER_EXTRACT_DYNAMICS_GAIN -0.5
 
-#define GRASP_ALIGNMENT_ANGLE    0.1
+#define GRASP_ALIGNMENT_ANGLE    0.05
 #define TRANSFER_ALIGNMENT_ANGLE 0.2
 #define PLACE_ALIGNMENT_ANGLE    0.0
 #define EXTRACT_ALIGNMENT_ANGLE  0.0
@@ -72,6 +72,7 @@ private:
     boost::mutex manipulator_tasks_m_;
     boost::condition_variable cond_;
     double task_error_tol_;
+    double task_diff_tol_;
     bool task_status_changed_;
     bool task_success_;
     bool with_gazebo_; ///<indicate whether the node is run in simulation
@@ -80,6 +81,8 @@ private:
     //**Grasp definition - this should be modified to grasp different objects */
     GraspInterval grasp_;
     PlaceInterval place_zone_; ///< placement zone for the object
+
+    Eigen::VectorXd t_prog_prev_;
 
     ros::Subscriber task_status_sub_;
     ros::ServiceClient set_tasks_clt_;
@@ -111,6 +114,7 @@ private:
 
     //** To be called before entering a new state*/
     bool resetState();
+    
     //** sends the filled SetTasks to the controller*/
     bool sendStateTasks();
     //** visualizes the tasks_*/
