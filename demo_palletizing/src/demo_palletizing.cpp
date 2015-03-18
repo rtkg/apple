@@ -13,7 +13,7 @@
 namespace demo_palletizing
 {
 //-----------------------------------------------------------------
-DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0)
+  DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(0.0)
 {
 
     //handle to home
@@ -262,6 +262,9 @@ bool DemoPalletizing::resetState()
 
     //clean up the monitored tasks
     monitored_tasks_.clear();
+
+    //clean up the previous task progress vector;
+    t_prog_prev_.resize(0);
 
     return true;
 }
@@ -969,7 +972,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
 
     //send the filled task message to the controller
     if(!sendStateTasks())
-        return false;
+      return false;
 
     //monitor the task
     monitored_tasks_.push_back(tasks_.response.ids[0]);
@@ -978,9 +981,9 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
 
     return true;
 }
-//-----------------------------------------------------------------
-void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArrayPtr& msg)
-{
+  //-----------------------------------------------------------------
+  void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArrayPtr& msg)
+  {
     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
 
     //    std::cerr<<"monitor tasks: ";
@@ -989,40 +992,55 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
 
     //      std::cerr<<std::endl;
 
+    Eigen::VectorXd t_prog(monitored_tasks_.size());
+
     //form the maximum norm over all errors
-    double e = 0.0;
+   
     for(unsigned int i=0; i<monitored_tasks_.size(); i++)
-    {
+      {
         //try to find the monitored task id in the given task status message
         std::vector<hqp_controllers_msgs::TaskStatus>::const_iterator status_it;
         for(status_it = msg->statuses.begin(); status_it!=msg->statuses.end(); ++status_it)
-            if(monitored_tasks_[i] == status_it->id)
+	  if(monitored_tasks_[i] == status_it->id)
             {
-                //std::cerr<<"task id: "<<status_it->id<<" sse: "<<status_it->sse<<std::endl;
-                //found the corresponding task in the status message
-                if (status_it->progress > e)
-                    e = status_it->progress;
-
-                break;
+	      t_prog(i)=status_it->progress;
+	      break;
             }
 
         if(status_it==msg->statuses.end())
-        {
+	  {
             ROS_WARN("No status feedback for monitored task id %d!", monitored_tasks_[i]);
             return; //just so we don't give a false positive task success
-        }
+	  }
 
-    }
+      }
+
+    double e = 0.0;
+    double e_diff = INFINITY;
+      
+    if(monitored_tasks_.size() > 0)
+      {
+	//task error
+	e = t_prog.cwiseAbs().maxCoeff();
+
+	//find the task progress difference between iterations
+	if(t_prog_prev_.size() > 0)
+	  e_diff = (t_prog - t_prog_prev_).cwiseAbs().maxCoeff();
+
+	//std::cerr<<"t_prog: "<<t_prog.transpose()<<"e: "<<e<<std::endl;
+	//std::cerr<<"t_prog_prev_: "<<t_prog_prev_.transpose()<<"e_diff: "<<e_diff<<std::endl;
+	t_prog_prev_ = t_prog;
+      }
 
     if(e <= task_error_tol_)
-    {
+      {
         std::cerr<<std::endl<<"STATE CHANGE:"<<std::endl<<"monitored tasks: ";
         for(unsigned int i=0; i<monitored_tasks_.size(); i++)
-            std::cerr<<monitored_tasks_[i]<<" ";
+	  std::cerr<<monitored_tasks_[i]<<" ";
 
         std::cerr<<std::endl<<"task statuses: "<<std::endl;
         for( std::vector<hqp_controllers_msgs::TaskStatus>::iterator it = msg->statuses.begin(); it!=msg->statuses.end(); ++it)
-            std::cerr<<"id: "<<it->id<<" progress: "<<it->progress<<std::endl;
+	  std::cerr<<"id: "<<it->id<<" progress: "<<it->progress<<std::endl;
 
         std::cerr<<"e: "<<e<<std::endl<<std::endl;
 
@@ -1030,19 +1048,19 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
         task_status_changed_ = true;
         task_success_ = true;
         cond_.notify_one();
-    }
+      }
+    else if(e_diff <= task_diff_tol_) //(task progresses ain't changing no more)
+      {
+	task_status_changed_ = true;
+	task_success_ = true;
+	ROS_WARN("Task execution timeout!");
 
-    //        else if //(should detect task timeout here ...)
-    //    {
-    //        task_status_changed_ = true;
-    //        task_success_ = false;
-    //        ROS_ERROR("Task execution timeout!");
-    //        cond_.notify_one();
-    //    }
-}
-//-----------------------------------------------------------------
-bool DemoPalletizing::loadPersistentTasks()
-{
+	cond_.notify_one();
+      }
+  }
+  //-----------------------------------------------------------------
+  bool DemoPalletizing::loadPersistentTasks()
+  {
     hqp_controllers_msgs::LoadTasks persistent_tasks;
     persistent_tasks.request.task_definitions = "task_definitions";
     if(!load_tasks_clt_.call(persistent_tasks))
@@ -1326,6 +1344,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             return false;
         }
         task_error_tol_ = 5 * 1e-3;
+        task_diff_tol_ = 1e-4;
         activateHQPControl();
 
         while(!task_status_changed_)

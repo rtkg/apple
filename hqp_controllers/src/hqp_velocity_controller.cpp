@@ -257,18 +257,18 @@ bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQP
     lock_.unlock();
 
     if(req.active == true)
-        ROS_INFO("HQP control activated.");
+      ROS_INFO("HQP control activated.");
     else
-        ROS_INFO("HQP control deactivated.");
+      ROS_INFO("HQP control deactivated.");
 
     return true;
 }
-//-----------------------------------------------------------------------
-void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
-{
+  //-----------------------------------------------------------------------
+  void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
+  {
     lock_.lock();
     if(active_)
-    {
+      {
         //compute jacobians and poses of the task links, as well as the task functions and jacobians
         task_manager_.updateTasks();
 
@@ -277,13 +277,10 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 
         //set the computed task velocities if the computation was succesful, otherwise set them to zero
         if(!task_manager_.getDQ(commands_))
-            commands_.setZero();
+	  commands_.setZero();
 
         //std::cerr<<"computed DQ: "<<commands_.transpose()<<std::endl;
         //ROS_BREAK();
-
-        for(unsigned int i=0; i<n_joints_; i++)
-            joints_.at(i).setCommand(commands_(i));
 
         // ================= DEBUG PRINT ============================
         //    for (int i=0; i<n_joints_; i++)
@@ -299,7 +296,7 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
         //======================= PUBLISH =================
         // limit rate of publishing
         if (PUBLISH_RATE > 0.0 && last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE) < time)
-        {
+	  {
             // we're actually publishing, so increment time
             last_publish_time_ = last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE);
 
@@ -309,19 +306,22 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
             task_manager_.getTaskGeometryMarkers(vis_t_geom_pub_.msg_,vis_ids_);
 
             if (vis_t_geom_pub_.trylock())
-                vis_t_geom_pub_.unlockAndPublish();
+	      vis_t_geom_pub_.unlockAndPublish();
 
             task_manager_.getTaskStatusArray(t_status_pub_.msg_);
             if (t_status_pub_.trylock())
-                t_status_pub_.unlockAndPublish();
-        }
-    }
+	      t_status_pub_.unlockAndPublish();
+	  }
+      }
     else
-        commands_.setZero();
+      commands_.setZero();
+
+    for(unsigned int i=0; i<n_joints_; i++)
+      joints_.at(i).setCommand(commands_(i));
 
     lock_.unlock();
-}
-//-----------------------------------------------------------------------
+  }
+  //-----------------------------------------------------------------------
 } //end namespace hqp_controllers
 
 PLUGINLIB_EXPORT_CLASS(hqp_controllers::HQPVelocityController,controller_interface::ControllerBase)
