@@ -24,4 +24,7 @@
  <!--load predifined persistent task descriptions (joint limit avoidance, self-collision avoidance ...) definitions for the HQP controller -->
  <rosparam file="$(find demo_palletizing)/hqp_tasks/task_definitions.yaml" command="load" ns="/apple"/>
 
+ <!-- Show in Rviz   -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find apple_description)/launch/apple.rviz"/>
+
 </launch>
