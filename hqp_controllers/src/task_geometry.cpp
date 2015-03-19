@@ -54,6 +54,10 @@ Eigen::VectorXd TaskGeometry::getLinkData() const {return link_data_;}
 //------------------------------------------------------
 Eigen::VectorXd TaskGeometry::getTaskData() const {return task_data_;}
 //------------------------------------------------------
+void TaskGeometry::setLinkData(const Eigen::VectorXd &link_data){link_data_ = link_data;}
+//------------------------------------------------------
+void TaskGeometry::setTaskData(const Eigen::VectorXd &task_data){task_data_ = task_data;}
+//------------------------------------------------------
 boost::shared_ptr<TaskGeometry> TaskGeometry::makeTaskGeometry(TaskGeometryType type, std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data)
 {
     boost::shared_ptr<TaskGeometry> geom;
@@ -275,6 +279,12 @@ OrientationQuantities Line::orient(const OrientableGeometry &geom) const
     return geom.orientTowardsLine(*this);
 }
 //------------------------------------------------------------------------
+OrientationQuantities Line::coplanar(OrientableGeometry const& geom)const
+{
+    ROS_ASSERT(task_frame_ == geom.getTaskFrame());
+    return geom.coplanarWithLine(*this);
+}
+//------------------------------------------------------------------------
 OrientationQuantities Line::orientTowardsLine(Line const& line)const
 {
     ROS_ERROR("Line::orientTowardsLine(...): not implemented yet!");
@@ -292,6 +302,18 @@ OrientationQuantities Line::orientTowardsCone(Cone const& cone)const
     ori.h_ = v1.transpose() * skewSymmetricMatrix(v2);
 
     return ori;
+}
+//------------------------------------------------------------------------
+OrientationQuantities Line::coplanarWithLine(Line const& line)const
+{
+    ROS_ERROR("Line::coplanarWithLine(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+OrientationQuantities Line::coplanarWithCone(Cone const& cone)const
+{
+    ROS_ERROR("Line::coplanarWithCone(...): not implemented yet!");
+    ROS_BREAK();
 }
 //------------------------------------------------------------------------
 ProjectionQuantities Line::project(const ProjectableGeometry &geom)const
@@ -336,11 +358,11 @@ ProjectionQuantities Line::projectOntoLine(Line const& line)const
         proj.N_.col(0).normalize();
 
         proj.d_(0) = proj.N_.col(0).dot(l1-l2);
-        if(proj.d_(0) > 0.0)
-        {
-            proj.d_(0) = -proj.d_(0);
-            proj.N_(0) = -proj.N_(0);
-        }
+//        if(proj.d_(0) > 0.0)
+//        {
+//            proj.d_(0) = -proj.d_(0);
+//            proj.N_(0) = -proj.N_(0);
+//        }
 
         //find the jacobian point
         Eigen::MatrixXd C(3,2);
@@ -350,6 +372,15 @@ ProjectionQuantities Line::projectOntoLine(Line const& line)const
 
         proj.P2_.col(0) = l2+lmbd(1)*v2;
         proj.P1_.col(0) = proj.P2_.col(0) + proj.N_.col(0) * proj.d_.col(0);
+
+        //make sure the normal points from 2 to 1
+        proj.N_.col(0) = proj.P2_.col(0)-proj.P1_.col(0);
+        proj.N_.col(0).normalize();
+
+        //make sure d has the right sign
+        if(proj.d_(0) > 0.0)
+            proj.d_(0) = -proj.d_(0);
+
     }
 
     return proj;
@@ -1231,6 +1262,12 @@ OrientationQuantities Cone::orient(const OrientableGeometry &geom) const
     return geom.orientTowardsCone(*this);
 }
 //------------------------------------------------------------------------
+OrientationQuantities Cone::coplanar(OrientableGeometry const& geom)const
+{
+    ROS_ASSERT(task_frame_ == geom.getTaskFrame());
+    return geom.coplanarWithCone(*this);
+}
+//------------------------------------------------------------------------
 OrientationQuantities Cone::orientTowardsLine(Line const& line)const
 {
     ROS_ERROR("Cone::orientTowardsLine(...): not implemented yet!");
@@ -1240,6 +1277,37 @@ OrientationQuantities Cone::orientTowardsLine(Line const& line)const
 OrientationQuantities Cone::orientTowardsCone(Cone const& cone)const
 {
     ROS_ERROR("Cone::orientTowardsCone(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+OrientationQuantities Cone::coplanarWithLine(const Line &line) const
+{
+    OrientationQuantities ori;
+
+    Eigen::Vector3d v2 = task_data_.segment<3>(3);
+    Eigen::Vector3d v1 = v2;
+
+    if(v2.cross(line.getTaskData().tail<3>()).norm() > 1e-4 )
+    {
+        //lines are not  parallel - find the projection by converting the cone to a line
+        Line l2(link_frame_, task_frame_, link_data_.head<6>());
+        l2.setTaskData(task_data_.head<6>());
+        ProjectionQuantities l_proj = l2.projectOntoLine(line);
+
+        v1 = l_proj.P1_.col(0) - task_data_.head<3>();
+        v1.normalize();
+        //std::cerr<<"Cone::coplanarWithLine(): l_proj:"<<l_proj<<std::endl<<"v1: "<<v1.transpose()<<std::endl<<"v2: "<<v2.transpose()<<std::endl;
+    }
+
+    ori.d_ = cos(task_data_(6)) - v1.transpose()*v2;
+    ori.h_ = v1.transpose() * skewSymmetricMatrix(v2);
+
+    return ori;
+}
+//------------------------------------------------------------------------
+OrientationQuantities Cone::coplanarWithCone(Cone const& cone)const
+{
+    ROS_ERROR("Cone::coplanarWithCone(...): not implemented yet!");
     ROS_BREAK();
 }
 //------------------------------------------------------------------------

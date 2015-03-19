@@ -199,8 +199,8 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
 
     if(t_type == PROJECTION)
         task.reset(new Projection(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
-    else if(t_type == ORIENTATION)
-        task.reset(new Orientation(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
+    else if(t_type == PARALLEL)
+        task.reset(new Parallel(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
     else if(t_type == JOINT_SETPOINT)
         task.reset(new JointSetpoint(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
     else if(t_type == JOINT_LIMIT_AVOIDANCE)
@@ -209,8 +209,8 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
     //        task.reset(new ParallelLines(id, priority, sign, t_objs, t_dynamics));
     //    else if(type == ANGLE_LINES)
     //        task.reset(new AngleLines(id, priority, sign, t_objs, t_dynamics));
-    //    else if(type == COPLANAR_LINES)
-    //        task.reset(new CoplanarLines(id, priority, sign, t_objs, t_dynamics));
+        else if(t_type == COPLANAR)
+        task.reset(new Coplanar(id, priority, task_frame, is_equality_task, t_dynamics, t_links));
     //    else if(type == PROJECT_SPHERE_PLANE)
     //        task.reset(new ProjectSpherePlane(id, priority, sign, t_objs, t_dynamics));
     else
@@ -324,9 +324,8 @@ double Projection::getTaskProgress()const
     }
 }
 //---------------------------------------------------------
-Orientation::Orientation(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links) : Task(id, priority, task_frame, is_equality_task, t_dynamics, t_links)
+Parallel::Parallel(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links) : Task(id, priority, task_frame, is_equality_task, t_dynamics, t_links)
 {
-    //    dim_ = t_objs_->at(1).getGeometries()->size();
     ROS_ASSERT(t_links_.size() == 2);
     ROS_ASSERT(t_links_.at(0).get() && t_links_.at(1).get()); //make sure the task links exist
     //make sure task geometries exist
@@ -340,7 +339,7 @@ Orientation::Orientation(unsigned int id, unsigned int priority, std::string con
     E_.setZero();
 }
 //---------------------------------------------------------
-void Orientation::updateTask()
+void Parallel::updateTask()
 {
     //compute forward kinematics and jacobians
     computeTaskLinkKinematics();
@@ -372,7 +371,7 @@ void Orientation::updateTask()
 //    std::cerr<<"J_:"<<std::endl<<J_<<std::endl;
 }
 //---------------------------------------------------------
-double Orientation::getTaskProgress()const
+double Parallel::getTaskProgress()const
 {
     if (is_equality_task_)
         return pow(E_(0,0),2); //SSE of the task function
@@ -733,5 +732,65 @@ void JointLimitAvoidance::updateTask()
 //    //       std::cout<<"E_ :"<<std::endl<<(*E_)<<std::endl;
 //    //       std::cout<<"A_ :"<<std::endl<<(*A_)<<std::endl;
 //}
+//---------------------------------------------------------
+Coplanar::Coplanar(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links) : Task(id, priority, task_frame, is_equality_task, t_dynamics, t_links)
+{
+    ROS_ASSERT(t_links_.size() == 2);
+    ROS_ASSERT(t_links_.at(0).get() && t_links_.at(1).get()); //make sure the task links exist
+    //make sure task geometries exist
+    ROS_ASSERT((t_links_.at(0)->getGeometries().size() == 1) &&  (t_links_.at(1)->getGeometries().size() == 1));
+    ROS_ASSERT(t_links_.at(0)->getGeometries().at(0).get());
+    ROS_ASSERT(t_links_.at(1)->getGeometries().at(0).get());
+
+    J_.resize(1, t_links_[0]->getNumJoints());
+    J_.setZero();
+    E_.resize(1, 2);
+    E_.setZero();
+}
+//---------------------------------------------------------
+void Coplanar::updateTask()
+{
+    //compute forward kinematics and jacobians
+    computeTaskLinkKinematics();
+
+    OrientableGeometry* geom1 = dynamic_cast<OrientableGeometry*>(t_links_[0]->getGeometries().at(0).get());
+    OrientableGeometry* geom2 = dynamic_cast<OrientableGeometry*>(t_links_[1]->getGeometries().at(0).get());
+    OrientationQuantities ori = geom1->coplanar(* geom2);
+    //std::cerr<<"Coplanar::updateTask(): Orientation quantities: "<<std::endl<<ori<<std::endl;
+
+    //in case of an inequality task, disregard the task component if it's outside the influence zone
+    if((ori.d_ < -di_) && (!is_equality_task_))
+        return;
+
+    //TASK FUNCTION
+    Eigen::VectorXd x(1), dx(1);
+    //apply task damping
+    x(0) = (ori.d_ + ds_);
+    t_dynamics_->getDX(dx, x);
+    E_(0,0) = x(0);
+    E_(0,1) = dx(0);
+
+    Eigen::MatrixXd jac = t_links_[0]->getJacobian() - t_links_[1]->getJacobian(); //delta offset does not matter since we're only interested in the rotation part of the jacobian
+    J_ = -ori.h_ * jac.bottomRows<3>();
+
+    //    std::cerr<<"E_:"<<std::endl<<E_<<std::endl;
+    //    std::cerr<<"J_:"<<std::endl<<J_<<std::endl;
+
+}
+//---------------------------------------------------------
+double Coplanar::getTaskProgress()const
+{
+    if (is_equality_task_)
+        return pow(E_(0,0),2); //SSE of the task function
+    else
+    {
+        //for inequality projection tasks, a negative task function value per definiton indicates 0 sse
+        double sse = 0;
+        if(E_(0,0) > 0.0)
+            sse=pow(E_(0,0),2);
+
+        return sse;
+    }
+}
 //---------------------------------------------------------
 } //end namespace hqp_controllers

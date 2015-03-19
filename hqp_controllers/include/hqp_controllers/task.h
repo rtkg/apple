@@ -14,7 +14,7 @@ namespace hqp_controllers {
 //----------------------------------------------------------------
 enum TaskDescriptionFormat {ROS_MESSAGE = 1, XML = 2};
 //----------------------------------------------------------------
-enum TaskType {PROJECTION = 1, ORIENTATION = 2, JOINT_SETPOINT = 3, JOINT_LIMIT_AVOIDANCE = 4};
+enum TaskType {PROJECTION = 1, PARALLEL = 2, JOINT_SETPOINT = 3, JOINT_LIMIT_AVOIDANCE = 4, COPLANAR = 5};
 //----------------------------------------------------------------
 class Task
 {
@@ -86,16 +86,31 @@ private:
 
 };
 //----------------------------------------------------------------
-class Orientation: public Task
+class Parallel: public Task
 {
 public:
-    Orientation(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links);
+    Parallel(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links);
 
     virtual void updateTask();
     virtual double getTaskProgress()const;
 
 protected:
-    Orientation(){};
+    Parallel(){};
+
+private:
+
+};
+//----------------------------------------------------------------
+class Coplanar: public Task
+{
+public:
+    Coplanar(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links);
+
+    virtual void updateTask();
+    virtual double getTaskProgress()const;
+
+protected:
+    Coplanar(){};
 
 private:
 

@@ -372,7 +372,7 @@ bool DemoPalletizing::setObjectTransfer()
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
-    task.t_type = hqp_controllers_msgs::Task::ORIENTATION;
+    task.t_type = hqp_controllers_msgs::Task::PARALLEL;
     task.priority = 2;
     task.is_equality_task = false;
     task.task_frame = "world";
@@ -496,7 +496,7 @@ bool DemoPalletizing::setObjectPlace()
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
-    task.t_type = hqp_controllers_msgs::Task::ORIENTATION;
+    task.t_type = hqp_controllers_msgs::Task::PARALLEL;
     task.priority = 2;
     task.is_equality_task = false;
     task.task_frame = "world";
@@ -628,7 +628,7 @@ bool DemoPalletizing::setGripperExtract()
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
-    task.t_type = hqp_controllers_msgs::Task::ORIENTATION;
+    task.t_type = hqp_controllers_msgs::Task::PARALLEL;
     task.priority = 2;
     task.is_equality_task = false;
     task.task_frame = "world";
@@ -853,7 +853,7 @@ bool DemoPalletizing::setGraspApproach()
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
-    task.t_type = hqp_controllers_msgs::Task::ORIENTATION;
+    task.t_type = hqp_controllers_msgs::Task::PARALLEL;
     task.priority = 2;
     task.is_equality_task = false;
     task.task_frame = grasp_.obj_frame_;

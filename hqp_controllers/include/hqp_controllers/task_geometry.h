@@ -60,6 +60,9 @@ public:
     std::string getTaskFrame() const;
     Eigen::VectorXd getLinkData() const;
     Eigen::VectorXd getTaskData() const;
+
+    void setLinkData(const Eigen::VectorXd& link_data);
+    void setTaskData(const Eigen::VectorXd& task_data);
     //    boost::shared_ptr<Eigen::Affine3d> getLinkTransform() const;
 
     friend std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom);
@@ -103,6 +106,10 @@ public:
     virtual OrientationQuantities orient(OrientableGeometry const& geom)const = 0;
     virtual OrientationQuantities orientTowardsLine(Line const& line)const = 0;
     virtual OrientationQuantities orientTowardsCone(Cone const& cone)const = 0;
+
+     virtual OrientationQuantities coplanar(OrientableGeometry const& geom)const = 0;
+    virtual OrientationQuantities coplanarWithLine(Line const& line)const = 0;
+         virtual OrientationQuantities coplanarWithCone(Cone const& cone)const = 0;
 };
 //------------------------------------------------------------------------------------------
 class Point: public ProjectableGeometry
@@ -169,6 +176,10 @@ public:
     virtual OrientationQuantities orient(OrientableGeometry const& geom)const;
     virtual OrientationQuantities orientTowardsLine(Line const& line)const;
     virtual OrientationQuantities orientTowardsCone(Cone const& cone)const;
+
+    virtual OrientationQuantities coplanar(OrientableGeometry const& geom)const;
+    virtual OrientationQuantities coplanarWithLine(Line const& line)const;
+         virtual OrientationQuantities coplanarWithCone(Cone const& cone)const;
 };
 //------------------------------------------------------------------------------------------
 //** Plane defined as Plane::n_^T*x - Plane::d_ = 0.0 */
@@ -248,6 +259,10 @@ public:
     virtual OrientationQuantities orient(OrientableGeometry const& geom)const;
     virtual OrientationQuantities orientTowardsLine(Line const& line)const;
     virtual OrientationQuantities orientTowardsCone(Cone const& cone)const;
+
+    virtual OrientationQuantities coplanar(OrientableGeometry const& geom)const;
+    virtual OrientationQuantities coplanarWithLine(Line const& line)const;
+        virtual OrientationQuantities coplanarWithCone(Cone const& cone)const;
 };
 //------------------------------------------------------------------------------------------
 class JointPosition: public TaskGeometry

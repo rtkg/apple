@@ -28,6 +28,9 @@
   <!-- Launch RQT for control tuning -->
   <!-- <node name="apple_rqt" pkg="rqt_gui" type="rqt_gui" respawn="false" output="screen"/> -->
 
+ <!--load predifined persistent task descriptions (joint limit avoidance, self-collision avoidance ...) definitions for the HQP controller -->
+ <rosparam file="$(find demo_palletizing)/hqp_tasks/task_definitions.yaml" command="load" ns="/apple"/>
+
 </launch>
 
 
