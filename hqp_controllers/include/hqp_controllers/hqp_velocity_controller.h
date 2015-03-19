@@ -1,6 +1,7 @@
 #ifndef HQP_VELOCITY_CONTROLLER_H
 #define HQP_VELOCITY_CONTROLLER_H
 
+#include <time.h>
 #include <vector>
 #include <string>
 #include <ros/node_handle.h>
@@ -26,7 +27,20 @@
 namespace hqp_controllers
 {
 #define PUBLISH_RATE 50 //The rate to publish
+//--------------------------------------------------------
+class Timer
+{
+public:
+    Timer();
 
+    void start();
+   // void reset();
+    double computeCTime();
+
+private:
+    struct timeval t_;//, t_prev_;
+};
+//--------------------------------------------------------
 /**
    * \brief Forward command controller for a set of joints.
    *
@@ -61,6 +75,7 @@ private:
     TaskManager task_manager_;
     boost::mutex lock_;
     ros::NodeHandle n_;
+    Timer timer_;
 
     realtime_tools::RealtimePublisher<visualization_msgs::MarkerArray> vis_t_geom_pub_;
     realtime_tools::RealtimePublisher<hqp_controllers_msgs::TaskStatusArray> t_status_pub_;

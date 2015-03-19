@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(hqp_controllers)
 
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
+#set(CMAKE_BUILD_TYPE Release)
+
+ set(CMAKE_CXX_FLAGS "-O3") 
 
 # GUROBI libs and includes
 set(GUROBI_INCLUDE_DIR "$ENV{GUROBI_HOME}/include") 

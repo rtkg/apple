@@ -10,6 +10,28 @@
 namespace hqp_controllers
 {
 //-----------------------------------------------------------------------
+Timer::Timer(){}
+//-----------------------------------------------------------------------
+//void Timer::reset()
+//{
+//    c_time_ = 0.0;
+//    t_prev_ = t_;
+//}
+//-----------------------------------------------------------------------
+double Timer::computeCTime()
+{
+    timeval t_new;
+    gettimeofday(&t_new,0);
+
+    return t_new.tv_sec - t_.tv_sec + 0.000001 * (t_new.tv_usec - t_.tv_usec);
+}
+//-----------------------------------------------------------------------
+void Timer::start()
+{
+ gettimeofday(&t_,0);
+
+}
+//-----------------------------------------------------------------------
 HQPVelocityController::HQPVelocityController() : active_(false) {}
 //-----------------------------------------------------------------------
 HQPVelocityController::~HQPVelocityController()
@@ -266,9 +288,11 @@ bool HQPVelocityController::activateHQPControl(hqp_controllers_msgs::ActivateHQP
 //-----------------------------------------------------------------------
 void HQPVelocityController::update(const ros::Time& time, const ros::Duration& period)
 {
+
     lock_.lock();
     if(active_)
     {
+        timer_.start();
         //compute jacobians and poses of the task links, as well as the task functions and jacobians
         task_manager_.updateTasks();
 
@@ -295,8 +319,10 @@ void HQPVelocityController::update(const ros::Time& time, const ros::Duration& p
 
         //======================= PUBLISH =================
         // limit rate of publishing
+        double c_time = timer_.computeCTime();
         if (PUBLISH_RATE > 0.0 && last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE) < time)
         {
+           // std::cerr<<"Computation time: "<<c_time<<std::endl;
             // we're actually publishing, so increment time
             last_publish_time_ = last_publish_time_ + ros::Duration(1.0/PUBLISH_RATE);
 
