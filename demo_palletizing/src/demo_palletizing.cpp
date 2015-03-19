@@ -820,9 +820,9 @@ bool DemoPalletizing::setGraspApproach()
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
-    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
+    task.t_type = hqp_controllers_msgs::Task::COPLANAR;
     task.priority = 2;
-    task.is_equality_task = true;
+    task.is_equality_task = false;
     task.task_frame = grasp_.obj_frame_;
     task.ds = 0.0;
     task.di = 0.05;
@@ -832,18 +832,19 @@ bool DemoPalletizing::setGraspApproach()
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::LINE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(1); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_link.link_frame = grasp_.e_frame_;
+    t_geom.g_data.push_back(grasp_.p_(0)); t_geom.g_data.push_back(grasp_.p_(1)); t_geom.g_data.push_back(grasp_.p_(2));
+    t_geom.g_data.push_back(grasp_.v_(0)); t_geom.g_data.push_back(grasp_.v_(1)); t_geom.g_data.push_back(grasp_.v_(2));
+    t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::LINE;
-    t_geom.g_data.push_back(grasp_.p_(0)); t_geom.g_data.push_back(grasp_.p_(1)); t_geom.g_data.push_back(grasp_.p_(2));
-    t_geom.g_data.push_back(grasp_.v_(0)); t_geom.g_data.push_back(grasp_.v_(1)); t_geom.g_data.push_back(grasp_.v_(2));
-    t_link.link_frame = grasp_.obj_frame_;
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
+    t_geom.g_data.push_back(1); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
+    t_geom.g_data.push_back(GRASP_ALIGNMENT_ANGLE);
+    t_link.link_frame = grasp_.e_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
