@@ -3,7 +3,22 @@
 #include <ros/ros.h>
 
 namespace hqp_controllers{
+//----------------------------------------------
+Timer::Timer() : c_time_(0.0)
+{
+     gettimeofday(&t_,0);
+}
+//----------------------------------------------
+void Timer::iterate()
+{
+    timeval t_new;
+    gettimeofday(&t_new,0);
 
+    c_time_ = t_new.tv_sec - t_.tv_sec + 0.000001 * (t_new.tv_usec - t_.tv_usec);
+    t_ = t_new;
+}
+//----------------------------------------------
+double Timer::getCTime()const{return c_time_;}
 //----------------------------------------------
 TaskManager::TaskManager() : hqp_computed_(false){}
 //----------------------------------------------
@@ -62,6 +77,27 @@ void TaskManager::updateTasks()
    //     std::cerr<<"task boost ptr: "<<it->second<<", task ptr: "<<it->second.get()<<std::endl;
         it->second->updateTask();
     }
+
+    hqp_.clear();
+     for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_.begin(); task_it!=tasks_.end(); ++task_it)
+     {
+
+         unsigned int priority =  task_it->second->getPriority();
+
+        //if no stage with the given priority is in the hqp yet, create one, otherwise append the task to the existing stage
+         std::map<unsigned int,boost::shared_ptr<HQPStage> >::const_iterator stage_it = hqp_.find(priority);
+         if(stage_it == hqp_.end())
+             hqp_[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
+         else
+             stage_it->second->appendTask(*task_it->second);
+     }
+
+     if(hqp_solver_.solve(hqp_))
+         hqp_computed_ = true;
+     else
+         hqp_computed_ = false;
+
+     timer_.iterate();
 }
 //----------------------------------------------
 bool TaskManager::getDQ(Eigen::VectorXd& dq)const
@@ -114,6 +150,8 @@ void TaskManager::getTaskStatusArray(hqp_controllers_msgs::TaskStatusArray& t_st
 
         t_status_array.statuses.push_back(status);
     }
+
+    t_status_array.c_time = timer_.getCTime();
 }
 //----------------------------------------------
 bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& markers, Eigen::VectorXi const& vis_ids)const
@@ -137,28 +175,6 @@ bool TaskManager::getTaskGeometryMarkers(visualization_msgs::MarkerArray& marker
         }
     }
     return true;
-}
-//----------------------------------------------
-void TaskManager::computeHQP()
-{
-   hqp_.clear();
-    for (std::map<unsigned int, boost::shared_ptr<Task> >::iterator task_it=tasks_.begin(); task_it!=tasks_.end(); ++task_it)
-    {
-
-        unsigned int priority =  task_it->second->getPriority();
-
-       //if no stage with the given priority is in the hqp yet, create one, otherwise append the task to the existing stage
-        std::map<unsigned int,boost::shared_ptr<HQPStage> >::const_iterator stage_it = hqp_.find(priority);
-        if(stage_it == hqp_.end())
-            hqp_[priority] = boost::shared_ptr<HQPStage>(new HQPStage(*task_it->second));
-        else
-            stage_it->second->appendTask(*task_it->second);
-    }
-
-    if(hqp_solver_.solve(hqp_))
-        hqp_computed_ = true;
-    else
-        hqp_computed_ = false;
 }
 //----------------------------------------------
 //void TaskManager::writeHQP()

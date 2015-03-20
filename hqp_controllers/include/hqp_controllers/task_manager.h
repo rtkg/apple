@@ -10,9 +10,24 @@
 #include <map>
 #include <hardware_interface/joint_command_interface.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <time.h>
 
 namespace hqp_controllers {
+//--------------------------------------------------------
+class Timer
+{
+public:
+    Timer();
 
+    void iterate();
+   // void reset();
+    double getCTime()const;
+
+private:
+    struct timeval t_;//, t_prev_;
+    double c_time_;
+};
+//--------------------------------------------------------
 class TaskManager
 {
 public:
@@ -23,12 +38,8 @@ public:
     void reset();
     bool removeTask(unsigned int id);
 
-    /**Computes the task jacobians and velocities of all tasks*/
+    /**Computes the task jacobians and velocities of all tasks and solves the HQP*/
     void updateTasks();
-   /**solves the corresponding HQP. The solution is returned in dq */
-    void computeHQP();
-
-    //void writeHQP();
 
     unsigned int getValidTaskId() const;
     bool getTask(unsigned int id, boost::shared_ptr<Task> task)const;
@@ -42,6 +53,7 @@ private:
     std::map<unsigned int, boost::shared_ptr<Task> > tasks_;
     std::map<unsigned int, boost::shared_ptr<HQPStage> > hqp_;
     bool hqp_computed_;
+    Timer timer_;
 
     HQPSolver hqp_solver_;
 };
