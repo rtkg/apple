@@ -230,7 +230,7 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
 //---------------------------------------------------------
   void Task::setName(std::string name){name_ = name;}
 //---------------------------------------------------------
-  std::string getName()const{return name_;}
+  std::string Task::getName()const{return name_;}
 //---------------------------------------------------------
 void Task::computeTaskLinkKinematics()
 {

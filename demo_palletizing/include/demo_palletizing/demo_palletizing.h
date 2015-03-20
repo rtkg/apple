@@ -11,37 +11,37 @@
 #include <Eigen/Core>
 #include <velvet_interface_node/SmartGrasp.h>
 #include <velvet_interface_node/VelvetToPos.h>
+#include <lbr_fri/SetStiffness.h>
 
 namespace demo_palletizing
 {
 //-----------------------------------------------------------
 //#define HQP_GRIPPER_JOINT 1
 
-#define JOINT_SETPOINT_DYNAMICS_GAIN  -0.8
-#define GRASP_APPROACH_DYNAMICS_GAIN  -0.5
-#define OBJECT_TRANSFER_DYNAMICS_GAIN -0.5
-#define OBJECT_PLACE_DYNAMICS_GAIN    -0.5
-#define GRIPPER_EXTRACT_DYNAMICS_GAIN -0.5
+#define PILE_GRASPING 1
 
-#define GRASP_ALIGNMENT_ANGLE    0.05
-#define TRANSFER_ALIGNMENT_ANGLE 0.2
-#define PLACE_ALIGNMENT_ANGLE    0.0
-#define EXTRACT_ALIGNMENT_ANGLE  0.0
+#define DYNAMICS_GAIN  -0.5
+#define ALIGNMENT_ANGLE  0.05
+
+#define EXTRACT_HEIGHT 0.6
 //-----------------------------------------------------------
 ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
 struct GraspInterval
 {
     std::string obj_frame_; //object frame
     std::string e_frame_; //endeffector frame
-
     Eigen::Vector3d e_; //endeffector point expressed in e_frame_
-
+#ifdef PILE_GRASPING
+    Eigen::Vector3d p_; //pile attack point
+    Eigen::Vector3d a_; //approach axis
+#else
     Eigen::Vector3d v_; //cylinder axis
     Eigen::Vector3d p_; //cylinder reference point
     double r1_, r2_; //cylinder radii r2 !> r1
 
     Eigen::Vector3d n1_, n2_; //plane normals
     double d1_, d2_; //plane offsets d1 !> d2
+#endif
 };
 //-----------------------------------------------------------
 struct PlaceInterval
@@ -58,6 +58,16 @@ struct PlaceInterval
     Eigen::Vector3d n_; //place plane normal
     double d_; //place plane offsets d !> 0
 };
+////-----------------------------------------------------------
+//struct CartesianStiffness
+//{
+//    double sx;
+//    double sy;
+//    double sz;
+//    double sa;
+//    double sb;
+//    double sc;
+//};
 //-----------------------------------------------------------
 class DemoPalletizing
 {
@@ -81,7 +91,7 @@ private:
     //**Grasp definition - this should be modified to grasp different objects */
     GraspInterval grasp_;
     PlaceInterval place_zone_; ///< placement zone for the object
-
+    lbr_fri::SetStiffness cart_stiffness_;
     Eigen::VectorXd t_prog_prev_;
 
     ros::Subscriber task_status_sub_;
@@ -96,6 +106,7 @@ private:
     ros::ServiceClient load_tasks_clt_;
     ros::ServiceClient reset_hqp_control_clt_;
     ros::ServiceClient velvet_grasp_clt_;
+    ros::ServiceClient set_stiffness_clt_;
     ros::ServiceServer start_demo_srv_;
 
 
@@ -109,7 +120,7 @@ private:
     hqp_controllers_msgs::SetTasks tasks_;
     //** map holding the ids of those tasks whose completion indicates a state change*/
     std::vector<unsigned int> monitored_tasks_;
-   // std::map<std::string, hqp_controllers_msgs::TaskObject> task_object_templates_;
+    // std::map<std::string, hqp_controllers_msgs::TaskObject> task_object_templates_;
 
 
     //** To be called before entering a new state*/
@@ -128,6 +139,7 @@ private:
     void safeShutdown();
 
     bool setJointConfiguration(std::vector<double> const& joints);
+
     bool setGraspApproach();
     bool setObjectExtract();
     bool setObjectTransfer();
@@ -135,6 +147,7 @@ private:
     bool setObjectPlace();
     bool loadPersistentTasks();
     bool getGraspInterval();
+    bool getPileGraspInterval();
 
     //double maximumNorm(std::vector<double>const& e);
 
