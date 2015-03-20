@@ -17,7 +17,7 @@ namespace demo_palletizing
 //-----------------------------------------------------------
 //#define HQP_GRIPPER_JOINT 1
 
-#define JOINT_SETPOINT_DYNAMICS_GAIN  -0.5
+#define JOINT_SETPOINT_DYNAMICS_GAIN  -0.8
 #define GRASP_APPROACH_DYNAMICS_GAIN  -0.5
 #define OBJECT_TRANSFER_DYNAMICS_GAIN -0.5
 #define OBJECT_PLACE_DYNAMICS_GAIN    -0.5

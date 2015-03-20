@@ -147,6 +147,7 @@ void TaskManager::getTaskStatusArray(hqp_controllers_msgs::TaskStatusArray& t_st
         }
 
         status.progress = it->second->getTaskProgress();
+        status.name = it->second->getName();
 
         t_status_array.statuses.push_back(status);
     }

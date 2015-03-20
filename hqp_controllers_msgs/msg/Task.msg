@@ -6,6 +6,7 @@ uint16 COPLANAR = 5
 
 uint16       t_type
 uint16       priority
+string       name
 bool         is_equality_task
 string       task_frame
 float64      ds #velocity damping safety zone

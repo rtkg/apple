@@ -695,9 +695,9 @@ bool DemoPalletizing::setGraspApproach()
     task.is_equality_task = false;
     task.task_frame = grasp_.obj_frame_;
     task.ds = 0.0;
-    task.di = 0.05;
+    task.di = 0.02;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(GRASP_APPROACH_DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(GRASP_APPROACH_DYNAMICS_GAIN / 5);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();

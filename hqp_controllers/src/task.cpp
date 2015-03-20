@@ -25,7 +25,7 @@ std::ostream& operator<<(std::ostream& str, Task const& task)
     str<<std::endl;
 }
 //---------------------------------------------------------
-Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links): id_(id), priority_(priority), task_frame_(task_frame), is_equality_task_(is_equality_task), t_dynamics_(t_dynamics), t_links_(t_links), ds_(0.0), di_(1.0)
+  Task::Task(unsigned int id, unsigned int priority, std::string const& task_frame, bool is_equality_task, boost::shared_ptr<TaskDynamics> t_dynamics, std::vector<boost::shared_ptr<TaskLink> > const& t_links): id_(id), priority_(priority), task_frame_(task_frame), is_equality_task_(is_equality_task), t_dynamics_(t_dynamics), t_links_(t_links), ds_(0.0), di_(1.0), name_("")
 {
     ROS_ASSERT(t_dynamics_.get());
     ROS_ASSERT(t_dynamics_->getDimension() > 0);
@@ -102,6 +102,7 @@ XmlRpc::XmlRpcValue Task::taskMessageToXmlRpcValue(hqp_controllers_msgs::Task co
     XmlRpc::XmlRpcValue task;
 
     task["t_type"] = msg.t_type;
+    task["name"] = msg.name;
     task["priority"] = msg.priority;
     task["is_equality_task"] = msg.is_equality_task;
     task["task_frame"] = msg.task_frame;
@@ -131,6 +132,9 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
 
     ROS_ASSERT(t_description["priority"].getType() == XmlRpc::XmlRpcValue::TypeInt);
     int priority = (int)t_description["priority"];
+
+    ROS_ASSERT(t_description["name"].getType() == XmlRpc::XmlRpcValue::TypeString);
+    std::string name = (std::string)t_description["name"];
 
     ROS_ASSERT(t_description["is_equality_task"].getType() == XmlRpc::XmlRpcValue::TypeInt); //TypeBoolean ain't working for some reason
     bool is_equality_task;
@@ -220,8 +224,13 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
     }
 
     task->setTaskVelocityDamping(ds,di);
+    task->setName(name);
     return task;
 }
+//---------------------------------------------------------
+  void Task::setName(std::string name){name_ = name;}
+//---------------------------------------------------------
+  std::string getName()const{return name_;}
 //---------------------------------------------------------
 void Task::computeTaskLinkKinematics()
 {

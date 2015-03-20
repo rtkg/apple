@@ -31,6 +31,8 @@ public:
 
     unsigned int getPriority()const;
     bool getIsEqualityTask()const;
+    void setName(std::string name);
+    std::string getName()const;
 
     Eigen::MatrixXd getTaskJacobian()const;
     Eigen::VectorXd getTaskFunction()const;
@@ -66,6 +68,7 @@ protected:
     //    bool t_start_;
     double ds_;
     double di_;
+    std::string name_;
 
     //    void updateTaskFunctionDerivatives();
     void computeTaskLinkKinematics();
