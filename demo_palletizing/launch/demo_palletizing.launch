@@ -19,6 +19,7 @@
      <remap from="/get_grasp_interval" to="/find_beer/find_cans"/>
      <remap from="/velvet_grasp" to="/velvet_node/velvet_grasp"/>
      <remap from="/velvet_pos" to="/velvet_node/gripper_pos"/>
+     <remap from="/set_stiffness" to="/apple/iiwa_hw_interface/set_stiffness"/>
   </node>
 
  <!--load predifined persistent task descriptions (joint limit avoidance, self-collision avoidance ...) definitions for the HQP controller -->

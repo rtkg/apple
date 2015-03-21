@@ -230,9 +230,9 @@ bool DemoPalletizing::getGraspInterval()
     data = grasp.response.CanTask[0].g_data;
     grasp_.p_(0) = data[0]; grasp_.p_(1) = data[1]; grasp_.p_(2) = data[2];
 
-    ROS_ASSERT(grasp.response.CanTask[0].g_type == hqp_controllers_msgs::TaskGeometry::LINE);
+    ROS_ASSERT(grasp.response.CanTask[1].g_type == hqp_controllers_msgs::TaskGeometry::LINE);
     data = grasp.response.CanTask[1].g_data;
-    grasp_.a_(0) = data[3]; grasp_.a_(0) = data[4]; grasp_.a_(0) = data[5];
+    grasp_.a_(0) = data[3]; grasp_.a_(1) = data[4]; grasp_.a_(2) = data[5];
 #else
     ROS_ASSERT(grasp.response.CanTask.size()==4);
     std::vector<double> data;
@@ -1496,18 +1496,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     }
 
 
-    if(!with_gazebo_)
-    {
-        //VELVET INITIAL POSE
-        velvet_interface_node::VelvetToPos poscall;
-        poscall.request.angle = 0.4;
 
-        if(!velvet_pos_clt_.call(poscall))
-        {
-            ROS_ERROR("could not call velvet to pos");
-            ROS_BREAK();
-        }
-    }
 
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
@@ -1542,6 +1531,18 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         ROS_INFO("Manipulator transfer state tasks executed successfully.");
     }
 #endif
+    if(!with_gazebo_)
+    {
+        //VELVET INITIAL POSE
+        velvet_interface_node::VelvetToPos poscall;
+        poscall.request.angle = 0.3;
+
+        if(!velvet_pos_clt_.call(poscall))
+        {
+            ROS_ERROR("could not call velvet to pos");
+            ROS_BREAK();
+        }
+    }
     {//MANIPULATOR SENSING CONFIGURATION
         ROS_INFO("Trying to put the manipulator in sensing configuration.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -1576,6 +1577,8 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     }
 
 
+
+
     {//GRASP APPROACH
         ROS_INFO("Trying grasp approach.");
         boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -1598,6 +1601,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             return false;
         }
         task_error_tol_ = 5*1e-3;
+        task_diff_tol_ = 1e-6;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1612,6 +1616,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
 
         ROS_INFO("Grasp approach tasks executed successfully.");
     }
+
 
     if(!with_gazebo_)
     {
@@ -1644,6 +1649,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
 
     }
+    ROS_BREAK();
 
     {//OBJECT EXTRACT
         ROS_INFO("Trying object extract.");
