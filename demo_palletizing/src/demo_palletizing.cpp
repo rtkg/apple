@@ -13,7 +13,7 @@
 namespace demo_palletizing
 {
 //-----------------------------------------------------------------
-DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(0.0)
+DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5), task_timeout_tol_(0.15)
 {
 
     //handle to home
@@ -1345,6 +1345,17 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
 {
     boost::mutex::scoped_lock lock(manipulator_tasks_m_);
 
+    static ros::Time t_stag;
+    ros::Time t=ros::Time::now();
+    static bool new_sot = true;
+    if(new_sot)
+    {
+        t_stag = t;
+        new_sot = false;
+    }
+
+
+
     //    std::cerr<<"monitor tasks: ";
     //      for(unsigned int i=0; i<monitored_tasks_.size(); i++)
     //          std::cerr<<monitored_tasks_[i]<<" ";
@@ -1404,17 +1415,23 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
         std::cerr<<"e: "<<e<<std::endl<<std::endl;
 
         // ROS_INFO("Task status switch!");
+        new_sot = true;
         task_status_changed_ = true;
         task_success_ = true;
         cond_.notify_one();
     }
     else if(e_diff <= task_diff_tol_) //(task progresses ain't changing no more)
     {
-        task_status_changed_ = true;
-        task_success_ = true;
-        ROS_WARN("Task execution timeout!");
+        if((t.toSec() - t_stag.toSec()) > task_timeout_tol_ )
+        {
+            new_sot = true;
+            task_status_changed_ = true;
+            task_success_ = true;
+            ROS_WARN("Task execution timeout!");
 
-        cond_.notify_one();
+            cond_.notify_one();
+
+        }
     }
 }
 //-----------------------------------------------------------------
@@ -1601,7 +1618,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             return false;
         }
         task_error_tol_ = 5*1e-3;
-        task_diff_tol_ = 1e-6;
         activateHQPControl();
 
         while(!task_status_changed_)

@@ -83,6 +83,7 @@ private:
     boost::condition_variable cond_;
     double task_error_tol_;
     double task_diff_tol_;
+    double task_timeout_tol_;
     bool task_status_changed_;
     bool task_success_;
     bool with_gazebo_; ///<indicate whether the node is run in simulation
