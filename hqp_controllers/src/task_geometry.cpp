@@ -227,7 +227,7 @@ void Point::addMarker(visualization_msgs::MarkerArray& markers)
     marker.type = visualization_msgs::Marker::POINTS;
     marker.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0);
     geometry_msgs::Point p;
     p.x=link_data_(0);
     p.y=link_data_(1);
@@ -421,7 +421,7 @@ void Line::addMarker(visualization_msgs::MarkerArray& markers)
     visualization_msgs::Marker marker;
     marker.header.frame_id = link_frame_;
     marker.header.stamp = ros::Time::now();
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0);
     marker.type =  visualization_msgs::Marker::ARROW;
     marker.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
@@ -518,7 +518,7 @@ void Plane::addMarker(visualization_msgs::MarkerArray& markers)
     marker.header.stamp = ros::Time::now();
     marker.type =  visualization_msgs::Marker::ARROW;
     marker.action = visualization_msgs::Marker::ADD;
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0);
     marker.id = markers.markers.size();
     marker.pose.position.x = n(0) * d;
     marker.pose.position.y = n(1) * d;
@@ -1102,7 +1102,7 @@ void Cylinder::addMarker(visualization_msgs::MarkerArray& markers)
     marker.header.stamp = ros::Time::now();
     marker.type =  visualization_msgs::Marker::CYLINDER;
     marker.action = visualization_msgs::Marker::ADD;
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0);
     marker.id = markers.markers.size();
     marker.pose.position.x = p(0) + v(0) * 0.5 * LINE_SCALE;
     marker.pose.position.y = p(1) + v(1) * 0.5 * LINE_SCALE;
@@ -1207,7 +1207,7 @@ void Sphere::addMarker(visualization_msgs::MarkerArray& markers)
     marker.type = visualization_msgs::Marker::SPHERE;
     marker.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0);
     marker.pose.position.x = link_data_.head<3>()(0);
     marker.pose.position.y = link_data_.head<3>()(1);
     marker.pose.position.z = link_data_.head<3>()(2);
@@ -1368,7 +1368,7 @@ void Cone::addMarker(visualization_msgs::MarkerArray& markers)
     marker.header.stamp = ros::Time::now();
     marker.header.frame_id = link_frame_;
     marker.type =  visualization_msgs::Marker::CYLINDER;
-    marker.lifetime = ros::Duration(0.1);
+    marker.lifetime = ros::Duration(0);
     //    m.action = visualization_msgs::Marker::ADD;
     marker.id = markers.markers.size();
     marker.pose.position.x = p(0) + v(0) * cos(alpha) * CONE_SCALE;

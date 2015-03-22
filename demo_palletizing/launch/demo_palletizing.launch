@@ -3,8 +3,9 @@
 <launch>
   <include file="$(find apple_launch)/launch/lbr_iiwa_vel_control.launch"/>
   <include file="$(find lbr_fri)/launch/fri_launch.launch"/>
-  <include file="$(find can_finder)/launch/can_finder.launch"/>
+  <!--include file="$(find can_finder)/launch/can_finder.launch"/-->
   <include file="$(find velvet_interface_node)/launch/velvet_node.launch"/>
+  <!--include file="$(find experiment_console)/launch/structure_frames.launch"/-->
   <!-- launch the demo palletizing node -->
   <node name="demo_palletizing" pkg="demo_palletizing" type="demo_palletizing" respawn="false" output="screen">
      <param name="with_gazebo" type="bool" value="false"/>

@@ -5,11 +5,11 @@ task_definitions:
          name: lbr_iiwa_joint_1_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.035 #safety margin
-         di: 0.18  #influence zone
+         ds: 0.05 #safety margin
+         di: 0.4  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-0.1]
+           d_data: [-10.0]
          t_links:
             - link_frame: lbr_iiwa_link_1
               geometries: 
@@ -21,11 +21,11 @@ task_definitions:
          name: lbr_iiwa_joint_2_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.035
-         di: 0.18
+         ds: 0.05
+         di: 0.4
          dynamics: 
            d_type: 1
-           d_data: [-0.1]
+           d_data: [-10.0]
          t_links:
             - link_frame: lbr_iiwa_link_2
               geometries: 
@@ -37,11 +37,11 @@ task_definitions:
          name: lbr_iiwa_joint_3_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.035
-         di: 0.18
+         ds: 0.05
+         di: 0.4
          dynamics: 
            d_type: 1
-           d_data: [-0.1]
+           d_data: [-10.0]
          t_links:
             - link_frame: lbr_iiwa_link_3
               geometries: 
@@ -53,11 +53,11 @@ task_definitions:
          name: lbr_iiwa_joint_4_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.035
-         di: 0.18
+         ds: 0.05
+         di: 0.4
          dynamics: 
            d_type: 1
-           d_data: [-0.1]
+           d_data: [-10.0]
          t_links:
             - link_frame: lbr_iiwa_link_4
               geometries: 
@@ -69,11 +69,11 @@ task_definitions:
          name: lbr_iiwa_joint_5_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.035
-         di: 0.18
+         ds: 0.05
+         di: 0.4
          dynamics: 
            d_type: 1
-           d_data: [-0.1]
+           d_data: [-10.0]
          t_links:
             - link_frame: lbr_iiwa_link_5
               geometries: 
@@ -85,11 +85,11 @@ task_definitions:
          name: lbr_iiwa_joint_6_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.035
-         di: 0.18
+         ds: 0.05
+         di: 0.4
          dynamics: 
            d_type: 1
-           d_data: [-0.1]
+           d_data: [-10.0]
          t_links:
             - link_frame: lbr_iiwa_link_6
               geometries: 
@@ -101,11 +101,11 @@ task_definitions:
          name: lbr_iiwa_joint_7_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.035
-         di: 0.18
+         ds: 0.05
+         di: 0.4
          dynamics: 
            d_type: 1
-           d_data: [-0.1]
+           d_data: [-10.0]
          t_links:
             - link_frame: lbr_iiwa_link_7
               geometries: 
@@ -234,11 +234,11 @@ task_definitions:
          name: velvet_fingers_points_avoidance
          is_equality_task: 0
          task_frame: world
-         ds: 0.0 #safety margin
+         ds: 0.01 #safety margin
          di: 0.03  #influence zone
          dynamics: 
            d_type: 1
-           d_data: [-0.005]
+           d_data: [-2.0]
          t_links:
             - link_frame: world
               geometries: 

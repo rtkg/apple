@@ -92,7 +92,6 @@ private:
     //**Grasp definition - this should be modified to grasp different objects */
     GraspInterval grasp_;
     PlaceInterval place_zone_; ///< placement zone for the object
-    lbr_fri::SetStiffness cart_stiffness_;
     Eigen::VectorXd t_prog_prev_;
 
     ros::Subscriber task_status_sub_;
@@ -149,6 +148,7 @@ private:
     bool loadPersistentTasks();
     bool getGraspInterval();
     bool getPileGraspInterval();
+    bool setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc);
 
     //double maximumNorm(std::vector<double>const& e);
 

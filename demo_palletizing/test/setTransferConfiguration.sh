@@ -3,6 +3,8 @@ rosservice call /apple/apple_hqp_vel_controller/activate_hqp_control false
 #clean the controller
 rosservice call /apple/apple_hqp_vel_controller/reset_hqp_control 
 
+rosservice call /apple/iiwa_hw_interface/set_stiffness "{sx: 1000.0, sy: 1000.0, sz: 1000.0, sa: 200.0, sb: 200.0, sc: 200.0}"
+
 #load the persistent tasks
 rosservice call /apple/apple_hqp_vel_controller/load_tasks "task_definitions"
 
