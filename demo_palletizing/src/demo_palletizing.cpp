@@ -14,7 +14,7 @@
 namespace demo_palletizing
 {
 //-----------------------------------------------------------------
-DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-4), task_timeout_tol_(0.15)
+DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5), task_timeout_tol_(0.25)
 {
 
     //handle to home
@@ -722,13 +722,13 @@ bool DemoPalletizing::setObjectExtract()
     hqp_controllers_msgs::TaskGeometry t_geom;
 
 
-    //EE ON HORIZONTAL PLANE
+    //EE ON ATTACK POINT
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
-    task.name = "ee_on_horizontal_plane";
+    task.name = "ee_on_attack_point";
     task.is_equality_task = true;
     task.task_frame = grasp_.obj_frame_;
     task.ds = 0.0;
@@ -738,10 +738,9 @@ bool DemoPalletizing::setObjectExtract()
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(EXTRACT_HEIGHT);
-    t_link.link_frame = "world";
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
+    t_geom.g_data.push_back(grasp_.p_(0) - grasp_.a_(0)*0.1); t_geom.g_data.push_back(grasp_.p_(1) - grasp_.a_(1)*0.1); t_geom.g_data.push_back(grasp_.p_(2) + 0.01);
+    t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -767,7 +766,7 @@ bool DemoPalletizing::setObjectExtract()
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 2);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -779,7 +778,7 @@ bool DemoPalletizing::setObjectExtract()
     a(0) = grasp_.a_(0); a(1) = grasp_.a_(1);
     a.normalize();
     t_geom.g_data.push_back(a(0)); t_geom.g_data.push_back(a(1)); t_geom.g_data.push_back(a(2));
-    t_geom.g_data.push_back(ALIGNMENT_ANGLE * 4);
+    t_geom.g_data.push_back(ALIGNMENT_ANGLE);
     t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -806,14 +805,14 @@ bool DemoPalletizing::setObjectExtract()
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 2);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 2);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(ALIGNMENT_ANGLE * 2);
+    t_geom.g_data.push_back(ALIGNMENT_ANGLE / 2);
     t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -828,7 +827,6 @@ bool DemoPalletizing::setObjectExtract()
     task.t_links.push_back(t_link);
 
     tasks_.request.tasks.push_back(task);
-
 
     //send the filled task message to the controller
     if(!sendStateTasks())
@@ -1740,58 +1738,44 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
     }
 
+    {//OBJECT EXTRACT
+      ROS_INFO("Trying object extract.");
+      boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+      task_status_changed_ = false;
+      task_success_ = false;
+      deactivateHQPControl();
+      if(!resetState())
+        {
+    	  ROS_ERROR("Could not reset the state!");
+    	  safeShutdown();
+    	  return false;
+        }
+       if(!setCartesianStiffness(1000, 1000, 1000, 100, 100, 100))
+        {
+            safeShutdown();
+            return false;
+        }
+      if(!setObjectExtract())
+        {
+    	  ROS_ERROR("Could not set the object extract!");
+    	  safeShutdown();
+    	  return false;
+        }
 
+      task_error_tol_ = 1e-4;
+      activateHQPControl();
 
-    // {//OBJECT EXTRACT
-    //   ROS_INFO("Trying object extract.");
-    //   boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-    //   task_status_changed_ = false;
-    //   task_success_ = false;
-    //   deactivateHQPControl();
-    //   if(!resetState())
-    //     {
-    // 	  ROS_ERROR("Could not reset the state!");
-    // 	  safeShutdown();
-    // 	  return false;
-    //     }
+      while(!task_status_changed_)
+    	cond_.wait(lock);
 
-    //   if(!with_gazebo_)
-    //     {
-    // 	  //SET NOMINAL STIFFNESS
-    // 	  cart_stiffness_.request.sx = 1000;
-    // 	  cart_stiffness_.request.sy = 100;
-    // 	  cart_stiffness_.request.sz = 100;
-    // 	  cart_stiffness_.request.sa = 100;
-    // 	  cart_stiffness_.request.sb = 100;
-    // 	  cart_stiffness_.request.sc = 100;
-    // 	  if(!set_stiffness_clt_.call(cart_stiffness_))
-    //         {
-    // 	      ROS_ERROR("Could not set the cartesian stiffness!");
-    // 	      safeShutdown();
-    // 	      return false;
-    //         }
-    //     }
-    //   if(!setObjectExtract())
-    //     {
-    // 	  ROS_ERROR("Could not set the object extract!");
-    // 	  safeShutdown();
-    // 	  return false;
-    //     }
-
-    //   task_error_tol_ = 1e-2;
-    //   activateHQPControl();
-
-    //   while(!task_status_changed_)
-    // 	cond_.wait(lock);
-
-    //   if(!task_success_)
-    //     {
-    // 	  ROS_ERROR("Could not complete the object extract tasks!");
-    // 	  safeShutdown();
-    // 	  return false;
-    //     }
-    //   ROS_INFO("Object extract tasks executed successfully.");
-    // }
+      if(!task_success_)
+        {
+    	  ROS_ERROR("Could not complete the object extract tasks!");
+    	  safeShutdown();
+    	  return false;
+        }
+      ROS_INFO("Object extract tasks executed successfully.");
+    }
 
 #if 0
     {//OBJECT TRANSFER
@@ -1967,12 +1951,12 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator transfer state tasks executed successfully.");
     }
-
+#endif
     deactivateHQPControl();
     resetState();
     reset_hqp_control_clt_.call(srv);
     pers_task_vis_ids_.clear();
-#endif
+
     ROS_INFO("DEMO FINISHED.");
 
     return true;
