@@ -14,7 +14,7 @@
 namespace demo_palletizing
 {
 //-----------------------------------------------------------------
-DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5), task_timeout_tol_(0.25)
+DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5), task_timeout_tol_(0.5)
 {
 
     //handle to home
@@ -172,11 +172,11 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place_zone_.place_frame_ = "world";
     place_zone_.e_frame_ = "velvet_fingers_palm";
     place_zone_.e_.setZero();
-    place_zone_.p_(0) = 0.7; place_zone_.p_(1) = -0.4; place_zone_.p_(2) = 0.13; //reference point on the cylinder axis
+    place_zone_.p_(0) = 0.7; place_zone_.p_(1) = -0.4; place_zone_.p_(2) = 0.15; //reference point on the cylinder axis
     place_zone_.v_(0) = 0.0; place_zone_.v_(1) = 0.0; place_zone_.v_(2) = 1.0; //cylinder normal
-    place_zone_.r_ = 0.05;
+    place_zone_.r_ = 0.03;
     place_zone_.n_ = place_zone_.v_;
-    place_zone_.d_ = 0.22;
+    place_zone_.d_ = 0.24;
 
 }
 //-----------------------------------------------------------------
@@ -572,7 +572,7 @@ bool DemoPalletizing::setObjectPlace()
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 2);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -599,7 +599,7 @@ bool DemoPalletizing::setObjectPlace()
 
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
-    task.name = "ee_in_placement_cylinder";
+    task.name = "ee_in_placement_cylinder (place)";
     task.is_equality_task = false;
     task.task_frame = place_zone_.place_frame_;
     task.ds = 0.0;
@@ -1493,7 +1493,7 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
         {
             task_status_changed_ = true;
             task_success_ = true;
-            ROS_WARN("Task execution timeout!");
+            ROS_WARN("Task execution timeout! e: %f", e);
 
             //std::cerr<<"t: "<<"t - t_stag: "<<t.tv_sec - t_stag.tv_sec + 0.000001 * (t.tv_usec - t_stag.tv_usec)<<" task_timeout_tol_: "<<task_timeout_tol_<<std::endl;
             //std::cerr<<"e_diff: "<<e_diff<<" e_diff_tol_: "<<task_diff_tol_<<std::endl<<std::endl;
@@ -1777,7 +1777,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
       ROS_INFO("Object extract tasks executed successfully.");
     }
 
-#if 0
+
     {//OBJECT TRANSFER
         ROS_INFO("Trying object transfer.");
 
@@ -1843,8 +1843,8 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-        task_error_tol_ = 5 * 1e-3;
-        task_diff_tol_ = 1e-4;
+        task_error_tol_ = 5 * 1e-4;
+        task_diff_tol_ = 1e-5;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1871,7 +1871,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
 
     }
-
+#if 0
     {//GRIPPER EXTRACT
         ROS_INFO("Trying gripper extract.");
 

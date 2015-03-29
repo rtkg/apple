@@ -24,7 +24,7 @@
 
   <!-- half pallet on the citi truck-->
   <xacro:half_pallet name="transport_pallet" parent="citi_truck_base">
-    <origin xyz="0.6 0 -0.0899" rpy="0 0 0" />
+    <origin xyz="0.6 0 -0.0699" rpy="0 0 0" />
   </xacro:half_pallet> 
 
   <!-- half pallet for loading -->
