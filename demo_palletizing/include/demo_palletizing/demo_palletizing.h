@@ -139,7 +139,7 @@ private:
     void safeShutdown();
 
     bool setJointConfiguration(std::vector<double> const& joints);
-
+    bool setTransferConfiguration(std::vector<double> const& joints);
     bool setGraspApproach();
     bool setObjectExtract();
     bool setObjectTransfer();
