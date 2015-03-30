@@ -169,11 +169,11 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place_zone_.place_frame_ = "world";
     place_zone_.e_frame_ = "velvet_fingers_palm";
     place_zone_.e_(0) = 0.16;  place_zone_.e_(1) = 0.0;  place_zone_.e_(2) = 0.0;
-    place_zone_.p_(0) = 0.8; place_zone_.p_(1) = -0.3; place_zone_.p_(2) = 0.15; //reference point on the cylinder axis
+    place_zone_.p_(0) = 0.75; place_zone_.p_(1) = 0.2; /*-0.2 0.0 0.2*/ place_zone_.p_(2) = 0.15; //reference point on the cylinder axis
     place_zone_.v_(0) = 0.0; place_zone_.v_(1) = 0.0; place_zone_.v_(2) = 1.0; //cylinder normal
     place_zone_.r_ = 0.03;
     place_zone_.n_ = place_zone_.v_;
-    place_zone_.d_ = 0.25;
+    place_zone_.d_ = 0.2;
 
 }
 //-----------------------------------------------------------------
@@ -981,25 +981,25 @@ bool DemoPalletizing::setGraspApproach()
     ROS_ASSERT(grasp_.p_(2) >= 0.23);
     ROS_ASSERT(grasp_.a_(0) >= 0.0);
 
-    //EE ON SAGITTAL PLANE
+    //EE ON HORIZONTAL PLANE
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
-    task.name = "ee_on_attack_point";
+    task.name = "ee_on_horizontal_plane";
     task.is_equality_task = true;
     task.task_frame = grasp_.obj_frame_;
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 3/2);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    t_geom.g_data.push_back(grasp_.n1_(0)); t_geom.g_data.push_back(grasp_.n1_(1)); t_geom.g_data.push_back(grasp_.n1_(2));
-    t_geom.g_data.push_back(grasp_.d1_);
+    t_geom.g_data.push_back(0.0); t_geom.g_data.push_back(0.0); t_geom.g_data.push_back(1.0);
+    t_geom.g_data.push_back(grasp_.p_(2));
     t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -1014,28 +1014,19 @@ bool DemoPalletizing::setGraspApproach()
 
     tasks_.request.tasks.push_back(task);
 
-
-
-
-
-
-
-
-
- //LOWER GRASP INTERVAL PLANE
+    //CONSTRAINT CYLINDER
     task.t_links.clear();
     task.dynamics.d_data.clear();
 
     task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
+    task.name = "ee_in_constraint_cylinder";
     task.is_equality_task = false;
     task.task_frame = grasp_.obj_frame_;
     task.ds = 0.0;
-    task.di = 0.02;
+    task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 5);
-
-
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 3/2);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -1045,20 +1036,17 @@ bool DemoPalletizing::setGraspApproach()
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
+    t_geom.g_data.push_back(grasp_.p_(0)); t_geom.g_data.push_back(grasp_.p_(1)); t_geom.g_data.push_back(0.14);
+    t_geom.g_data.push_back(0.0); t_geom.g_data.push_back(0.0); t_geom.g_data.push_back(1.0);
+    t_geom.g_data.push_back(0.005);
+    t_link.link_frame = grasp_.obj_frame_;
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
     tasks_.request.tasks.push_back(task);
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     //GRIPPER APPROACH AXIS ALIGNMENT
     task.t_links.clear();
@@ -1072,7 +1060,7 @@ bool DemoPalletizing::setGraspApproach()
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 2/3 );
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 2);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -1111,7 +1099,7 @@ bool DemoPalletizing::setGraspApproach()
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 2);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 4);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -1537,8 +1525,15 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
         {
             task_status_changed_ = true;
             task_success_ = true;
-            ROS_WARN("Task execution timeout! e: %f", e);
+            ROS_WARN("Task execution timeout!");
+            for(unsigned int i=0; i<monitored_tasks_.size(); i++)
+                std::cerr<<monitored_tasks_[i]<<" ";
 
+            std::cerr<<std::endl<<"task statuses: "<<std::endl;
+            for( std::vector<hqp_controllers_msgs::TaskStatus>::iterator it = msg->statuses.begin(); it!=msg->statuses.end(); ++it)
+                std::cerr<<"id: "<<it->id<<" name: "<<it->name<<" progress: "<<it->progress<<std::endl;
+
+            std::cerr<<"e: "<<e<<std::endl<<std::endl;
             //std::cerr<<"t: "<<"t - t_stag: "<<t.tv_sec - t_stag.tv_sec + 0.000001 * (t.tv_usec - t_stag.tv_usec)<<" task_timeout_tol_: "<<task_timeout_tol_<<std::endl;
             //std::cerr<<"e_diff: "<<e_diff<<" e_diff_tol_: "<<task_diff_tol_<<std::endl<<std::endl;
 
@@ -1735,7 +1730,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-        task_error_tol_ =  5 * 1e-4;
+        task_error_tol_ =  1e-3;
         activateHQPControl();
 
         while(!task_status_changed_)
@@ -1849,7 +1844,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             safeShutdown();
             return false;
         }
-        task_error_tol_ = 5 * 1e-3;
+        task_error_tol_ = 5 * 1e-4;
         activateHQPControl();
 
         while(!task_status_changed_)
