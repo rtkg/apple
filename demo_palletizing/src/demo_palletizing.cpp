@@ -49,7 +49,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
         velvet_grasp_clt_ = n_.serviceClient<velvet_interface_node::SmartGrasp>("velvet_grasp");
         set_stiffness_clt_ = n_.serviceClient<lbr_fri::SetStiffness>("set_stiffness");
         //get_grasp_interval_clt_.waitForExistence();
-	//  velvet_pos_clt_.waitForExistence();
+        //  velvet_pos_clt_.waitForExistence();
         //velvet_grasp_clt_.waitForExistence();
         set_stiffness_clt_.waitForExistence();
     }
@@ -154,8 +154,8 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
 
     // place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
 
-     place_locations_.resize(1);
-     place_locations_[0](0) = 0.75; place_locations_[0](1) = 0.0; place_locations_[0](2) = 0.15;     
+    place_locations_.resize(1);
+    place_locations_[0](0) = 0.75; place_locations_[0](1) = 0.0; place_locations_[0](2) = 0.15;
 }
 //-----------------------------------------------------------------
 bool DemoPalletizing::setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc)
@@ -511,6 +511,66 @@ bool DemoPalletizing::setObjectTransfer()
 
     tasks_.request.tasks.push_back(task);
 
+    //    [2.1472751520548883, 0.5899616425784506, -0.971957093441632, -1.7346464362202543, 0.553561321519731, 0.6201217041427647, -2.101610283239774
+    t_link.geometries.resize(1);
+    t_geom.g_data.resize(1);
+    task.t_links.clear();
+    task.dynamics.d_data.clear();
+    task.t_type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
+    task.priority = 3;
+    task.name = "joint_setpoints (object transfer)";
+    task.is_equality_task = true;
+    task.task_frame = "world";
+    task.ds = 0.0;
+    task.di = 1.0;
+    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
+
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "lbr_iiwa_link_1";
+    task.t_links.push_back(t_link);
+
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "lbr_iiwa_link_2";
+    task.t_links.push_back(t_link);
+
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "lbr_iiwa_link_3";
+    task.t_links.push_back(t_link);
+
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "lbr_iiwa_link_4";
+    task.t_links.push_back(t_link);
+
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "lbr_iiwa_link_5";
+    task.t_links.push_back(t_link);
+
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "lbr_iiwa_link_6";
+    task.t_links.push_back(t_link);
+
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "lbr_iiwa_link_7";
+    task.t_links.push_back(t_link);
+
+#ifdef HQP_GRIPPER_JOINT
+    t_geom.g_data[0] = 0;
+    t_link.geometries[0] = t_geom;
+    t_link.link_frame = "velvet_fingers_right";
+    task.t_links.push_back(t_link);
+#endif
+
+    tasks_.request.tasks.push_back(task);
+
     //send the filled task message to the controller
     if(!sendStateTasks())
         return false;
@@ -530,7 +590,7 @@ bool DemoPalletizing::setObjectTransfer()
     return true;
 }
 //-----------------------------------------------------------------
-bool DemoPalletizing::setTransferConfiguration(std::vector<double> const& joints)
+bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
 {
 #ifdef HQP_GRIPPER_JOINT
     ROS_ASSERT(joints.size() == 8);//7 joints for the lbr iiwa + 1 velvet fingers joint
@@ -540,17 +600,121 @@ bool DemoPalletizing::setTransferConfiguration(std::vector<double> const& joints
 
     hqp_controllers_msgs::Task task;
     hqp_controllers_msgs::TaskLink t_link;
-    t_link.geometries.resize(1);
     hqp_controllers_msgs::TaskGeometry t_geom;
-    t_geom.g_data.resize(1);
 
-    task.t_type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
+    //LINK 5 ABOVE HORIZONTAL PLANE
+    task.t_links.clear();
+    task.dynamics.d_data.clear();
+
+    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
     task.priority = 2;
+    task.name = "lbr_iiwa_link_5_above_horizontal_plane (joint configuration)";
+    task.is_equality_task = false;
+    task.task_frame = "world";
+    task.ds = 0.0;
+    task.di = 0.02;
+    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 3);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
+    t_geom.g_data.push_back(EXTRACT_HEIGHT);
+    t_link.link_frame = "world";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
+    t_geom.g_data.push_back(0.075);
+    t_link.link_frame = "lbr_iiwa_link_5";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    tasks_.request.tasks.push_back(task);
+
+    //LINK 6 ABOVE HORIZONTAL PLANE
+    task.t_links.clear();
+    task.dynamics.d_data.clear();
+
+    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
+    task.priority = 2;
+    task.name = "lbr_iiwa_link_6_above_horizontal_plane (joint configuration)";
+    task.is_equality_task = false;
+    task.task_frame = "world";
+    task.ds = 0.0;
+    task.di = 0.02;
+    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 3);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
+    t_geom.g_data.push_back(EXTRACT_HEIGHT);
+    t_link.link_frame = "world";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
+    t_geom.g_data.push_back(0.1);
+    t_link.link_frame = "lbr_iiwa_link_6";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    tasks_.request.tasks.push_back(task);
+
+    //PALM ABOVE HORIZONTAL PLANE
+    task.t_links.clear();
+    task.dynamics.d_data.clear();
+
+    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
+    task.priority = 2;
+    task.name = "velvet_fingers_palm_above_horizontal_plane (joint configuration)";
+    task.is_equality_task = false;
+    task.task_frame = "world";
+    task.ds = 0.0;
+    task.di = 0.02;
+    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 3);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
+    t_geom.g_data.push_back(EXTRACT_HEIGHT);
+    t_link.link_frame = "world";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    t_geom.g_data.push_back(0.04); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0.025);
+    t_geom.g_data.push_back(0.11);
+    t_link.link_frame = "velvet_fingers_palm";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    tasks_.request.tasks.push_back(task);
+
+    t_link.geometries.resize(1);
+    t_geom.g_data.resize(1);
+    task.t_links.clear();
+    task.dynamics.d_data.clear();
+    task.t_type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
+    task.priority = 3;
     task.name = "joint_setpoints";
     task.is_equality_task = true;
     task.task_frame = "world";
     task.ds = 0.0;
-    task.di = 1.0;
+    task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
     task.dynamics.d_data.push_back(DYNAMICS_GAIN * 4);
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
@@ -599,50 +763,17 @@ bool DemoPalletizing::setTransferConfiguration(std::vector<double> const& joints
 
     tasks_.request.tasks.push_back(task);
 
-    //EE ON HORIZONTAL PLANE
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-
-    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
-    task.priority = 1;
-    task.name = "ee_above_horizontal_plane (transfer configuration)";
-    task.is_equality_task = false;
-    task.task_frame = "world";
-    task.ds = 0.0;
-    task.di = 1;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 3);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(EXTRACT_HEIGHT);
-    t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
-    t_link.link_frame = place_zone_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
     //send the filled task message to the controller
     if(!sendStateTasks())
         return false;
 
-    //monitor the task
-    monitored_tasks_.push_back(tasks_.response.ids[0]);
-    monitored_tasks_.push_back(tasks_.response.ids[1]);
+    //monitor only the last task
+    monitored_tasks_.push_back(tasks_.response.ids.back());
 
-    //could start joint target visualization here, but its messed up for the joints anyway ...
+    //visualize all tasks except of the last one
     std::vector<unsigned int> ids = pers_task_vis_ids_;
-    ids.push_back(tasks_.response.ids[1]);
+    for(unsigned int i=0; i<tasks_.response.ids.size() - 1;i++)
+        ids.push_back(tasks_.response.ids[i]);
 
     if(!visualizeStateTasks(ids))
         return false;
@@ -1443,87 +1574,6 @@ bool DemoPalletizing::setGraspApproach()
     return true;
 }
 //-----------------------------------------------------------------
-bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
-{
-#ifdef HQP_GRIPPER_JOINT
-    ROS_ASSERT(joints.size() == 8);//7 joints for the lbr iiwa + 1 velvet fingers joint
-#else
-    ROS_ASSERT(joints.size() == 7);
-#endif
-
-    hqp_controllers_msgs::Task task;
-    hqp_controllers_msgs::TaskLink t_link;
-    t_link.geometries.resize(1);
-    hqp_controllers_msgs::TaskGeometry t_geom;
-    t_geom.g_data.resize(1);
-
-    task.t_type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
-    task.priority = 2;
-    task.name = "joint_setpoints";
-    task.is_equality_task = true;
-    task.task_frame = "world";
-    task.ds = 0.0;
-    task.di = 1.0;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 4);
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
-
-    t_geom.g_data[0] = joints[0];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_1";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = joints[1];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_2";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = joints[2];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_3";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = joints[3];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_4";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = joints[4];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_5";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = joints[5];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_6";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = joints[6];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_7";
-    task.t_links.push_back(t_link);
-
-#ifdef HQP_GRIPPER_JOINT
-    t_geom.g_data[0] = joints[7];
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "velvet_fingers_right";
-    task.t_links.push_back(t_link);
-#endif
-
-    tasks_.request.tasks.push_back(task);
-
-    //send the filled task message to the controller
-    if(!sendStateTasks())
-        return false;
-
-    //monitor the task
-    monitored_tasks_.push_back(tasks_.response.ids[0]);
-
-    //could start joint target visualization here, but its messed up for the joints anyway ...
-
-    return true;
-}
-//-----------------------------------------------------------------
 void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArrayPtr& msg)
 {
     boost::mutex::scoped_lock lock(manipulator_tasks_m_, boost::try_to_lock);
@@ -1792,7 +1842,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     safeShutdown();
                     return false;
                 }
-		grasp_success = true; //REEEEEEEEEEMOOOOOOOOOOOOOOOVEEEEEEEEEE!!!!!!!!!
+                grasp_success = true; //REEEEEEEEEEMOOOOOOOOOOOOOOOVEEEEEEEEEE!!!!!!!!!
 #if 0
                 deactivateHQPControl();
                 //VELVET GRASP_
@@ -1951,7 +2001,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 ROS_ERROR("could not call velvet to pos");
                 ROS_BREAK();
             }
-
         }
 
         {//GRIPPER EXTRACT
@@ -2014,7 +2063,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             return false;
         }
 
-        if(!setTransferConfiguration(transfer_config_))
+        if(!setJointConfiguration(transfer_config_))
         {
             ROS_ERROR("Could not set manipulator transfer configuration!");
             safeShutdown();
