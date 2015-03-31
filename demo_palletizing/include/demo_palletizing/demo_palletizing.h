@@ -121,7 +121,7 @@ private:
     //** map holding the ids of those tasks whose completion indicates a state change*/
     std::vector<unsigned int> monitored_tasks_;
     // std::map<std::string, hqp_controllers_msgs::TaskObject> task_object_templates_;
-
+  std::vector<Eigen::Vector3d> place_locations_;
 
     //** To be called before entering a new state*/
     bool resetState();
