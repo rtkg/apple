@@ -149,13 +149,13 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place_zone_.n_ = place_zone_.v_;
     place_zone_.d_ = 0.25;
 
-    // place_locations_.resize(3);
-    // place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
+     place_locations_.resize(3);
+     place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
+     place_locations_[1](0) = 0.75; place_locations_[1](1) = 0.0; place_locations_[1](2) = 0.15;
+     place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
 
-    // place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
-
-    place_locations_.resize(1);
-    place_locations_[0](0) = 0.75; place_locations_[0](1) = 0.0; place_locations_[0](2) = 0.15;
+    // place_locations_.resize(1);
+    //place_locations_[0](0) = 0.75; place_locations_[0](1) = 0.0; place_locations_[0](2) = 0.15;
 }
 //-----------------------------------------------------------------
 bool DemoPalletizing::setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc)
@@ -387,7 +387,7 @@ bool DemoPalletizing::setObjectTransfer()
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 1.5);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -511,9 +511,8 @@ bool DemoPalletizing::setObjectTransfer()
 
     tasks_.request.tasks.push_back(task);
 
-    //    [2.1472751520548883, 0.5899616425784506, -0.971957093441632, -1.7346464362202543, 0.553561321519731, 0.6201217041427647, -2.101610283239774
     t_link.geometries.resize(1);
-    t_geom.g_data.resize(1);
+     t_geom.g_data.resize(1);
     task.t_links.clear();
     task.dynamics.d_data.clear();
     task.t_type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
@@ -527,37 +526,37 @@ bool DemoPalletizing::setObjectTransfer()
     task.dynamics.d_data.push_back(DYNAMICS_GAIN);
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
 
-    t_geom.g_data[0] = 0;
+    t_geom.g_data[0] = 0; //2.15
     t_link.geometries[0] = t_geom;
     t_link.link_frame = "lbr_iiwa_link_1";
     task.t_links.push_back(t_link);
 
-    t_geom.g_data[0] = 0;
+    t_geom.g_data[0] = 0;//0.59
     t_link.geometries[0] = t_geom;
     t_link.link_frame = "lbr_iiwa_link_2";
     task.t_links.push_back(t_link);
 
-    t_geom.g_data[0] = 0;
+    t_geom.g_data[0] = 0;//-0.97
     t_link.geometries[0] = t_geom;
     t_link.link_frame = "lbr_iiwa_link_3";
     task.t_links.push_back(t_link);
 
-    t_geom.g_data[0] = 0;
+    t_geom.g_data[0] = 0;//-1.73
     t_link.geometries[0] = t_geom;
     t_link.link_frame = "lbr_iiwa_link_4";
     task.t_links.push_back(t_link);
 
-    t_geom.g_data[0] = 0;
+    t_geom.g_data[0] = 0;//0.55
     t_link.geometries[0] = t_geom;
     t_link.link_frame = "lbr_iiwa_link_5";
     task.t_links.push_back(t_link);
 
-    t_geom.g_data[0] = 0;
+    t_geom.g_data[0] = 0.6;//0.62
     t_link.geometries[0] = t_geom;
     t_link.link_frame = "lbr_iiwa_link_6";
     task.t_links.push_back(t_link);
 
-    t_geom.g_data[0] = 0;
+    t_geom.g_data[0] = 0;//-2.10
     t_link.geometries[0] = t_geom;
     t_link.link_frame = "lbr_iiwa_link_7";
     task.t_links.push_back(t_link);
@@ -1895,7 +1894,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 return false;
             }
 
-            task_error_tol_ = 1e-3;
+            task_error_tol_ = 2 * 1e-3;
             activateHQPControl();
 
             while(!task_status_changed_)
@@ -1936,7 +1935,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 safeShutdown();
                 return false;
             }
-            task_error_tol_ = 5 * 1e-4;
+            task_error_tol_ = 10 * 1e-4;
             activateHQPControl();
 
             while(!task_status_changed_)
@@ -2043,7 +2042,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             ROS_INFO("Gripper extract tasks executed successfully.");
         }
     }
-
+#if 0
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
 
@@ -2083,7 +2082,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator transfer configuration tasks executed successfully.");
     }
-
+#endif
     deactivateHQPControl();
     resetState();
     reset_hqp_control_clt_.call(srv);
