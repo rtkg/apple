@@ -48,9 +48,9 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
         velvet_pos_clt_ = n_.serviceClient<velvet_interface_node::VelvetToPos>("velvet_pos");
         velvet_grasp_clt_ = n_.serviceClient<velvet_interface_node::SmartGrasp>("velvet_grasp");
         set_stiffness_clt_ = n_.serviceClient<lbr_fri::SetStiffness>("set_stiffness");
-        get_grasp_interval_clt_.waitForExistence();
-        velvet_pos_clt_.waitForExistence();
-        velvet_grasp_clt_.waitForExistence();
+        //get_grasp_interval_clt_.waitForExistence();
+	//  velvet_pos_clt_.waitForExistence();
+        //velvet_grasp_clt_.waitForExistence();
         set_stiffness_clt_.waitForExistence();
     }
     else
@@ -149,10 +149,13 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place_zone_.n_ = place_zone_.v_;
     place_zone_.d_ = 0.25;
 
-    place_locations_.resize(3);
-    place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
-    place_locations_[1](0) = 0.75; place_locations_[1](1) = 0.0; place_locations_[1](2) = 0.15;
-    place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
+    // place_locations_.resize(3);
+    // place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
+
+    // place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
+
+     place_locations_.resize(1);
+     place_locations_[0](0) = 0.75; place_locations_[0](1) = 0.0; place_locations_[0](2) = 0.15;     
 }
 //-----------------------------------------------------------------
 bool DemoPalletizing::setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc)
@@ -1789,6 +1792,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     safeShutdown();
                     return false;
                 }
+		grasp_success = true; //REEEEEEEEEEMOOOOOOOOOOOOOOOVEEEEEEEEEE!!!!!!!!!
 #if 0
                 deactivateHQPControl();
                 //VELVET GRASP_
