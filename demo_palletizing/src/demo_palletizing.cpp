@@ -1648,46 +1648,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 ROS_BREAK();
             }
         }
-
-        {//GRIPPER EXTRACT
-            ROS_INFO("Trying gripper extract.");
-
-            boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-            task_status_changed_ = false;
-            task_success_ = false;
-            deactivateHQPControl();
-            if(!resetState())
-            {
-                ROS_ERROR("Could not reset the state!");
-                safeShutdown();
-                return false;
-            }
-            if(!setCartesianStiffness(1000, 1000, 1000, 100, 100, 100))
-            {
-                safeShutdown();
-                return false;
-            }
-
-            if(!setJointConfiguration(place_zones_[i].joints_))
-            {
-                ROS_ERROR("Could not set the gripper extract!");
-                safeShutdown();
-                return false;
-            }
-            task_error_tol_ = 1e-2;
-            activateHQPControl();
-
-            while(!task_status_changed_)
-                cond_.wait(lock);
-
-            if(!task_success_)
-            {
-                ROS_ERROR("Could not complete the gripper extract tasks!");
-                safeShutdown();
-                return false;
-            }
-            ROS_INFO("Gripper extract tasks executed successfully.");
-        }
     }
 
     {//MANIPULATOR TRANSFER CONFIGURATION
