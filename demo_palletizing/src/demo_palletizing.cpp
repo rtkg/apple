@@ -162,7 +162,8 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
 
     place.joints_.clear();
     place.p_(1) = -0.2;
-    place.joints_ += 2.36, -0.05, -1.01, -1.83, -0.13, 1.00, -1.68;
+    //    place.joints_ += 2.36, -0.05, -1.01, -1.83, -0.13, 1.00, -1.68;
+    place.joints_ += 0.038, -0.26, 0.94, -1.88, 0.51, 1.01, -2.29;
     place_zones_.push_back(place);
 }
 //-----------------------------------------------------------------
@@ -340,6 +341,41 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     hqp_controllers_msgs::TaskLink t_link;
     hqp_controllers_msgs::TaskGeometry t_geom;
 
+
+    //LINK 4 ABOVE HORIZONTAL PLANE
+    task.t_links.clear();
+    task.dynamics.d_data.clear();
+
+    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
+    task.priority = 2;
+    task.name = "lbr_iiwa_link_4_above_horizontal_plane (joint configuration)";
+    task.is_equality_task = false;
+    task.task_frame = "world";
+    task.ds = 0.0;
+    task.di = 0.02;
+    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 3);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
+    t_geom.g_data.push_back(SAFETY_HEIGHT);
+    t_link.link_frame = "world";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::SPHERE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
+    t_geom.g_data.push_back(0.12);
+    t_link.link_frame = "lbr_iiwa_link_4";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    tasks_.request.tasks.push_back(task);
+
     //LINK 5 ABOVE HORIZONTAL PLANE
     task.t_links.clear();
     task.dynamics.d_data.clear();
@@ -454,7 +490,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 4);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
 
     t_geom.g_data[0] = joints[0];
@@ -604,7 +640,7 @@ bool DemoPalletizing::setObjectPlace(PlaceInterval const& place)
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back( DYNAMICS_GAIN);
+    task.dynamics.d_data.push_back( DYNAMICS_GAIN / 2);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -1626,20 +1662,19 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 safeShutdown();
                 return false;
             }
-            if(!setCartesianStiffness(1000, 100, 100, 100, 100, 100))
+            if(!setCartesianStiffness(1000, 1000, 1000, 100, 100, 100))
             {
                 safeShutdown();
                 return false;
             }
 
             if(!setJointConfiguration(place_zones_[i].joints_))
-//            if(!setGripperExtract(place_zones_[i]))
             {
                 ROS_ERROR("Could not set the gripper extract!");
                 safeShutdown();
                 return false;
             }
-            task_error_tol_ = 5 * 1e-3;
+            task_error_tol_ = 1e-2;
             activateHQPControl();
 
             while(!task_status_changed_)
