@@ -3,7 +3,7 @@
 #include <math.h>
 #include <limits>
 #include <time.h>
-
+#include <boost/assign/std/vector.hpp>
 #include <hqp_controllers_msgs/TaskGeometry.h>
 #include <hqp_controllers_msgs/RemoveTasks.h>
 #include <hqp_controllers_msgs/ActivateHQPControl.h>
@@ -13,6 +13,7 @@
 
 namespace demo_palletizing
 {
+using namespace boost::assign;
 //-----------------------------------------------------------------
 DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5), task_timeout_tol_(0.5)
 {
@@ -92,6 +93,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     load_tasks_clt_.waitForExistence();
     reset_hqp_control_clt_.waitForExistence();
 
+    //PRE-DEFINED JOINT CONFIGURATIONS
     //configs have to be within the safety margins of the joint limits
 #ifdef HQP_GRIPPER_JOINT
     unsigned int n_jnts = 8;
@@ -124,6 +126,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     sensing_config_[7] = 0.1;
 #endif
 
+    //DEFAULT GRASP
     grasp_.obj_frame_ = "world"; //object frame
     grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
     grasp_.e_.setZero(); //endeffector point expressed in the endeffector frame
@@ -139,23 +142,28 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     grasp_.d1_ = 0.2; grasp_.d2_= -0.35; //plane offsets
 #endif
 
-    //placement zone
-    place_zone_.place_frame_ = "world";
-    place_zone_.e_frame_ = "velvet_fingers_palm";
-    place_zone_.e_(0) = 0.16;  place_zone_.e_(1) = 0.0;  place_zone_.e_(2) = 0.0;
-    place_zone_.p_(0) = 0.75; place_zone_.p_(1) = -0.2; /*-0.2 0.0 0.2*/ place_zone_.p_(2) = 0.15; //reference point on the cylinder axis
-    place_zone_.v_(0) = 0.0; place_zone_.v_(1) = 0.0; place_zone_.v_(2) = 1.0; //cylinder normal
-    place_zone_.r_ = 0.02;
-    place_zone_.n_ = place_zone_.v_;
-    place_zone_.d_ = 0.25;
+    //PLACEMENT ZONES
+    PlaceInterval place;
+    place.place_frame_ = "world";
+    place.e_frame_ = "velvet_fingers_palm";
+    place.e_(0) = 0.16; place.e_(1) = 0.0; place.e_(2) = 0.0;
+    place.v_(0) = 0.0; place.v_(1) = 0.0; place.v_(2) = 1.0;
+    place.p_(0) = 0.75; place.p_(1) = 0.2; place.p_(2) = 0.15;
+    place.r_ = 0.02;
+    place.n_(0) = 0.0; place.n_(1) = 0.0; place.n_(2) = 1.0;
+    place.d_ = 0.25;
+    place.joints_ += 1.81, 1.01, -0.75, -1.28, 0.79, 0.85, -2.26;
+    place_zones_.push_back(place);
 
-     place_locations_.resize(3);
-     place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
-     place_locations_[1](0) = 0.75; place_locations_[1](1) = 0.0; place_locations_[1](2) = 0.15;
-     place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
+    place.joints_.clear();
+    place.p_(1) = 0.0;
+    place.joints_ += 2.11, 0.58, -1.00, -1.71, 0.58, 0.82, -2.20;
+    place_zones_.push_back(place);
 
-    // place_locations_.resize(1);
-    //place_locations_[0](0) = 0.75; place_locations_[0](1) = 0.0; place_locations_[0](2) = 0.15;
+    place.joints_.clear();
+    place.p_(1) = -0.2;
+    place.joints_ += 2.36, -0.05, -1.01, -1.83, -0.13, 1.00, -1.68;
+    place_zones_.push_back(place);
 }
 //-----------------------------------------------------------------
 bool DemoPalletizing::setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc)
@@ -266,55 +274,6 @@ bool DemoPalletizing::getGraspInterval()
     return true;
 }
 //-----------------------------------------------------------------
-bool DemoPalletizing::getPileGraspInterval()
-{
-    //    //get the grasp intervall
-    //    hqp_controllers_msgs::FindCanTask grasp;
-    //    if(!get_grasp_interval_clt_.call(grasp))
-    //    {
-    //        ROS_ERROR("Could not obtain the grasp intervall!");
-    //        safeShutdown();
-    //        return false;
-    //    }
-
-    //    ROS_ASSERT(grasp.response.CanTask.size()==4);
-    //    std::vector<double> data;
-    //    grasp_.obj_frame_ = grasp.response.reference_frame;
-
-    //    //BOTTOM PLANE
-    //    ROS_ASSERT(grasp.response.CanTask[0].g_type == hqp_controllers_msgs::TaskGeometry::PLANE);
-    //    data = grasp.response.CanTask[0].g_data;
-    //    ROS_ASSERT(data.size() == 4);
-    //    grasp_.n1_(0) = data[0];  grasp_.n1_(1) = data[1]; grasp_.n1_(2) = data[2];
-    //    grasp_.d1_ = data[3];
-
-    //    //TOP PLANE
-    //    ROS_ASSERT(grasp.response.CanTask[1].g_type == hqp_controllers_msgs::TaskGeometry::PLANE);
-    //    data = grasp.response.CanTask[1].g_data;
-    //    ROS_ASSERT(data.size() == 4);
-    //    grasp_.n2_(0) = data[0];  grasp_.n2_(1) = data[1]; grasp_.n2_(2) = data[2];
-    //    grasp_.d2_ = data[3];
-
-    //    //INNER GRASP CYLINDER
-    //    ROS_ASSERT(grasp.response.CanTask[2].g_type == hqp_controllers_msgs::TaskGeometry::CYLINDER);
-    //    data = grasp.response.CanTask[2].g_data;
-    //    ROS_ASSERT(data.size() == 7);
-    //    grasp_.p_(0) = data[0];  grasp_.p_(1) = data[1]; grasp_.p_(2) = data[2];
-    //    grasp_.v_(0) = data[3];  grasp_.v_(1) = data[4]; grasp_.v_(2) = data[5];
-    //    grasp_.r1_ = data[6];
-
-    //    //OUTER GRASP CYLINDER
-    //    ROS_ASSERT(grasp.response.CanTask[3].g_type == hqp_controllers_msgs::TaskGeometry::CYLINDER);
-    //    data = grasp.response.CanTask[3].g_data;
-    //    ROS_ASSERT(data.size() == 7);
-    //    grasp_.r2_ = data[6];
-
-    //    //Plane normals need to point in opposit directions to give a closed interval
-    //    ROS_ASSERT((grasp_.n1_.transpose() * grasp_.n2_)  <= 0.0);
-
-    return true;
-}
-//-----------------------------------------------------------------
 bool DemoPalletizing::resetState()
 {
     hqp_controllers_msgs::RemoveTasks rem_t_srv;
@@ -369,226 +328,6 @@ bool DemoPalletizing::sendStateTasks()
     return true;
 }
 //-----------------------------------------------------------------
-bool DemoPalletizing::setObjectTransfer()
-{
-    hqp_controllers_msgs::Task task;
-    hqp_controllers_msgs::TaskLink t_link;
-    hqp_controllers_msgs::TaskGeometry t_geom;
-
-    //EE ON HORIZONTAL PLANE
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-
-    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
-    task.priority = 2;
-    task.name = "ee_on_horizontal_plane (transfer)";
-    task.is_equality_task = true;
-    task.task_frame = "world";
-    task.ds = 0.0;
-    task.di = 1;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 1.5);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(EXTRACT_HEIGHT);
-    t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
-    t_link.link_frame = place_zone_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
-    //PLACEMENT_CYLINDER
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-
-    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
-    task.priority = 2;
-    task.name = "ee_in_placement_cylinder";
-    task.is_equality_task = false;
-    task.task_frame = place_zone_.place_frame_;
-    task.ds = 0.0;
-    task.di = 0.02;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
-    t_link.link_frame = place_zone_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
-    t_geom.g_data.push_back(place_zone_.p_(0)); t_geom.g_data.push_back(place_zone_.p_(1)); t_geom.g_data.push_back(place_zone_.p_(2));
-    t_geom.g_data.push_back(place_zone_.v_(0)); t_geom.g_data.push_back(place_zone_.v_(1)); t_geom.g_data.push_back(place_zone_.v_(2));
-    t_geom.g_data.push_back(place_zone_.r_);
-    t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
-    //GRIPPER APPROACH AXIS ALIGNMENT
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-
-    task.t_type = hqp_controllers_msgs::Task::PARALLEL;
-    task.priority = 2;
-    task.name = "gripper_approach_axis_alignment";
-    task.is_equality_task = false;
-    task.task_frame = grasp_.obj_frame_;
-    task.ds = 0.0;
-    task.di = 0.05;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back( DYNAMICS_GAIN);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(-0.707); t_geom.g_data.push_back(0.707); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(ALIGNMENT_ANGLE * 10);
-    t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::LINE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(1); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_link.link_frame = grasp_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
-    //GRIPPER VERTICAL AXIS ALIGNMENT
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-    task.name = "gripper_vertical_axis_alignment";
-    task.t_type = hqp_controllers_msgs::Task::PARALLEL;
-    task.priority = 2;
-    task.is_equality_task = false;
-    task.task_frame = grasp_.obj_frame_;
-    task.ds = 0.0;
-    task.di = 1;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 10);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(ALIGNMENT_ANGLE * 10);
-    t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::LINE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_link.link_frame = grasp_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
-    t_link.geometries.resize(1);
-     t_geom.g_data.resize(1);
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-    task.t_type = hqp_controllers_msgs::Task::JOINT_SETPOINT;
-    task.priority = 3;
-    task.name = "joint_setpoints (object transfer)";
-    task.is_equality_task = true;
-    task.task_frame = "world";
-    task.ds = 0.0;
-    task.di = 1.0;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::JOINT_POSITION;
-
-    t_geom.g_data[0] = 0; //2.15
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_1";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = 0;//0.59
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_2";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = 0;//-0.97
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_3";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = 0;//-1.73
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_4";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = 0;//0.55
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_5";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = 0.6;//0.62
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_6";
-    task.t_links.push_back(t_link);
-
-    t_geom.g_data[0] = 0;//-2.10
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "lbr_iiwa_link_7";
-    task.t_links.push_back(t_link);
-
-#ifdef HQP_GRIPPER_JOINT
-    t_geom.g_data[0] = 0;
-    t_link.geometries[0] = t_geom;
-    t_link.link_frame = "velvet_fingers_right";
-    task.t_links.push_back(t_link);
-#endif
-
-    tasks_.request.tasks.push_back(task);
-
-    //send the filled task message to the controller
-    if(!sendStateTasks())
-        return false;
-
-    //monitor all tasks except of the last one
-    for(unsigned int i=0; i<tasks_.response.ids.size() - 1;i++)
-        monitored_tasks_.push_back(tasks_.response.ids[i]);
-
-    //visualize all tasks except of the last one
-    std::vector<unsigned int> ids = pers_task_vis_ids_;
-    for(unsigned int i=0; i<tasks_.response.ids.size() - 1;i++)
-        ids.push_back(tasks_.response.ids[i]);
-
-    if(!visualizeStateTasks(ids))
-        return false;
-
-    return true;
-}
-//-----------------------------------------------------------------
 bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
 {
 #ifdef HQP_GRIPPER_JOINT
@@ -619,7 +358,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(EXTRACT_HEIGHT);
+    t_geom.g_data.push_back(SAFETY_HEIGHT);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -653,7 +392,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(EXTRACT_HEIGHT);
+    t_geom.g_data.push_back(SAFETY_HEIGHT);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -687,7 +426,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(EXTRACT_HEIGHT);
+    t_geom.g_data.push_back(SAFETY_HEIGHT);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -780,7 +519,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     return true;
 }
 //-----------------------------------------------------------------
-bool DemoPalletizing::setObjectPlace()
+bool DemoPalletizing::setObjectPlace(PlaceInterval const& place)
 {
     hqp_controllers_msgs::Task task;
     hqp_controllers_msgs::TaskLink t_link;
@@ -794,7 +533,7 @@ bool DemoPalletizing::setObjectPlace()
     task.priority = 2;
     task.name = "ee_on_horizontal_plane (place)";
     task.is_equality_task = true;
-    task.task_frame = place_zone_.place_frame_;
+    task.task_frame = place.place_frame_;
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -803,17 +542,17 @@ bool DemoPalletizing::setObjectPlace()
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    t_geom.g_data.push_back(place_zone_.n_(0)); t_geom.g_data.push_back(place_zone_.n_(1)); t_geom.g_data.push_back(place_zone_.n_(2));
-    t_geom.g_data.push_back(place_zone_.d_);
-    t_link.link_frame = place_zone_.place_frame_;
+    t_geom.g_data.push_back(place.n_(0)); t_geom.g_data.push_back(place.n_(1)); t_geom.g_data.push_back(place.n_(2));
+    t_geom.g_data.push_back(place.d_);
+    t_link.link_frame = place.place_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
-    t_link.link_frame = place_zone_.e_frame_;
+    t_geom.g_data.push_back(place.e_(0)); t_geom.g_data.push_back(place.e_(1)); t_geom.g_data.push_back(place.e_(2));
+    t_link.link_frame = place.e_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -827,7 +566,7 @@ bool DemoPalletizing::setObjectPlace()
     task.priority = 2;
     task.name = "ee_in_placement_cylinder (place)";
     task.is_equality_task = false;
-    task.task_frame = place_zone_.place_frame_;
+    task.task_frame = place.place_frame_;
     task.ds = 0.0;
     task.di = 0.05;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -836,17 +575,17 @@ bool DemoPalletizing::setObjectPlace()
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
-    t_link.link_frame = place_zone_.e_frame_;
+    t_geom.g_data.push_back(place.e_(0)); t_geom.g_data.push_back(place.e_(1)); t_geom.g_data.push_back(place.e_(2));
+    t_link.link_frame = place.e_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
-    t_geom.g_data.push_back(place_zone_.p_(0)); t_geom.g_data.push_back(place_zone_.p_(1)); t_geom.g_data.push_back(place_zone_.p_(2));
-    t_geom.g_data.push_back(place_zone_.v_(0)); t_geom.g_data.push_back(place_zone_.v_(1)); t_geom.g_data.push_back(place_zone_.v_(2));
-    t_geom.g_data.push_back(place_zone_.r_);
+    t_geom.g_data.push_back(place.p_(0)); t_geom.g_data.push_back(place.p_(1)); t_geom.g_data.push_back(place.p_(2));
+    t_geom.g_data.push_back(place.v_(0)); t_geom.g_data.push_back(place.v_(1)); t_geom.g_data.push_back(place.v_(2));
+    t_geom.g_data.push_back(place.r_);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -873,7 +612,7 @@ bool DemoPalletizing::setObjectPlace()
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(-0.707); t_geom.g_data.push_back(0.707); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(ALIGNMENT_ANGLE * 10);
-    t_link.link_frame = "world";
+    t_link.link_frame = place.place_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -907,7 +646,7 @@ bool DemoPalletizing::setObjectPlace()
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(0.0);
-    t_link.link_frame = "world";
+    t_link.link_frame = place.place_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -1039,132 +778,6 @@ bool DemoPalletizing::setObjectExtract()
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(ALIGNMENT_ANGLE / 2);
-    t_link.link_frame = grasp_.obj_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::LINE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_link.link_frame = grasp_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
-    //send the filled task message to the controller
-    if(!sendStateTasks())
-        return false;
-
-    //monitor all tasks
-    for(unsigned int i=0; i<tasks_.response.ids.size();i++)
-        monitored_tasks_.push_back(tasks_.response.ids[i]);
-
-    //visualize all tasks
-    std::vector<unsigned int> ids = pers_task_vis_ids_;
-    for(unsigned int i=0; i<tasks_.response.ids.size();i++)
-        ids.push_back(tasks_.response.ids[i]);
-
-    if(!visualizeStateTasks(ids))
-        return false;
-
-    return true;
-}
-//---------------------------------------------------------------------
-bool DemoPalletizing::setGripperExtract()
-{
-    hqp_controllers_msgs::Task task;
-    hqp_controllers_msgs::TaskLink t_link;
-    hqp_controllers_msgs::TaskGeometry t_geom;
-
-    //EE ON HORIZONTAL PLANE
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-
-    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
-    task.priority = 2;
-    task.name = "ee_on_horizontal_plane (extract)";
-    task.is_equality_task = true;
-    task.task_frame = "world";
-    task.ds = 0.0;
-    task.di = 1;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(EXTRACT_HEIGHT);
-    t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
-    t_link.link_frame = place_zone_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
-    //PLACEMENT_CYLINDER
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-
-    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
-    task.priority = 2;
-    task.name = "ee_in_placement_cylinder (place)";
-    task.is_equality_task = false;
-    task.task_frame = place_zone_.place_frame_;
-    task.ds = 0.0;
-    task.di = 0.05;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 2);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place_zone_.e_(0)); t_geom.g_data.push_back(place_zone_.e_(1)); t_geom.g_data.push_back(place_zone_.e_(2));
-    t_link.link_frame = place_zone_.e_frame_;
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CYLINDER;
-    t_geom.g_data.push_back(place_zone_.p_(0)); t_geom.g_data.push_back(place_zone_.p_(1)); t_geom.g_data.push_back(place_zone_.p_(2));
-    t_geom.g_data.push_back(place_zone_.v_(0)); t_geom.g_data.push_back(place_zone_.v_(1)); t_geom.g_data.push_back(place_zone_.v_(2));
-    t_geom.g_data.push_back(place_zone_.r_);
-    t_link.link_frame = "world";
-    t_link.geometries.push_back(t_geom);
-    task.t_links.push_back(t_link);
-
-    tasks_.request.tasks.push_back(task);
-
-    //GRIPPER VERTICAL AXIS ALIGNMENT
-    task.t_links.clear();
-    task.dynamics.d_data.clear();
-    task.name = "gripper_vertical_axis_alignment";
-    task.t_type = hqp_controllers_msgs::Task::PARALLEL;
-    task.priority = 2;
-    task.is_equality_task = false;
-    task.task_frame = grasp_.obj_frame_;
-    task.ds = 0.0;
-    task.di = 1;
-    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 2);
-
-    t_link.geometries.clear();
-    t_geom.g_data.clear();
-    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
-    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(ALIGNMENT_ANGLE * 4);
     t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -1674,6 +1287,7 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
             task_status_changed_ = true;
             task_success_ = true;
             ROS_WARN("Task execution timeout!");
+            std::cerr<<"monitored tasks: ";
             for(unsigned int i=0; i<monitored_tasks_.size(); i++)
                 std::cerr<<monitored_tasks_[i]<<" ";
 
@@ -1738,10 +1352,8 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
     }
 
-    for(unsigned int i=0; i<place_locations_.size(); i++)
+    for(unsigned int i=0; i<place_zones_.size(); i++)
     {
-        place_zone_.p_ = place_locations_[i];
-
         bool grasp_success = false;
         while(!grasp_success)
         {
@@ -1894,7 +1506,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 return false;
             }
 
-            task_error_tol_ = 2 * 1e-3;
+            task_error_tol_ =  1e-3;
             activateHQPControl();
 
             while(!task_status_changed_)
@@ -1910,8 +1522,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
 
         {//OBJECT TRANSFER
-            ROS_INFO("Trying object transfer.");
-
+            ROS_INFO("Trying object transfer configuration.");
 
             boost::mutex::scoped_lock lock(manipulator_tasks_m_);
             task_status_changed_ = false;
@@ -1929,9 +1540,9 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 return false;
             }
 
-            if(!setObjectTransfer())
+            if(!setJointConfiguration(place_zones_[i].joints_))
             {
-                ROS_ERROR("Could not set the object transfer!");
+                ROS_ERROR("Could not set the object transfer configuration!");
                 safeShutdown();
                 return false;
             }
@@ -1943,7 +1554,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
 
             if(!task_success_)
             {
-                ROS_ERROR("Could not complete the object transfer tasks!");
+                ROS_ERROR("Could not complete the object transfer configuration!");
                 safeShutdown();
                 return false;
             }
@@ -1968,7 +1579,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 return false;
             }
 
-            if(!setObjectPlace())
+            if(!setObjectPlace(place_zones_[i]))
             {
                 ROS_ERROR("Could not set the object place!");
                 safeShutdown();
@@ -2021,13 +1632,14 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 return false;
             }
 
-            if(!setGripperExtract())
+            if(!setJointConfiguration(place_zones_[i].joints_))
+//            if(!setGripperExtract(place_zones_[i]))
             {
                 ROS_ERROR("Could not set the gripper extract!");
                 safeShutdown();
                 return false;
             }
-            task_error_tol_ = 5* 1e-3;
+            task_error_tol_ = 5 * 1e-3;
             activateHQPControl();
 
             while(!task_status_changed_)
@@ -2042,7 +1654,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             ROS_INFO("Gripper extract tasks executed successfully.");
         }
     }
-#if 0
+
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
 
@@ -2082,7 +1694,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator transfer configuration tasks executed successfully.");
     }
-#endif
+
     deactivateHQPControl();
     resetState();
     reset_hqp_control_clt_.call(srv);
