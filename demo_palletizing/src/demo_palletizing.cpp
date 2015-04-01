@@ -149,13 +149,13 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place_zone_.n_ = place_zone_.v_;
     place_zone_.d_ = 0.25;
 
-     place_locations_.resize(3);
-     place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
-     place_locations_[1](0) = 0.75; place_locations_[1](1) = 0.0; place_locations_[1](2) = 0.15;
-     place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
+//     place_locations_.resize(3);
+//     place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
+//     place_locations_[1](0) = 0.75; place_locations_[1](1) = 0.0; place_locations_[1](2) = 0.15;
+//     place_locations_[2](0) = 0.75; place_locations_[2](1) = 0.2; place_locations_[2](2) = 0.15;
 
-    // place_locations_.resize(1);
-    //place_locations_[0](0) = 0.75; place_locations_[0](1) = 0.0; place_locations_[0](2) = 0.15;
+     place_locations_.resize(1);
+    place_locations_[0](0) = 0.75; place_locations_[0](1) = -0.2; place_locations_[0](2) = 0.15;
 }
 //-----------------------------------------------------------------
 bool DemoPalletizing::setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc)
@@ -375,6 +375,39 @@ bool DemoPalletizing::setObjectTransfer()
     hqp_controllers_msgs::TaskLink t_link;
     hqp_controllers_msgs::TaskGeometry t_geom;
 
+    //LINK 4 ABOVE HORIZONTAL PLANE
+    task.t_links.clear();
+    task.dynamics.d_data.clear();
+
+    task.t_type = hqp_controllers_msgs::Task::PROJECTION;
+    task.priority = 2;
+    task.name = "link_4_above_horizontal_plane (transfer)";
+    task.is_equality_task = false;
+    task.task_frame = "world";
+    task.ds = 0.0;
+    task.di = 1;
+    task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 2);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
+    t_geom.g_data.push_back(0.7);
+    t_link.link_frame = "world";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    t_link.geometries.clear();
+    t_geom.g_data.clear();
+    t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
+    t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
+    t_link.link_frame = "lbr_iiwa_link_4";
+    t_link.geometries.push_back(t_geom);
+    task.t_links.push_back(t_link);
+
+    tasks_.request.tasks.push_back(task);
+
     //EE ON HORIZONTAL PLANE
     task.t_links.clear();
     task.dynamics.d_data.clear();
@@ -488,14 +521,14 @@ bool DemoPalletizing::setObjectTransfer()
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 10);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 2);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::CONE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(0);
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
-    t_geom.g_data.push_back(ALIGNMENT_ANGLE * 10);
+    t_geom.g_data.push_back(ALIGNMENT_ANGLE * 0);
     t_link.link_frame = "world";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -1949,7 +1982,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             }
             ROS_INFO("Object transfer tasks executed successfully.");
         }
-
+#if 0
         {//OBJECT PLACE
             ROS_INFO("Trying object place.");
             boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -2041,6 +2074,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             }
             ROS_INFO("Gripper extract tasks executed successfully.");
         }
+#endif
     }
 #if 0
     {//MANIPULATOR TRANSFER CONFIGURATION
