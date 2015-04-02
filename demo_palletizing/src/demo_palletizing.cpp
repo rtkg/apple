@@ -127,7 +127,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
 #endif
 
     //DEFAULT GRASP
-    grasp_.obj_frame_ = "world"; //object frame
+    grasp_.obj_frame_ = "citi_truck_base"; //object frame
     grasp_.e_frame_ = "velvet_fingers_palm"; //endeffector frame
     grasp_.e_.setZero(); //endeffector point expressed in the endeffector frame
 
@@ -144,7 +144,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
 
     //PLACEMENT ZONES
     PlaceInterval place;
-    place.place_frame_ = "world";
+    place.place_frame_ = "citi_truck_base";
     place.e_frame_ = "velvet_fingers_palm";
     place.e_(0) = 0.16; place.e_(1) = 0.0; place.e_(2) = 0.0;
     place.v_(0) = 0.0; place.v_(1) = 0.0; place.v_(2) = 1.0;
@@ -350,7 +350,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     task.priority = 2;
     task.name = "lbr_iiwa_link_4_above_horizontal_plane (joint configuration)";
     task.is_equality_task = false;
-    task.task_frame = "world";
+    task.task_frame = "citi_truck_base";
     task.ds = 0.0;
     task.di = 0.02;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -361,7 +361,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(SAFETY_HEIGHT);
-    t_link.link_frame = "world";
+    t_link.link_frame = "citi_truck_base";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -384,7 +384,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     task.priority = 2;
     task.name = "lbr_iiwa_link_5_above_horizontal_plane (joint configuration)";
     task.is_equality_task = false;
-    task.task_frame = "world";
+    task.task_frame = "citi_truck_base";
     task.ds = 0.0;
     task.di = 0.02;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -395,7 +395,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(SAFETY_HEIGHT);
-    t_link.link_frame = "world";
+    t_link.link_frame = "citi_truck_base";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -418,7 +418,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     task.priority = 2;
     task.name = "lbr_iiwa_link_6_above_horizontal_plane (joint configuration)";
     task.is_equality_task = false;
-    task.task_frame = "world";
+    task.task_frame = "citi_truck_base";
     task.ds = 0.0;
     task.di = 0.02;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -429,7 +429,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(SAFETY_HEIGHT);
-    t_link.link_frame = "world";
+    t_link.link_frame = "citi_truck_base";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -452,7 +452,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     task.priority = 2;
     task.name = "velvet_fingers_palm_above_horizontal_plane (joint configuration)";
     task.is_equality_task = false;
-    task.task_frame = "world";
+    task.task_frame = "citi_truck_base";
     task.ds = 0.0;
     task.di = 0.02;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -463,7 +463,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::PLANE;
     t_geom.g_data.push_back(0); t_geom.g_data.push_back(0); t_geom.g_data.push_back(1);
     t_geom.g_data.push_back(SAFETY_HEIGHT);
-    t_link.link_frame = "world";
+    t_link.link_frame = "citi_truck_base";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 
@@ -486,7 +486,7 @@ bool DemoPalletizing::setJointConfiguration(std::vector<double> const& joints)
     task.priority = 3;
     task.name = "joint_setpoints";
     task.is_equality_task = true;
-    task.task_frame = "world";
+    task.task_frame = "citi_truck_base";
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
@@ -622,7 +622,7 @@ bool DemoPalletizing::setObjectPlace(PlaceInterval const& place)
     t_geom.g_data.push_back(place.p_(0)); t_geom.g_data.push_back(place.p_(1)); t_geom.g_data.push_back(place.p_(2));
     t_geom.g_data.push_back(place.v_(0)); t_geom.g_data.push_back(place.v_(1)); t_geom.g_data.push_back(place.v_(2));
     t_geom.g_data.push_back(place.r_);
-    t_link.link_frame = "world";
+    t_link.link_frame = "citi_truck_base";
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
 

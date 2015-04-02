@@ -19,22 +19,22 @@
 
   <!-- citi truck-->
   <xacro:citi_truck name="citi_truck" parent="world">
-    <origin xyz="0 0 0.09" rpy="0 0 0" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:citi_truck> 
 
   <!-- half pallet on the citi truck-->
   <xacro:half_pallet name="transport_pallet" parent="citi_truck_base">
-    <origin xyz="0.6 0 -0.0699" rpy="0 0 0" />
+    <origin xyz="0.6 0 0.02" rpy="0 0 0" />
   </xacro:half_pallet> 
 
   <!-- half pallet for loading -->
-  <xacro:half_pallet name="load_pallet" parent="world">
+  <xacro:half_pallet name="load_pallet" parent="citi_truck_base">
     <origin xyz="1.1 -0.9 0.01" rpy="0 0 0" />
   </xacro:half_pallet> 
 
   <!--lbr -->
   <xacro:lbr_iiwa name="lbr_iiwa" hardware_interface="$(arg prefix)" parent="citi_truck_base">
-    <origin xyz="0.114 -0.265 0.5" rpy="0 ${PI / 2} ${-PI / 4}" />
+    <origin xyz="0.114 -0.265 0.595" rpy="0 ${PI / 2} ${-PI / 4}" />
   </xacro:lbr_iiwa>
 
   <!--velvet fingers gripper -->
