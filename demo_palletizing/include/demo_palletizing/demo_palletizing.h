@@ -110,14 +110,13 @@ private:
     ros::ServiceClient velvet_grasp_clt_;
     ros::ServiceClient set_stiffness_clt_;
     ros::ServiceServer start_demo_srv_;
+    ros::ServiceServer gimme_beer_srv_;
 
-
-    //** Manipulator joint configuration from which the demo can be started safely */
-    std::vector<double> home_config_;
     //** Manipulator joint configuration while moving the forklift */
     std::vector<double> transfer_config_;
     //** Manipulator joint configuration prior to reach-to-grasp */
     std::vector<double> sensing_config_;
+    std::vector<double> gimme_beer_config_;
     //** message holding the active tasks at each state. After each state change these tasks are removed and replaced by the ones corresponding to the next state. */
     hqp_controllers_msgs::SetTasks tasks_;
     //** map holding the ids of those tasks whose completion indicates a state change*/
@@ -157,6 +156,7 @@ private:
 
     void stateCallback( const hqp_controllers_msgs::TaskStatusArrayPtr& msg);
     bool startDemo(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
+    bool gimmeBeer(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
 };
 
 }//end namespace hqp controllers
