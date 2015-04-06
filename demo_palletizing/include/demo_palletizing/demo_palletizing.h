@@ -12,6 +12,7 @@
 #include <velvet_interface_node/SmartGrasp.h>
 #include <velvet_interface_node/VelvetToPos.h>
 #include <lbr_fri/SetStiffness.h>
+#include <sensor_msgs/JointState.h>
 
 namespace demo_palletizing
 {
@@ -82,6 +83,7 @@ private:
     ros::NodeHandle nh_;
     ros::NodeHandle n_;
     boost::mutex manipulator_tasks_m_;
+        boost::mutex force_change_m_;
     boost::condition_variable cond_;
     double task_error_tol_;
     double task_diff_tol_;
@@ -97,6 +99,8 @@ private:
     Eigen::VectorXd t_prog_prev_;
 
     ros::Subscriber task_status_sub_;
+    ros::Subscriber joint_state_sub_;
+
     ros::ServiceClient set_tasks_clt_;
     ros::ServiceClient get_grasp_interval_clt_;
     ros::ServiceClient activate_hqp_control_clt_;
@@ -154,7 +158,8 @@ private:
     //  CALLBACKS  //
     /////////////////
 
-    void stateCallback( const hqp_controllers_msgs::TaskStatusArrayPtr& msg);
+    void taskStatusCallback(const hqp_controllers_msgs::TaskStatusArrayPtr& msg);
+    void jointStateCallback(const sensor_msgs::JointStatePtr& msg);
     bool startDemo(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
     bool gimmeBeer(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
 };
