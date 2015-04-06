@@ -33,8 +33,10 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     task_success_ = false;
 
     //register general callbacks
-    start_demo_srv_ = nh_.advertiseService("start_demo", &DemoPalletizing::startDemo, this);;
-    task_status_sub_ = n_.subscribe("task_status_array", 1, &DemoPalletizing::stateCallback, this);
+    start_demo_srv_ = nh_.advertiseService("start_demo", &DemoPalletizing::startDemo, this);
+    gimme_beer_srv_ = nh_.advertiseService("gimme_beer", &DemoPalletizing::gimmeBeer, this);
+    task_status_sub_ = n_.subscribe("task_status_array", 1, &DemoPalletizing::taskStatusCallback, this);
+    joint_state_sub_ = n_.subscribe("joint_states", 1, &DemoPalletizing::jointStateCallback, this);
     set_tasks_clt_ = n_.serviceClient<hqp_controllers_msgs::SetTasks>("set_tasks");
     remove_tasks_clt_ = n_.serviceClient<hqp_controllers_msgs::RemoveTasks>("remove_tasks");
     activate_hqp_control_clt_ = n_.serviceClient<hqp_controllers_msgs::ActivateHQPControl>("activate_hqp_control");
@@ -101,7 +103,6 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     unsigned int n_jnts = 7;
 #endif
 
-    home_config_ = std::vector<double>(n_jnts, 0.1); //7 arm joint + 1 velvet fingers gripper joint
     transfer_config_ = std::vector<double>(n_jnts);
     transfer_config_[0] = 0;
     transfer_config_[1] = -1.57;
@@ -124,6 +125,18 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     sensing_config_[6] = -1.483;
 #ifdef HQP_GRIPPER_JOINT
     sensing_config_[7] = 0.1;
+#endif
+
+    gimme_beer_config_ = std::vector<double>(n_jnts);
+    gimme_beer_config_[0] = 0.14;
+    gimme_beer_config_[1] = -1.46;
+    gimme_beer_config_[2] = -0.87;
+    gimme_beer_config_[3] = -0.82;
+    gimme_beer_config_[4] = 0.02;
+    gimme_beer_config_[5] = 0.57;
+    gimme_beer_config_[6] = -0.001;
+#ifdef HQP_GRIPPER_JOINT
+    gimme_beer_config_[7] = 0.1;
 #endif
 
     //DEFAULT GRASP
@@ -151,18 +164,17 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place.p_(0) = 0.75; place.p_(1) = 0.2; place.p_(2) = 0.15;
     place.r_ = 0.02;
     place.n_(0) = 0.0; place.n_(1) = 0.0; place.n_(2) = 1.0;
-    place.d_ = 0.25;
+    place.d_ = 0.26;
     place.joints_ += 1.81, 1.01, -0.75, -1.28, 0.79, 0.85, -2.26;
     place_zones_.push_back(place);
 
     place.joints_.clear();
     place.p_(1) = 0.0;
     place.joints_ += 2.11, 0.58, -1.00, -1.71, 0.58, 0.82, -2.20;
-    place_zones_.push_back(place);
+    //place_zones_.push_back(place);
 
     place.joints_.clear();
     place.p_(1) = -0.2;
-    //    place.joints_ += 2.36, -0.05, -1.01, -1.83, -0.13, 1.00, -1.68;
     place.joints_ += 0.038, -0.26, 0.94, -1.88, 0.51, 1.01, -2.29;
     place_zones_.push_back(place);
 }
@@ -1222,7 +1234,7 @@ bool DemoPalletizing::setGraspApproach()
     return true;
 }
 //-----------------------------------------------------------------
-void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArrayPtr& msg)
+void DemoPalletizing::taskStatusCallback( const hqp_controllers_msgs::TaskStatusArrayPtr& msg)
 {
     boost::mutex::scoped_lock lock(manipulator_tasks_m_, boost::try_to_lock);
     if(!lock) return;
@@ -1342,6 +1354,132 @@ void DemoPalletizing::stateCallback( const hqp_controllers_msgs::TaskStatusArray
 
 }
 //-----------------------------------------------------------------
+void DemoPalletizing::jointStateCallback( const sensor_msgs::JointStatePtr& msg)
+{
+    boost::mutex::scoped_lock lock(force_change_m_, boost::try_to_lock);
+    if(!lock) return;
+
+    static sensor_msgs::JointState prev_state = *msg;
+
+
+
+    //    static struct timeval t_stag;
+    //    struct timeval t;
+    //    gettimeofday(&t,0);
+    //    static bool stagnation_flag = false;
+
+    //    if(!stagnation_flag)
+    //        t_stag = t;
+
+    //    stagnation_flag = false;
+    //    // double curr = t.tv_sec + 0.000001*t.tv_usec;
+    //    // double stag = t_stag.tv_sec + 0.000001*t_stag.tv_usec;
+
+    //    // std::cerr<<"t: "<<curr<<std::endl;
+    //    // std::cerr<<"t_stag: "<<stag<<std::endl;
+
+    //    // std::cerr<<"monitored tasks: ";
+    //    // for(unsigned int i=0; i<monitored_tasks_.size(); i++)
+    //    //   std::cerr<<monitored_tasks_[i]<<" ";
+
+    //    // std::cerr<<std::endl;
+    //    // std::cerr<<"received tasks: ";
+    //    // std::vector<hqp_controllers_msgs::TaskStatus>::const_iterator status_it2;
+    //    // for(status_it2 = msg->statuses.begin(); status_it2!=msg->statuses.end(); ++status_it2)
+    //    // 	std::cerr<<status_it2->id<<" "<<status_it2->name<<" "<<std::endl;
+
+    //    // std::cerr<<std::endl;
+
+    //    Eigen::VectorXd t_prog(monitored_tasks_.size());
+
+    //    //form the maximum norm over all errors
+
+    //    for(unsigned int i=0; i<monitored_tasks_.size(); i++)
+    //    {
+    //        //try to find the monitored task id in the given task status message
+    //        std::vector<hqp_controllers_msgs::TaskStatus>::const_iterator status_it;
+    //        for(status_it = msg->statuses.begin(); status_it!=msg->statuses.end(); ++status_it)
+    //            if(monitored_tasks_[i] == status_it->id)
+    //            {
+    //                t_prog(i)=status_it->progress;
+    //                break;
+    //            }
+
+    //        if(status_it==msg->statuses.end())
+    //        {
+    //            ROS_WARN("No status feedback for monitored task id %d!", monitored_tasks_[i]);
+    //            return; //just so we don't give a false positive task success
+    //        }
+
+    //    }
+
+    //    double e = 0.0;
+    //    double e_diff = INFINITY;
+
+
+    //    if(monitored_tasks_.size() > 0)
+    //    {
+    //        //task error
+    //        e = t_prog.cwiseAbs().maxCoeff();
+
+    //        //find the task progress difference between iterations
+    //        if(t_prog_prev_.size() > 0)
+    //            e_diff = (t_prog - t_prog_prev_).cwiseAbs().maxCoeff();
+
+    //        //std::cerr<<"t_prog: "<<t_prog.transpose()<<"e: "<<e<<std::endl;
+    //        //std::cerr<<"t_prog_prev_: "<<t_prog_prev_.transpose()<<"e_diff: "<<e_diff<<std::endl;
+    //        t_prog_prev_ = t_prog;
+    //    }
+    //    //  std::cout<<" t - t_stag: "<<t.tv_sec - t_stag.tv_sec + 0.000001 * (t.tv_usec - t_stag.tv_usec)<<" task_timeout_tol_: "<<task_timeout_tol_<<std::endl;
+    //    //std::cout<<"e_diff: "<<e_diff<<" e_diff_tol_: "<<task_diff_tol_<<std::endl;
+
+    //    if(e <= task_error_tol_)
+    //    {
+    //        std::cerr<<std::endl<<"STATE CHANGE:"<<std::endl<<"monitored tasks: ";
+    //        for(unsigned int i=0; i<monitored_tasks_.size(); i++)
+    //            std::cerr<<monitored_tasks_[i]<<" ";
+
+    //        std::cerr<<std::endl<<"task statuses: "<<std::endl;
+    //        for( std::vector<hqp_controllers_msgs::TaskStatus>::iterator it = msg->statuses.begin(); it!=msg->statuses.end(); ++it)
+    //            std::cerr<<"id: "<<it->id<<" name: "<<it->name<<" progress: "<<it->progress<<std::endl;
+
+    //        std::cerr<<"e: "<<e<<std::endl<<std::endl;
+
+    //        // ROS_INFO("Task status switch!");
+    //        task_status_changed_ = true;
+    //        task_success_ = true;
+    //        cond_.notify_one();
+    //    }
+    //    else if(e_diff <= task_diff_tol_) //(task progresses ain't changing no more)
+    //    {
+    //        stagnation_flag = true;
+    //        std::cerr<<"task progress stagnating since:"<<t.tv_sec - t_stag.tv_sec + 0.000001 * (t.tv_usec - t_stag.tv_usec)<<" s, e_diff is: "<<e_diff<<std::endl;
+    //        if((t.tv_sec - t_stag.tv_sec + 0.000001 * (t.tv_usec - t_stag.tv_usec)) > task_timeout_tol_ )
+    //        {
+    //            task_status_changed_ = true;
+    //            task_success_ = true;
+    //            ROS_WARN("Task execution timeout!");
+    //            std::cerr<<"monitored tasks: ";
+    //            for(unsigned int i=0; i<monitored_tasks_.size(); i++)
+    //                std::cerr<<monitored_tasks_[i]<<" ";
+
+    //            std::cerr<<std::endl<<"task statuses: "<<std::endl;
+    //            for( std::vector<hqp_controllers_msgs::TaskStatus>::iterator it = msg->statuses.begin(); it!=msg->statuses.end(); ++it)
+    //                std::cerr<<"id: "<<it->id<<" name: "<<it->name<<" progress: "<<it->progress<<std::endl;
+
+    //            std::cerr<<"e: "<<e<<std::endl<<std::endl;
+    //            //std::cerr<<"t: "<<"t - t_stag: "<<t.tv_sec - t_stag.tv_sec + 0.000001 * (t.tv_usec - t_stag.tv_usec)<<" task_timeout_tol_: "<<task_timeout_tol_<<std::endl;
+    //            //std::cerr<<"e_diff: "<<e_diff<<" e_diff_tol_: "<<task_diff_tol_<<std::endl<<std::endl;
+
+    //            stagnation_flag = false;
+    //            cond_.notify_one();
+    //        }
+    //    }
+
+    prev_state = *msg;
+
+}
+//-----------------------------------------------------------------
 bool DemoPalletizing::loadPersistentTasks()
 {
     hqp_controllers_msgs::LoadTasks persistent_tasks;
@@ -1444,14 +1582,13 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     safeShutdown();
                     return false;
                 }
-#if 0
+
                 if(!with_gazebo_)
                     if(!getGraspInterval())
                     {
                         ROS_ERROR("Could not obtain the grasp intervall!");
                         safeShutdown();
                     }
-#endif 
 
                 if(!setCartesianStiffness(1000, 1000, 100, 100, 100, 100))
                 {
@@ -1489,8 +1626,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     safeShutdown();
                     return false;
                 }
-                grasp_success = true; //REEEEEEEEEEMOOOOOOOOOOOOOOOVEEEEEEEEEE!!!!!!!!!
-#if 0
+
                 deactivateHQPControl();
                 //VELVET GRASP_
                 velvet_interface_node::SmartGrasp graspcall;
@@ -1512,7 +1648,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     grasp_success = true;
                     ROS_INFO("Grasp aquired.");
                 }
-#endif
             }
             else
                 grasp_success = true;
@@ -1689,6 +1824,266 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
         }
         ROS_INFO("Manipulator transfer configuration tasks executed successfully.");
     }
+
+    deactivateHQPControl();
+    resetState();
+    reset_hqp_control_clt_.call(srv);
+    pers_task_vis_ids_.clear();
+
+    ROS_INFO("DEMO FINISHED.");
+
+    return true;
+}
+//--------------------------------------------------------------------------//-----------------------------------------------------------------
+bool DemoPalletizing::gimmeBeer(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
+{
+
+    deactivateHQPControl();
+    resetState();
+    std_srvs::Empty srv;
+    reset_hqp_control_clt_.call(srv);
+    pers_task_vis_ids_.clear();
+
+    if(!loadPersistentTasks())
+    {
+        ROS_ERROR("Could not load persistent tasks!");
+        safeShutdown();
+        return false;
+    }
+
+    if(!with_gazebo_)
+    {
+        //VELVET INITIAL POSE
+        velvet_interface_node::VelvetToPos poscall;
+        poscall.request.angle = 0.3;
+
+        if(!velvet_pos_clt_.call(poscall))
+        {
+            ROS_ERROR("could not call velvet to pos");
+            ROS_BREAK();
+        }
+    }
+
+    bool grasp_success = false;
+    while(!grasp_success)
+    {
+        {//MANIPULATOR SENSING CONFIGURATION
+            ROS_INFO("Trying to put the manipulator in sensing configuration.");
+            boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+            task_status_changed_ = false;
+            task_success_ = false;
+            deactivateHQPControl();
+            if(!resetState())
+            {
+                ROS_ERROR("Could not reset the state!");
+                safeShutdown();
+                return false;
+            }
+            if(!setCartesianStiffness(1000, 1000, 1000, 100, 100, 100))
+            {
+                safeShutdown();
+                return false;
+            }
+
+            if(!setJointConfiguration(sensing_config_))
+            {
+                ROS_ERROR("Could not set manipulator sensing state!");
+                safeShutdown();
+                return false;
+            }
+            task_error_tol_ = 1e-2;
+            activateHQPControl();
+
+            while(!task_status_changed_)
+                cond_.wait(lock);
+
+            if(!task_success_)
+            {
+                ROS_ERROR("Could not complete the manipulator sensing state tasks!");
+                safeShutdown();
+                return false;
+            }
+            ROS_INFO("Manipulator sensing state tasks executed successfully.");
+        }
+
+        {//GRASP APPROACH
+            ROS_INFO("Trying grasp approach.");
+            boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+            task_status_changed_ = false;
+            task_success_ = false;
+            deactivateHQPControl();
+            if(!resetState())
+            {
+                ROS_ERROR("Could not reset the state!");
+                safeShutdown();
+                return false;
+            }
+#if 0
+            if(!with_gazebo_)
+                if(!getGraspInterval())
+                {
+                    ROS_ERROR("Could not obtain the grasp intervall!");
+                    safeShutdown();
+                }
+#endif
+
+            if(!setCartesianStiffness(1000, 1000, 100, 100, 100, 100))
+            {
+                safeShutdown();
+                return false;
+            }
+            if(!setGraspApproach())
+            {
+                ROS_ERROR("Could not set the grasp approach!");
+                safeShutdown();
+                return false;
+            }
+            task_error_tol_ =  1e-3;
+            activateHQPControl();
+
+            while(!task_status_changed_)
+                cond_.wait(lock);
+
+            if(!task_success_)
+            {
+                ROS_ERROR("Could not complete the grasp approach tasks!");
+                safeShutdown();
+                return false;
+            }
+
+            ROS_INFO("Grasp approach tasks executed successfully.");
+        }
+
+
+        if(!with_gazebo_)
+        {
+            //SET GRASP STIFFNESS
+            if(!setCartesianStiffness(1000, 50, 15, 100, 100, 10))
+            {
+                safeShutdown();
+                return false;
+            }
+            grasp_success = true; //REEEEEEEEEEMOOOOOOOOOOOOOOOVEEEEEEEEEE!!!!!!!!!
+#if 0
+            deactivateHQPControl();
+            //VELVET GRASP_
+            velvet_interface_node::SmartGrasp graspcall;
+            graspcall.request.current_threshold_contact = 10;
+            graspcall.request.current_threshold_final = 35;
+            graspcall.request.max_belt_travel_mm = 90;
+            graspcall.request.phalange_delta_rad = 0.02;
+            graspcall.request.gripper_closed_thresh = 1.5;
+            graspcall.request.check_phalanges = true;
+
+            if(!velvet_grasp_clt_.call(graspcall)) {
+                ROS_ERROR("could not call grasping");
+                ROS_BREAK();
+            }
+            if(!graspcall.response.success)
+                ROS_ERROR("Grasp failed!");
+            else
+            {
+                grasp_success = true;
+                ROS_INFO("Grasp aquired.");
+            }
+#endif
+        }
+        else
+            grasp_success = true;
+    }
+
+    {//OBJECT EXTRACT
+        ROS_INFO("Trying object extract.");
+        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+        task_status_changed_ = false;
+        task_success_ = false;
+        deactivateHQPControl();
+        if(!resetState())
+        {
+            ROS_ERROR("Could not reset the state!");
+            safeShutdown();
+            return false;
+        }
+        if(!setCartesianStiffness(1000, 1000, 1000, 100, 100, 100))
+        {
+            safeShutdown();
+            return false;
+        }
+        if(!setObjectExtract())
+        {
+            ROS_ERROR("Could not set the object extract!");
+            safeShutdown();
+            return false;
+        }
+
+        task_error_tol_ =  1e-3;
+        activateHQPControl();
+
+        while(!task_status_changed_)
+            cond_.wait(lock);
+
+        if(!task_success_)
+        {
+            ROS_ERROR("Could not complete the object extract tasks!");
+            safeShutdown();
+            return false;
+        }
+        ROS_INFO("Object extract tasks executed successfully.");
+    }
+
+    {//GIMME BEER
+        ROS_INFO("Trying gimme beer configuration.");
+
+        boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+        task_status_changed_ = false;
+        task_success_ = false;
+        deactivateHQPControl();
+        if(!resetState())
+        {
+            ROS_ERROR("Could not reset the state!");
+            safeShutdown();
+            return false;
+        }
+        if(!setCartesianStiffness(1000, 1000, 1000, 100, 100, 100))
+        {
+            safeShutdown();
+            return false;
+        }
+
+        if(!setJointConfiguration(gimme_beer_config_))
+        {
+            ROS_ERROR("Could not set the gimme beer configuration!");
+            safeShutdown();
+            return false;
+        }
+        task_error_tol_ = 10 * 1e-4;
+        activateHQPControl();
+
+        while(!task_status_changed_)
+            cond_.wait(lock);
+
+        if(!task_success_)
+        {
+            ROS_ERROR("Could not complete the gimme beer configuration!");
+            safeShutdown();
+            return false;
+        }
+        ROS_INFO("Gimme beer tasks executed successfully.");
+    }
+
+
+    if(!with_gazebo_)
+    {
+        velvet_interface_node::VelvetToPos poscall2;
+        poscall2.request.angle = 0.2;
+
+        if(!velvet_pos_clt_.call(poscall2))
+        {
+            ROS_ERROR("could not call velvet to pos");
+            ROS_BREAK();
+        }
+    }
+
 
     deactivateHQPControl();
     resetState();
