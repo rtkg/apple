@@ -109,6 +109,7 @@ private:
     ros::ServiceClient reset_hqp_control_clt_;
     ros::ServiceClient velvet_grasp_clt_;
     ros::ServiceClient set_stiffness_clt_;
+    ros::ServiceClient next_truck_task_;
     ros::ServiceServer start_demo_srv_;
 
 
