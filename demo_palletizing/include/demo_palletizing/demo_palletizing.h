@@ -25,6 +25,8 @@ namespace demo_palletizing
 #define ALIGNMENT_ANGLE  0.05
 
 #define SAFETY_HEIGHT 0.34
+#define BEER_RADIUS   0.25
+#define BEER_HEIGHT   0.25
 //-----------------------------------------------------------
 ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
 struct GraspInterval

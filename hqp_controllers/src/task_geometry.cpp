@@ -1194,8 +1194,28 @@ ProjectionQuantities Sphere::projectOntoCylinder(const Cylinder &cylinder) const
 //------------------------------------------------------------------------
 ProjectionQuantities Sphere::projectOntoSphere(const Sphere &sphere) const
 {
-    ROS_ERROR("Error in Sphere::projectOntoSphere(...): not implemented yet!");
-    ROS_BREAK();
+    ProjectionQuantities proj;
+    proj.P1_.resize(Eigen::NoChange, 1);
+    proj.P2_.resize(Eigen::NoChange, 1);
+    proj.N_.resize(Eigen::NoChange, 1);
+    proj.d_.resize(1);
+
+    proj.P1_ << sphere.getTaskData().head<3>();
+    proj.P2_ << task_data_.head<3>();
+    proj.N_ << -proj.P1_ + proj.P2_;
+    
+    proj.d_(0) = -proj.N_.norm()+sphere.getTaskData()(3)+task_data_(3);
+    proj.N_.normalize();
+
+    // std::cerr<<"P1_: "<<proj.P1_.transpose()<<std::endl;
+    // std::cerr<<"P2_: "<<proj.P2_.transpose()<<std::endl;
+    // std::cerr<<"N_: "<<proj.N_.transpose()<<std::endl;
+    // std::cerr<<"d_: "<<proj.d_<<std::endl;
+
+    return proj;
+
+    //    ROS_ERROR("Error in Sphere::projectOntoSphere(...): not implemented yet!");
+    //    ROS_BREAK();
 }
 //------------------------------------------------------------------------
 void Sphere::addMarker(visualization_msgs::MarkerArray& markers)
