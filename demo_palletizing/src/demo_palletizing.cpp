@@ -51,10 +51,13 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
         velvet_pos_clt_ = n_.serviceClient<velvet_interface_node::VelvetToPos>("velvet_pos");
         velvet_grasp_clt_ = n_.serviceClient<velvet_interface_node::SmartGrasp>("velvet_grasp");
         set_stiffness_clt_ = n_.serviceClient<lbr_fri::SetStiffness>("set_stiffness");
-        //get_grasp_interval_clt_.waitForExistence();
-        //  velvet_pos_clt_.waitForExistence();
-        //velvet_grasp_clt_.waitForExistence();
+        next_truck_task_clt_ = n_.serviceClient<std_srvs::Empty>("execute_truck_task");
+	
+	get_grasp_interval_clt_.waitForExistence();
+        velvet_pos_clt_.waitForExistence();
+        velvet_grasp_clt_.waitForExistence();
         set_stiffness_clt_.waitForExistence();
+        next_truck_task_clt_.waitForExistence();
     }
     else
     {
@@ -1637,10 +1640,17 @@ bool DemoPalletizing::loadPersistentTasks()
 //-----------------------------------------------------------------
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
-
+    std_srvs::Empty srv;
+#if 0
+    //PICK EMPTY PALLET
+    ROS_INFO("Picking up empty pallet");
+    next_truck_task_clt_.call(srv);
+    //MOVE TO UNLOADING POSE
+    ROS_INFO("Moving to unloading pose");
+    next_truck_task_clt_.call(srv);
+#endif
     deactivateHQPControl();
     resetState();
-    std_srvs::Empty srv;
     reset_hqp_control_clt_.call(srv);
     pers_task_vis_ids_.clear();
 
@@ -1768,7 +1778,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 deactivateHQPControl();
                 //VELVET GRASP_
                 velvet_interface_node::SmartGrasp graspcall;
-                graspcall.request.current_threshold_contact = 10;
+                graspcall.request.current_threshold_contact = 20;
                 graspcall.request.current_threshold_final = 35;
                 graspcall.request.max_belt_travel_mm = 90;
                 graspcall.request.phalange_delta_rad = 0.02;
@@ -1967,7 +1977,15 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     resetState();
     reset_hqp_control_clt_.call(srv);
     pers_task_vis_ids_.clear();
+    #if 0
+    //MOVE TO DROP OFF
+    ROS_INFO("Moving to drop-off pose");
+    next_truck_task_clt_.call(srv);
 
+    //MOVE HOME 
+    ROS_INFO("Moving back home");
+    next_truck_task_clt_.call(srv);
+#endif
     ROS_INFO("DEMO FINISHED.");
 
     return true;
