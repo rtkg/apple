@@ -148,6 +148,7 @@ private:
     bool setJointConfiguration(std::vector<double> const& joints);
     bool setGraspApproach();
     bool setObjectExtract();
+    bool setGripperExtract(PlaceInterval const& place);
     bool setObjectPlace(PlaceInterval const& place);
     bool loadPersistentTasks();
     bool getGraspInterval();
