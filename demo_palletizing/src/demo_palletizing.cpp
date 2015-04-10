@@ -1934,14 +1934,13 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     safeShutdown();
                     return false;
                 }
-#if 0
+
                 if(!with_gazebo_)
                     if(!getGraspInterval())
                     {
                         ROS_ERROR("Could not obtain the grasp intervall!");
                         safeShutdown();
                     }
-#endif
 
                 if(!setCartesianStiffness(1000, 1000, 100, 100, 100, 100))
                 {
@@ -1975,12 +1974,12 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             if(!with_gazebo_)
             {
                 //SET GRASP STIFFNESS
-                if(!setCartesianStiffness(1000, 50, 15, 100, 100, 10))
+                if(!setCartesianStiffness(1000, 50, 30, 100, 100, 10))
                 {
                     safeShutdown();
                     return false;
                 }
-#if 0
+
                 deactivateHQPControl();
                 //VELVET GRASP_
                 velvet_interface_node::SmartGrasp graspcall;
@@ -2002,8 +2001,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     grasp_success = true;
                     ROS_INFO("Grasp aquired.");
                 }
-#endif
-		grasp_success = true; //REEEEEEEEEEEEMOOOOOOOOOOVVEEEEEEEEEEEEEE!!
 
             }
             else
@@ -2075,7 +2072,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 safeShutdown();
                 return false;
             }
-            task_error_tol_ = 10 * 1e-4;
+            task_error_tol_ = 1e-3;
             activateHQPControl();
 
             while(!task_status_changed_)
@@ -2291,7 +2288,7 @@ bool DemoPalletizing::gimmeBeer(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     ROS_ERROR("Could not obtain the grasp intervall!");
                     safeShutdown();
                 }
-
+	    
             if(!setCartesianStiffness(1000, 1000, 100, 100, 100, 100))
             {
                 safeShutdown();
