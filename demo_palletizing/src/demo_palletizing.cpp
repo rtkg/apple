@@ -167,9 +167,9 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place.p_(0) = 0.75; place.p_(1) = 0.2; place.p_(2) = 0.16;
     place.r_ = 0.02;
     place.n_(0) = 0.0; place.n_(1) = 0.0; place.n_(2) = 1.0;
-    place.d_ = 0.27;
+    place.d_ = 0.265;
     place.joints_ += 1.81, 1.01, -0.75, -1.28, 0.79, 0.85, -2.26;
-    place_zones_.push_back(place);
+    //place_zones_.push_back(place);
 
     place.joints_.clear();
     place.p_(1) = 0.0;
@@ -179,7 +179,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place.joints_.clear();
     place.p_(1) = -0.2;
     place.joints_ += 0.038, -0.26, 0.94, -1.88, 0.51, 1.01, -2.29;
-    place_zones_.push_back(place);
+    //place_zones_.push_back(place);
 }
 //-----------------------------------------------------------------
 bool DemoPalletizing::setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc)
@@ -2032,7 +2032,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 return false;
             }
 
-            task_error_tol_ = 1e-2;
+            task_error_tol_ = 5 * 1e-3;
             activateHQPControl();
 
             while(!task_status_changed_)
@@ -2111,7 +2111,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 safeShutdown();
                 return false;
             }
-            task_error_tol_ = 5 * 1e-4;
+            task_error_tol_ = 1e-4;
             task_diff_tol_ = 1e-5;
             activateHQPControl();
 

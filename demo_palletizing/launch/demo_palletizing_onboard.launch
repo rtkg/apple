@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <include file="$(find kmo_vehicle_execution)/launch/kuka_fair_aass_lab_onboard.launch" />
+  <!--include file="$(find kmo_vehicle_execution)/launch/kuka_fair_aass_lab_onboard.launch" /-->
   <include file="$(find apple_launch)/launch/lbr_iiwa_vel_control.launch"/>
   <include file="$(find lbr_fri)/launch/fri_launch.launch"/>
   <include file="$(find can_finder)/launch/can_finder.launch"/>
