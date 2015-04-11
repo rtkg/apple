@@ -169,7 +169,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place.n_(0) = 0.0; place.n_(1) = 0.0; place.n_(2) = 1.0;
     place.d_ = 0.26;
     place.joints_ += 1.81, 1.01, -0.75, -1.28, 0.79, 0.85, -2.26;
-    place_zones_.push_back(place);
+    //place_zones_.push_back(place);
 
     place.joints_.clear();
     place.p_(1) = 0.0;
@@ -179,7 +179,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     place.joints_.clear();
     place.p_(1) = -0.2;
     place.joints_ += 0.038, -0.26, 0.94, -1.88, 0.51, 1.01, -2.29;
-    place_zones_.push_back(place);
+    //place_zones_.push_back(place);
 }
 //-----------------------------------------------------------------
 bool DemoPalletizing::setCartesianStiffness(double sx, double sy, double sz, double sa, double sb, double sc)
@@ -1972,13 +1972,14 @@ bool DemoPalletizing::loadPersistentTasks()
 bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
 {
     std_srvs::Empty srv;
-#if 0
     //PICK EMPTY PALLET
     ROS_INFO("Picking up empty pallet");
     next_truck_task_clt_.call(srv);
     //MOVE TO UNLOADING POSE
     ROS_INFO("Moving to unloading pose");
     next_truck_task_clt_.call(srv);
+
+#if 0
 #endif
     deactivateHQPControl();
     resetState();
@@ -2061,13 +2062,14 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     safeShutdown();
                     return false;
                 }
-
                 if(!with_gazebo_)
                     if(!getGraspInterval())
                     {
                         ROS_ERROR("Could not obtain the grasp intervall!");
                         safeShutdown();
                     }
+#if 0
+#endif
 
                 if(!setCartesianStiffness(1000, 1000, 100, 100, 100, 100))
                 {
@@ -2128,13 +2130,14 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     grasp_success = true;
                     ROS_INFO("Grasp aquired.");
                 }
-
+#if 0
+		grasp_success = true; //RRRRRRRRRRRREEEEEEEEEEEEEEEMMMMMMMMMMMOOOOOOOOOOVVVVVVVVVVVEEEEEEEEEEEEEE!!!!!!!!!
+#endif
             }
             else
                 grasp_success = true;
 
         }
-
         {//OBJECT EXTRACT
             ROS_INFO("Trying object extract.");
             boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -2306,7 +2309,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             ROS_INFO("Gripper extract tasks executed successfully.");
         }
     }
-
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
 
@@ -2352,7 +2354,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     reset_hqp_control_clt_.call(srv);
     pers_task_vis_ids_.clear();
 
-    #if 0
     //MOVE TO DROP OFF
     ROS_INFO("Moving to drop-off pose");
     next_truck_task_clt_.call(srv);
@@ -2360,6 +2361,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     //MOVE HOME 
     ROS_INFO("Moving back home");
     next_truck_task_clt_.call(srv);
+#if 0
 #endif
     ROS_INFO("DEMO FINISHED.");
 

@@ -1,12 +1,11 @@
 <?xml version="1.0"?>
 
 <launch>
-  <!--include file="$(find kmo_vehicle_execution)/launch/kuka_fair_aass_lab_onboard.launch" /-->
+  <include file="$(find kmo_vehicle_execution)/launch/kuka_fair_booth_onboard.launch" />
   <include file="$(find apple_launch)/launch/lbr_iiwa_vel_control.launch"/>
   <include file="$(find lbr_fri)/launch/fri_launch.launch"/>
   <include file="$(find can_finder)/launch/can_finder.launch"/>
   <include file="$(find velvet_interface_node)/launch/velvet_node.launch"/>
-  <!--include file="$(find experiment_console)/launch/structure_frames.launch"/-->
   
   <node name="longLiveCamera" pkg="experiment_console" type="startCamera.sh" respawn="false" output="screen"/>
   <!-- launch the demo palletizing node -->
