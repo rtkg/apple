@@ -115,7 +115,10 @@ include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 # )
 
 ## Declare a cpp executable
-add_executable(demo_palletizing src/demo_palletizing.cpp)
+add_executable(demo_palletizing src/demo_palletizing.cpp
+                                src/lets_dance.cpp
+                                src/look_what_i_found.cpp
+                                src/gimme_beer.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes

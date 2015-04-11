@@ -16,8 +16,8 @@
 
 namespace demo_palletizing
 {
-//-----------------------------------------------------------
-//#define HQP_GRIPPER_JOINT 1
+  //-----------------------------------------------------------
+  //#define HQP_GRIPPER_JOINT 1
 
 #define PILE_GRASPING 1
 
@@ -27,10 +27,10 @@ namespace demo_palletizing
 #define SAFETY_HEIGHT 0.34
 #define BEER_RADIUS   0.55
 #define BEER_HEIGHT   -0.03
-//-----------------------------------------------------------
-///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
-struct GraspInterval
-{
+  //-----------------------------------------------------------
+  ///**To simplify, a grasp intervall is given as two concentric cylinders, described by axis v and a point p on the axis (referenced in a static obj_frame), and two planes. The controller will try to bring endeffector point e, expressed in frame e_frame, inside the intervall described by the two cylinders and the planes (i.e., inside the shell formed by the cylinders and in between the planes described by n^Tx - d = 0)*/
+  struct GraspInterval
+  {
     std::string obj_frame_; //object frame
     std::string e_frame_; //endeffector frame
     Eigen::Vector3d e_; //endeffector point expressed in e_frame_
@@ -45,10 +45,10 @@ struct GraspInterval
     Eigen::Vector3d n1_, n2_; //plane normals
     double d1_, d2_; //plane offsets d1 !> d2
 #endif
-};
-//-----------------------------------------------------------
-struct PlaceInterval
-{
+  };
+  //-----------------------------------------------------------
+  struct PlaceInterval
+  {
     std::string place_frame_;
     std::string e_frame_; //endeffector frame
 
@@ -62,30 +62,30 @@ struct PlaceInterval
     double d_; //place plane offsets d !> 0
 
     std::vector<double> joints_; //pre-place joint values
-};
-////-----------------------------------------------------------
-//struct CartesianStiffness
-//{
-//    double sx;
-//    double sy;
-//    double sz;
-//    double sa;
-//    double sb;
-//    double sc;
-//};
-//-----------------------------------------------------------
-class DemoPalletizing
-{
-public:
+  };
+  ////-----------------------------------------------------------
+  //struct CartesianStiffness
+  //{
+  //    double sx;
+  //    double sy;
+  //    double sz;
+  //    double sa;
+  //    double sb;
+  //    double sc;
+  //};
+  //-----------------------------------------------------------
+  class DemoPalletizing
+  {
+  public:
 
     DemoPalletizing();
 
-private:
+  private:
 
     ros::NodeHandle nh_;
     ros::NodeHandle n_;
     boost::mutex manipulator_tasks_m_;
-        boost::mutex force_change_m_;
+    boost::mutex force_change_m_;
     boost::condition_variable cond_;
     double task_error_tol_;
     double task_diff_tol_;
@@ -118,12 +118,15 @@ private:
     ros::ServiceClient next_truck_task_clt_;
     ros::ServiceServer start_demo_srv_;
     ros::ServiceServer gimme_beer_srv_;
+    ros::ServiceServer lets_dance_srv_;
+    ros::ServiceServer look_what_i_found_srv_;
 
     //** Manipulator joint configuration while moving the forklift */
     std::vector<double> transfer_config_;
     //** Manipulator joint configuration prior to reach-to-grasp */
     std::vector<double> sensing_config_;
     std::vector<double> gimme_beer_config_;
+    std::vector<double> look_beer_config_;
     //** message holding the active tasks at each state. After each state change these tasks are removed and replaced by the ones corresponding to the next state. */
     hqp_controllers_msgs::SetTasks tasks_;
     //** map holding the ids of those tasks whose completion indicates a state change*/
@@ -166,7 +169,9 @@ private:
     void jointStateCallback(const sensor_msgs::JointStatePtr& msg);
     bool startDemo(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
     bool gimmeBeer(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
-};
+    bool letsDance(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
+    bool lookWhatIFound(std_srvs::Empty::Request  &req,std_srvs::Empty::Response &res );
+  };
 
 }//end namespace hqp controllers
 
