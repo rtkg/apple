@@ -1106,12 +1106,12 @@ bool DemoPalletizing::setObjectExtract()
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 1.5);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN * 1);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(grasp_.p_(0) - grasp_.a_(0)*0.2); t_geom.g_data.push_back(grasp_.p_(1) - grasp_.a_(1)*0.2); t_geom.g_data.push_back(grasp_.p_(2) + 0.2);
+    t_geom.g_data.push_back(grasp_.p_(0) - grasp_.a_(0)*0.25); t_geom.g_data.push_back(grasp_.p_(1) - grasp_.a_(1)*0.2); t_geom.g_data.push_back(grasp_.p_(2) + 0.2);
     t_link.link_frame = grasp_.obj_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -1243,7 +1243,7 @@ bool DemoPalletizing::setGripperExtract(PlaceInterval const& place)
     t_link.geometries.clear();
     t_geom.g_data.clear();
     t_geom.g_type = hqp_controllers_msgs::TaskGeometry::POINT;
-    t_geom.g_data.push_back(place.p_(0)); t_geom.g_data.push_back(place.p_(1) - 0.15); t_geom.g_data.push_back(0.4);
+    t_geom.g_data.push_back(place.p_(0)); t_geom.g_data.push_back(place.p_(1) - 0.15); t_geom.g_data.push_back(0.6);
     t_link.link_frame = place.place_frame_;
     t_link.geometries.push_back(t_geom);
     task.t_links.push_back(t_link);
@@ -1292,7 +1292,7 @@ bool DemoPalletizing::setGripperExtract(PlaceInterval const& place)
     task.t_links.push_back(t_link);
 
     tasks_.request.tasks.push_back(task);
-
+#if 0
     //GRIPPER VERTICAL AXIS ALIGNMENT
     task.t_links.clear();
     task.dynamics.d_data.clear();
@@ -1326,6 +1326,7 @@ bool DemoPalletizing::setGripperExtract(PlaceInterval const& place)
     task.t_links.push_back(t_link);
 
     tasks_.request.tasks.push_back(task);
+#endif
 
     //send the filled task message to the controller
     if(!sendStateTasks())
@@ -1369,7 +1370,7 @@ bool DemoPalletizing::setGraspApproach()
     task.ds = 0.0;
     task.di = 1;
     task.dynamics.d_type = hqp_controllers_msgs::TaskDynamics::LINEAR_DYNAMICS;
-    task.dynamics.d_data.push_back(DYNAMICS_GAIN / 2);
+    task.dynamics.d_data.push_back(DYNAMICS_GAIN);
 
     t_link.geometries.clear();
     t_geom.g_data.clear();
@@ -1993,6 +1994,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     ROS_INFO("Moving to unloading pose");
     next_truck_task_clt_.call(srv);
 
+
 #if 0
 #endif
     deactivateHQPControl();
@@ -2076,10 +2078,10 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     safeShutdown();
                     return false;
                 }
-
 		 if(!with_gazebo_)
                     if(!getGraspInterval())
                         ROS_WARN("Could not obtain the grasp intervall - using default interval!");
+
 #if 0
 #endif
 
@@ -2142,7 +2144,9 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                     grasp_success = true;
                     ROS_INFO("Grasp aquired.");
                 }
-
+#if 0
+		grasp_success = true; //RRRRRRRRREEEEEEEEEEEMMMMMMMMMOOOOOOVVVVVVEEEEEEEE!!!!!!!!!!
+#endif
             }
             else
                 grasp_success = true;
@@ -2172,7 +2176,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
                 return false;
             }
 
-            task_error_tol_ = 5 * 1e-3;
+            task_error_tol_ = 1e-2;
             activateHQPControl();
 
             while(!task_status_changed_)
@@ -2319,6 +2323,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
             ROS_INFO("Gripper extract tasks executed successfully.");
         }
     }
+
     {//MANIPULATOR TRANSFER CONFIGURATION
         ROS_INFO("Trying to put the manipulator in transfer configuration.");
 
@@ -2363,7 +2368,6 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     resetState();
     reset_hqp_control_clt_.call(srv);
     pers_task_vis_ids_.clear();
-
     //MOVE TO DROP OFF
     ROS_INFO("Moving to drop-off pose");
     next_truck_task_clt_.call(srv);
@@ -2371,6 +2375,7 @@ bool DemoPalletizing::startDemo(std_srvs::Empty::Request  &req, std_srvs::Empty:
     //MOVE HOME 
     ROS_INFO("Moving back home");
     next_truck_task_clt_.call(srv);
+
 #if 0
 #endif
     ROS_INFO("DEMO FINISHED.");
