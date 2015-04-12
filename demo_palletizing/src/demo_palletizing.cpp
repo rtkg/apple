@@ -36,7 +36,7 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
     start_demo_srv_ = nh_.advertiseService("start_demo", &DemoPalletizing::startDemo, this);
     gimme_beer_srv_ = nh_.advertiseService("gimme_beer", &DemoPalletizing::gimmeBeer, this);
     lets_dance_srv_ = nh_.advertiseService("lets_dance", &DemoPalletizing::letsDance, this);
-    lets_dance_srv_ = nh_.advertiseService("look_what_i_found", &DemoPalletizing::lookWhatIFound, this);
+    look_what_i_found_srv_ = nh_.advertiseService("look_what_i_found", &DemoPalletizing::lookWhatIFound, this);
     task_status_sub_ = n_.subscribe("task_status_array", 1, &DemoPalletizing::taskStatusCallback, this);
     joint_state_sub_ = n_.subscribe("joint_states", 1, &DemoPalletizing::jointStateCallback, this);
     set_tasks_clt_ = n_.serviceClient<hqp_controllers_msgs::SetTasks>("set_tasks");
@@ -145,12 +145,12 @@ DemoPalletizing::DemoPalletizing() : task_error_tol_(0.0), task_diff_tol_(1e-5),
 #endif
 
     look_beer_config_ = std::vector<double>(n_jnts);
-    look_beer_config_[0] = 1.57;
-    look_beer_config_[1] = 0.81;
-    look_beer_config_[2] = -1.57;
-    look_beer_config_[3] = 0.76;
+    look_beer_config_[0] = -1.57;
+    look_beer_config_[1] = -0.81;
+    look_beer_config_[2] = 1.57;
+    look_beer_config_[3] = 1.2;
     look_beer_config_[4] = 0.0;
-    look_beer_config_[5] = 0.76;
+    look_beer_config_[5] = 1.2;
     look_beer_config_[6] = 0.0;
 #ifdef HQP_GRIPPER_JOINT
     look_beer_config_[7] = 0.1;

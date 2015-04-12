@@ -105,7 +105,119 @@ namespace demo_palletizing
 	      }
 	  }
 
-	{//MANIPULATOR LOOK BEER CONFIGURATION
+	{//MANIPULATOR TRANSFER CONFIGURATION
+	  ROS_INFO("Trying to put the manipulator in gimme beer configuration.");
+
+	  boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+	  task_status_changed_ = false;
+	  task_success_ = false;
+	  deactivateHQPControl();
+	  if(!resetState())
+	    {
+	      ROS_ERROR("Could not reset the state!");
+	      safeShutdown();
+	      return false;
+	    }
+
+	  if(!setJointConfiguration(transfer_config_))
+	    {
+	      ROS_ERROR("Could not set manipulator transfer configuration!");
+	      safeShutdown();
+	      return false;
+	    }
+	  task_error_tol_ = 1e-2;
+	  activateHQPControl();
+
+	  while(!task_status_changed_)
+	    cond_.wait(lock);
+
+	  if(!task_success_)
+	    {
+	      ROS_ERROR("Could not complete the manipulator transfer configuration tasks!");
+	      safeShutdown();
+	      return false;
+	    }
+	  ROS_INFO("Manipulator transfer configuration tasks executed successfully.");
+	}
+
+
+	if(!with_gazebo_)
+	  {
+	    //VELVET POSE
+	    velvet_interface_node::VelvetToPos poscall;
+
+	    poscall.request.angle = 0.1;
+	    if(!velvet_pos_clt_.call(poscall))
+	      {
+		ROS_ERROR("could not call velvet to pos");
+		ROS_BREAK();
+	      }
+
+	    poscall.request.angle = 1.45;
+	    if(!velvet_pos_clt_.call(poscall))
+	      {
+		ROS_ERROR("could not call velvet to pos");
+		ROS_BREAK();
+	      }
+	  }
+#if 0
+	{//MANIPULATOR SENSING CONFIGURATION
+	  ROS_INFO("Trying to put the manipulator in sensing configuration.");
+
+	  boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+	  task_status_changed_ = false;
+	  task_success_ = false;
+	  deactivateHQPControl();
+	  if(!resetState())
+	    {
+	      ROS_ERROR("Could not reset the state!");
+	      safeShutdown();
+	      return false;
+	    }
+
+	  if(!setJointConfiguration(sensing_config_))
+	    {
+	      ROS_ERROR("Could not set manipulator sensing configuration!");
+	      safeShutdown();
+	      return false;
+	    }
+	  task_error_tol_ = 1e-2;
+	  activateHQPControl();
+
+	  while(!task_status_changed_)
+	    cond_.wait(lock);
+
+	  if(!task_success_)
+	    {
+	      ROS_ERROR("Could not complete the manipulator sensing configuration tasks!");
+	      safeShutdown();
+	      return false;
+	    }
+	  ROS_INFO("Manipulator sensing configuration tasks executed successfully.");
+	}
+
+	if(!with_gazebo_)
+	  {
+	    //VELVET POSE
+	    velvet_interface_node::VelvetToPos poscall;
+
+	    poscall.request.angle = 0.1;
+	    if(!velvet_pos_clt_.call(poscall))
+	      {
+		ROS_ERROR("could not call velvet to pos");
+		ROS_BREAK();
+	      }
+
+	    poscall.request.angle = 1.45;
+	    if(!velvet_pos_clt_.call(poscall))
+	      {
+		ROS_ERROR("could not call velvet to pos");
+		ROS_BREAK();
+	      }
+	  }
+#endif
+
+	{//MANIPULATOR LOOK BEER  CONFIGURATION
 	  ROS_INFO("Trying to put the manipulator in look beer configuration.");
 
 	  boost::mutex::scoped_lock lock(manipulator_tasks_m_);
@@ -140,73 +252,6 @@ namespace demo_palletizing
 	  ROS_INFO("Manipulator look beer configuration tasks executed successfully.");
 	}
 
-	if(!with_gazebo_)
-	  {
-	    //VELVET POSE
-	    velvet_interface_node::VelvetToPos poscall;
-
-	    poscall.request.angle = 0.1;
-	    if(!velvet_pos_clt_.call(poscall))
-	      {
-		ROS_ERROR("could not call velvet to pos");
-		ROS_BREAK();
-	      }
-
-	    poscall.request.angle = 1.45;
-	    if(!velvet_pos_clt_.call(poscall))
-	      {
-		ROS_ERROR("could not call velvet to pos");
-		ROS_BREAK();
-	      }
-	  }
-
-	{//MANIPULATOR TRANSFER CONFIGURATION
-	  ROS_INFO("Trying to put the manipulator in gimme beer configuration.");
-
-	  boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-	  task_status_changed_ = false;
-	  task_success_ = false;
-	  deactivateHQPControl();
-	  if(!resetState())
-	    {
-	      ROS_ERROR("Could not reset the state!");
-	      safeShutdown();
-	      return false;
-	    }
-
-	  if(!setJointConfiguration(transfer_config_))
-	    {
-	      ROS_ERROR("Could not set manipulator sensing configuration!");
-	      safeShutdown();
-	      return false;
-	    }
-	  task_error_tol_ = 1e-2;
-	  activateHQPControl();
-
-	  while(!task_status_changed_)
-	    cond_.wait(lock);
-
-	  if(!task_success_)
-	    {
-	      ROS_ERROR("Could not complete the manipulator transfer configuration tasks!");
-	      safeShutdown();
-	      return false;
-	    }
-	  ROS_INFO("Manipulator transfer configuration tasks executed successfully.");
-	}
-
-
-	if(!with_gazebo_)
-	  {
-	    velvet_interface_node::VelvetToPos poscall2;
-	    poscall2.request.angle = 0.2;
-
-	    if(!velvet_pos_clt_.call(poscall2))
-	      {
-		ROS_ERROR("could not call velvet to pos");
-		ROS_BREAK();
-	      }
-	  }
       }
 
     deactivateHQPControl();

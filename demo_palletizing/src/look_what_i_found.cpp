@@ -104,6 +104,41 @@ namespace demo_palletizing
 
     for (unsigned int i=0; i<3; i++)
       {
+	{//MANIPULATOR TRANSFER CONFIGURATION
+	  ROS_INFO("Trying to put the manipulator in gimme beer configuration.");
+
+	  boost::mutex::scoped_lock lock(manipulator_tasks_m_);
+	  task_status_changed_ = false;
+	  task_success_ = false;
+	  deactivateHQPControl();
+	  if(!resetState())
+	    {
+	      ROS_ERROR("Could not reset the state!");
+	      safeShutdown();
+	      return false;
+	    }
+
+	  if(!setJointConfiguration(transfer_config_))
+	    {
+	      ROS_ERROR("Could not set manipulator sensing configuration!");
+	      safeShutdown();
+	      return false;
+	    }
+	  task_error_tol_ = 1e-2;
+	  activateHQPControl();
+
+	  while(!task_status_changed_)
+	    cond_.wait(lock);
+
+	  if(!task_success_)
+	    {
+	      ROS_ERROR("Could not complete the manipulator transfer configuration tasks!");
+	      safeShutdown();
+	      return false;
+	    }
+	  ROS_INFO("Manipulator transfer configuration tasks executed successfully.");
+	}
+
 
 	{//MANIPULATOR LOOK BEER CONFIGURATION
 	  ROS_INFO("Trying to put the manipulator in look beer configuration.");
@@ -140,41 +175,6 @@ namespace demo_palletizing
 	  ROS_INFO("Manipulator look beer configuration tasks executed successfully.");
 	}
 
-
-	{//MANIPULATOR TRANSFER CONFIGURATION
-	  ROS_INFO("Trying to put the manipulator in gimme beer configuration.");
-
-	  boost::mutex::scoped_lock lock(manipulator_tasks_m_);
-	  task_status_changed_ = false;
-	  task_success_ = false;
-	  deactivateHQPControl();
-	  if(!resetState())
-	    {
-	      ROS_ERROR("Could not reset the state!");
-	      safeShutdown();
-	      return false;
-	    }
-
-	  if(!setJointConfiguration(transfer_config_))
-	    {
-	      ROS_ERROR("Could not set manipulator sensing configuration!");
-	      safeShutdown();
-	      return false;
-	    }
-	  task_error_tol_ = 1e-2;
-	  activateHQPControl();
-
-	  while(!task_status_changed_)
-	    cond_.wait(lock);
-
-	  if(!task_success_)
-	    {
-	      ROS_ERROR("Could not complete the manipulator transfer configuration tasks!");
-	      safeShutdown();
-	      return false;
-	    }
-	  ROS_INFO("Manipulator transfer configuration tasks executed successfully.");
-	}
 
 	{//MANIPULATOR GIMME BEER CONFIGURATION
 	  ROS_INFO("Trying to put the manipulator in gimme beer configuration.");
