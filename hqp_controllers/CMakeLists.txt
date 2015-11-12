@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
      cmake_modules
      roscpp
      controller_interface
+     control_toolbox
+     control_msgs
      hqp_controllers_msgs
      kdl_parser
      realtime_tools
@@ -34,7 +36,9 @@ catkin_package(
      CATKIN_DEPENDS
      roscpp
      controller_interface
+     control_toolbox
      hqp_controllers_msgs
+     control_msgs
      kdl_parser
      realtime_tools
      DEPENDS orocos_kdl
@@ -58,6 +62,8 @@ link_directories(${GUROBI_LIB_DIR})
 
 add_library(${PROJECT_NAME} src/hqp_velocity_controller.cpp
                             include/hqp_controllers/hqp_velocity_controller.h
+                            src/hqp_effort_controller.cpp
+                            include/hqp_controllers/hqp_effort_controller.h
                             src/task.cpp
                             include/hqp_controllers/task.h
                             src/task_dynamics.cpp

@@ -11,6 +11,8 @@
   <author email="robert.krug@oru.se">Robert Krug</author>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>controller_interface</build_depend>
+  <build_depend>control_toolbox</build_depend>
+  <build_depend>control_msgs</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>cmake_modules</build_depend> 
   <build_depend>orocos_kdl</build_depend>
@@ -20,6 +22,8 @@
 
   <run_depend>realtime_tools</run_depend>
   <run_depend>controller_interface</run_depend>
+  <run_depend>control_toolbox</run_depend>
+  <run_depend>control_msgs</run_depend>
   <run_depend>hqp_controllers_msgs</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>orocos_kdl</run_depend>

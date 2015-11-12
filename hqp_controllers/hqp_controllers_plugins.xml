@@ -8,4 +8,12 @@
     </description>
   </class>
 
+  <class name="hqp_controllers/HQPEffortController" 
+         type="hqp_controllers::HQPEffortController" 
+         base_class_type="controller_interface::ControllerBase">
+    <description>
+      The HQPEffortController generates the same velocity commands as above, but also includes velocity tracking for a set of joints and outputs efforts. Thus, it expects a EffortJointInterface type of hardware interface.
+    </description>
+  </class>
+
 </library>
