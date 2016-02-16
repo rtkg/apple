@@ -47,6 +47,7 @@ public:
 
     Eigen::VectorXd commands_;
     unsigned int n_joints_;
+    unsigned int loop_count_;
 
     bool init(hardware_interface::EffortJointInterface *hw, ros::NodeHandle &n);
     void starting(const ros::Time& time);

@@ -9,6 +9,9 @@
 
 namespace hqp_controllers
 {
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
   //-----------------------------------------------------------------------
   HQPEffortController::HQPEffortController() : active_(false) {}
   //-----------------------------------------------------------------------
@@ -92,6 +95,8 @@ namespace hqp_controllers
     //============================================== REGISTER CALLBACKS END =========================================
     vis_t_geom_pub_.init(n, "task_geometries", 1);
     t_status_pub_.init(n, "task_status_array", 1);
+
+    loop_count_=0;
 
     return true;
   }
@@ -289,6 +294,9 @@ namespace hqp_controllers
     lock_.lock();
     if(active_)
       {
+	if(loop_count_ % 1 == 0)
+	  {
+
         //compute jacobians and poses of the task links, as well as the task functions and jacobians and compute the HQP
         task_manager_.updateTasks();
 
@@ -310,6 +318,9 @@ namespace hqp_controllers
         //    }
         // ================= DEBUG PRINT END ============================
 
+	loop_count_=0;
+	  }
+	loop_count_++;
       }
     else
       commands_.setZero();
@@ -321,7 +332,16 @@ namespace hqp_controllers
     for(unsigned int i=0; i<n_joints_; i++)
       {
 	double error = commands_(i) - joints_[i].getVelocity();
+        // if (fabs(error) < 1e-3)
+        //   error=0;
+
+
 	double commanded_effort = pids_[i].computeCommand(error, period);
+	// if (i==6)
+	// commanded_effort+=sgn(error)*1.1;
+	// if (fabs(commanded_effort) > 2.0)
+	//   commanded_effort = 2*sgn(commanded_effort);
+
 	joints_[i].setCommand(commanded_effort);
       }
 

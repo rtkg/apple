@@ -202,8 +202,23 @@ ProjectionQuantities Point::projectOntoCylinder(const Cylinder &cylinder) const
 //------------------------------------------------------------------------
 ProjectionQuantities Point::projectOntoSphere(Sphere const& sphere)const
 {
-    ROS_ERROR("Error in Point::projectOntoSphere(...): not implemented yet!");
-    ROS_BREAK();
+    ProjectionQuantities proj;
+    proj.P1_.resize(Eigen::NoChange, 1);
+    proj.P2_.resize(Eigen::NoChange, 1);
+    proj.N_.resize(Eigen::NoChange, 1);
+    proj.d_.resize(1);
+
+    proj.P1_ << sphere.getTaskData().head<3>();
+    proj.P2_ << task_data_;
+    proj.N_ << proj.P2_ - proj.P1_;
+    proj.d_(0) = -proj.N_.norm()+sphere.getTaskData()(3);
+    proj.N_.normalize();
+
+    // std::cout<<"P1: "<<proj.P1_.transpose()<<std::endl;
+    // std::cout<<"P2: "<<proj.P2_.transpose()<<std::endl;
+    // std::cout<<"N: "<<proj.N_.transpose()<<std::endl;
+    // std::cout<<"d: "<<proj.d_<<std::endl<<std::endl;
+    return proj;
 }
 //------------------------------------------------------------------------
 ProjectionQuantities Point::projectOntoCone(Cone const& cone)const
@@ -1162,8 +1177,24 @@ ProjectionQuantities Sphere::projectOntoCone(Cone const& cone)const
 //------------------------------------------------------------------------
 ProjectionQuantities Sphere::projectOntoPoint(const Point &point) const
 {
-    ROS_ERROR("Sphere::projectOntoPoint(...): not implemented yet!");
-    ROS_BREAK();
+
+    ProjectionQuantities proj;
+    proj.P1_.resize(Eigen::NoChange, 1);
+    proj.P2_.resize(Eigen::NoChange, 1);
+    proj.N_.resize(Eigen::NoChange, 1);
+    proj.d_.resize(1);
+
+    proj.P1_ << point.getTaskData();
+    proj.P2_ << task_data_.head<3>();
+    proj.N_ << -proj.P2_ + proj.P1_;
+    proj.d_(0) = proj.N_.norm()-task_data_(3);
+    proj.N_.normalize();
+
+    // std::cout<<"P1: "<<proj.P1_.transpose()<<std::endl;
+    // std::cout<<"P2: "<<proj.P2_.transpose()<<std::endl;
+    // std::cout<<"N: "<<proj.N_.transpose()<<std::endl;
+    // std::cout<<"d: "<<proj.d_<<std::endl<<std::endl;
+    return proj;
 }
 //------------------------------------------------------------------------
 ProjectionQuantities Sphere::projectOntoPlane(const Plane &plane) const
