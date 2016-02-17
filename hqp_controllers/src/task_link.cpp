@@ -175,6 +175,7 @@ Eigen::MatrixXd TaskLink::getJacobian(Eigen::Vector3d& base_AB) const
 void TaskLink::addGeometry(boost::shared_ptr<TaskGeometry> geometry)
 {
     //Make sure link and root frames correspond
+
     ROS_ASSERT(link_frame_ == geometry->getLinkFrame());
     ROS_ASSERT(task_frame_ == geometry->getTaskFrame());
 

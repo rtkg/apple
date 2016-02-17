@@ -40,6 +40,8 @@ std::ostream& operator<<(std::ostream& str, TaskGeometry const& geom)
     str<<"link data: "<<geom.link_data_.transpose()<<std::endl;
     str<<"task data: "<<geom.task_data_.transpose()<<std::endl;
     str<<std::endl;
+
+    return str;
 }
 //------------------------------------------------------
 TaskGeometry::TaskGeometry() : link_frame_(""), task_frame_(""){}
@@ -87,6 +89,7 @@ boost::shared_ptr<TaskGeometry> TaskGeometry::makeTaskGeometry(TaskGeometryType 
         ROS_ERROR("Task geometry type %d is invalid.",type);
         ROS_BREAK();
     }
+
     return geom;
 }
 //------------------------------------------------------------------------
@@ -306,6 +309,27 @@ OrientationQuantities Line::orientTowardsLine(Line const& line)const
     ROS_BREAK();
 }
 //------------------------------------------------------------------------
+OrientationQuantities Line::orientTowardsPlane(Plane const& plane)const
+{
+    OrientationQuantities ori;
+
+
+    Eigen::Vector3d v1 = plane.getTaskData().head<3>();
+    Eigen::Vector3d v2 = task_data_.segment<3>(3);
+
+    ori.d_=fabs(v1.transpose()*v2);
+
+    if(v1.transpose()*v2 < 0.0)
+      {
+	ori.h_ = v1.transpose()*skewSymmetricMatrix(v2);
+      }
+    else
+      ori.h_ = -v1.transpose()*skewSymmetricMatrix(v2);
+
+    return ori;
+
+}
+//------------------------------------------------------------------------
 OrientationQuantities Line::orientTowardsCone(Cone const& cone)const
 {
     OrientationQuantities ori;
@@ -467,6 +491,9 @@ Plane::Plane() : ProjectableGeometry()
 //------------------------------------------------------------------------
 Plane::Plane(std::string const& link_frame, std::string const& task_frame, Eigen::VectorXd const& link_data) : ProjectableGeometry(link_frame, task_frame, link_data)
 {
+    link_frame_ = link_frame;
+    task_frame_ = task_frame;
+
     ROS_ASSERT(link_data_.rows() == 4); //plane is described by unit normal n and offset d
 
     //normalize on the plane normal just to be sure ...
@@ -514,6 +541,49 @@ ProjectionQuantities Plane::projectOntoCylinder(const Cylinder &cylinder) const
 ProjectionQuantities Plane::projectOntoSphere(const Sphere &sphere) const
 {
     ROS_ERROR("Error in Plane::projectOntoSphere(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+OrientationQuantities Plane::orient(const OrientableGeometry &geom) const
+{
+    ROS_ASSERT(task_frame_ == geom.getTaskFrame());
+    OrientationQuantities ori =  geom.orientTowardsPlane(*this);
+    return geom.orientTowardsPlane(*this);
+}
+//------------------------------------------------------------------------
+OrientationQuantities Plane::coplanar(OrientableGeometry const& geom)const
+{
+    ROS_ERROR("Plane::coplanar(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+OrientationQuantities Plane::orientTowardsLine(Line const& line)const
+{
+    ROS_ERROR("Plane::orientTowardsLine(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+OrientationQuantities Plane::orientTowardsCone(Cone const& cone)const
+{
+    ROS_ERROR("Plane::orientTowardsCone(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+OrientationQuantities Plane::orientTowardsPlane(Plane const& plane)const
+{
+    ROS_ERROR("Plane::orientTowardsPlane(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+  OrientationQuantities Plane::coplanarWithLine(Line const& line)const
+{
+    ROS_ERROR("Plane::coplanarWithLine(...): not implemented yet!");
+    ROS_BREAK();
+}
+//------------------------------------------------------------------------
+  OrientationQuantities Plane::coplanarWithCone(Cone const& cone)const
+{
+    ROS_ERROR("Plane::coplanarWithCone(...): not implemented yet!");
     ROS_BREAK();
 }
 //------------------------------------------------------------------------
@@ -1324,6 +1394,25 @@ OrientationQuantities Cone::orientTowardsLine(Line const& line)const
     ROS_ERROR("Cone::orientTowardsLine(...): not implemented yet!");
     ROS_BREAK();
 }
+//------------------------------------------------------------------------
+  OrientationQuantities Cone::orientTowardsPlane(Plane const& plane)const
+  {
+    OrientationQuantities ori;
+
+    Eigen::Vector3d v1 = plane.getTaskData().head<3>();
+    Eigen::Vector3d v2 = task_data_.segment<3>(3);
+
+    ori.d_=cos(acos(fabs(v1.transpose()*v2))+task_data_(6));
+
+    if(v1.transpose()*v2 < 0.0)
+      {
+	ori.h_ = v1.transpose()*skewSymmetricMatrix(v2);
+      }
+    else
+      ori.h_ = -v1.transpose()*skewSymmetricMatrix(v2);
+
+    return ori;
+  }
 //------------------------------------------------------------------------
 OrientationQuantities Cone::orientTowardsCone(Cone const& cone)const
 {

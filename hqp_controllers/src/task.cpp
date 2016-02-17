@@ -191,7 +191,6 @@ boost::shared_ptr<Task> Task::makeTask(unsigned int id, XmlRpc::XmlRpcValue& t_d
 		ROS_ASSERT(t_description["t_links"][i]["geometries"][j]["g_data"][k].getType() == XmlRpc::XmlRpcValue::TypeDouble);
                 g_data(k) = t_description["t_links"][i]["geometries"][j]["g_data"][k];
 	      }
-
             boost::shared_ptr<TaskGeometry> geom = TaskGeometry::makeTaskGeometry(g_type, link_frame, task_frame, g_data);
             t_link->addGeometry(geom);
         }
@@ -356,16 +355,17 @@ void Parallel::updateTask()
     OrientableGeometry* geom1 = dynamic_cast<OrientableGeometry*>(t_links_[0]->getGeometries().at(0).get());
     OrientableGeometry* geom2 = dynamic_cast<OrientableGeometry*>(t_links_[1]->getGeometries().at(0).get());
     OrientationQuantities ori = geom1->orient(* geom2);
-    //std::cerr<<"Orientation quantities: "<<std::endl<<ori<<std::endl;
-
+   
     //in case of an inequality task, disregard the task component if it's outside the influence zone
     if((ori.d_ < -di_) && (!is_equality_task_))
         return;
+
 
     //TASK FUNCTION
     Eigen::VectorXd x(1), dx(1);
     //apply task damping
     x(0) = (ori.d_ + ds_);
+
     t_dynamics_->getDX(dx, x);
     E_(0,0) = x(0);
     E_(0,1) = dx(0);
@@ -376,8 +376,8 @@ void Parallel::updateTask()
     Eigen::MatrixXd jac = t_links_[0]->getJacobian() - t_links_[1]->getJacobian(); //delta offset does not matter since we're only interested in the rotation part of the jacobian
     J_ = -ori.h_ * jac.bottomRows<3>();
 
-//    std::cerr<<"E_:"<<std::endl<<E_<<std::endl;
-//    std::cerr<<"J_:"<<std::endl<<J_<<std::endl;
+   // std::cerr<<"E_:"<<std::endl<<E_<<std::endl;
+   // std::cerr<<"J_:"<<std::endl<<J_<<std::endl;
 }
 //---------------------------------------------------------
 double Parallel::getTaskProgress()const

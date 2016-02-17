@@ -106,6 +106,7 @@ public:
     virtual OrientationQuantities orient(OrientableGeometry const& geom)const = 0;
     virtual OrientationQuantities orientTowardsLine(Line const& line)const = 0;
     virtual OrientationQuantities orientTowardsCone(Cone const& cone)const = 0;
+virtual OrientationQuantities orientTowardsPlane(Plane const& cone)const = 0;
 
      virtual OrientationQuantities coplanar(OrientableGeometry const& geom)const = 0;
     virtual OrientationQuantities coplanarWithLine(Line const& line)const = 0;
@@ -176,6 +177,7 @@ public:
     virtual OrientationQuantities orient(OrientableGeometry const& geom)const;
     virtual OrientationQuantities orientTowardsLine(Line const& line)const;
     virtual OrientationQuantities orientTowardsCone(Cone const& cone)const;
+    virtual OrientationQuantities orientTowardsPlane(Plane const& cone)const;
 
     virtual OrientationQuantities coplanar(OrientableGeometry const& geom)const;
     virtual OrientationQuantities coplanarWithLine(Line const& line)const;
@@ -183,7 +185,7 @@ public:
 };
 //------------------------------------------------------------------------------------------
 //** Plane defined as Plane::n_^T*x - Plane::d_ = 0.0 */
-class Plane: public ProjectableGeometry
+ class Plane: public ProjectableGeometry, OrientableGeometry
 {
 public:
     Plane();
@@ -200,6 +202,15 @@ public:
     virtual ProjectionQuantities projectOntoSphere(Sphere const& sphere)const;
     virtual ProjectionQuantities projectOntoLine(Line const& line)const;
     virtual ProjectionQuantities projectOntoCone(Cone const& line)const;
+
+  virtual OrientationQuantities orient(OrientableGeometry const& geom)const;
+    virtual OrientationQuantities orientTowardsLine(Line const& line)const;
+    virtual OrientationQuantities orientTowardsCone(Cone const& cone)const;
+    virtual OrientationQuantities orientTowardsPlane(Plane const& cone)const;
+
+    virtual OrientationQuantities coplanar(OrientableGeometry const& geom)const;
+    virtual OrientationQuantities coplanarWithLine(Line const& line)const;
+        virtual OrientationQuantities coplanarWithCone(Cone const& cone)const;
 };
 ////------------------------------------------------------------------------------------------
 //class Capsule: public TaskGeometry
@@ -259,6 +270,7 @@ public:
     virtual OrientationQuantities orient(OrientableGeometry const& geom)const;
     virtual OrientationQuantities orientTowardsLine(Line const& line)const;
     virtual OrientationQuantities orientTowardsCone(Cone const& cone)const;
+    virtual OrientationQuantities orientTowardsPlane(Plane const& cone)const;
 
     virtual OrientationQuantities coplanar(OrientableGeometry const& geom)const;
     virtual OrientationQuantities coplanarWithLine(Line const& line)const;
