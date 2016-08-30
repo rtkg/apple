@@ -10,7 +10,7 @@ project(hqp_controllers)
 # GUROBI libs and includes
 set(GUROBI_INCLUDE_DIR "$ENV{GUROBI_HOME}/include") 
 set(GUROBI_LIB_DIR "$ENV{GUROBI_HOME}/lib")
-set(GUROBI_LIBS gurobi_c++ gurobi60)
+set(GUROBI_LIBS gurobi_c++ gurobi65)
 
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS
